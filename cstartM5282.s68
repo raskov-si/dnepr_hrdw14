@@ -1,0 +1,115 @@
+;------------------------------------------------------------------------------
+;       C startup for ColdFire MCF5282
+;
+;       This module contains device configuration.
+;
+;------------------------------------------------------------------------------
+;       Copyright (c) 2007-2008 IAR Systems AB.
+;       $Revision: 1089 $
+;------------------------------------------------------------------------------
+;       Macros:
+;       _VECTOR_TABLE_MOVED
+;       Define this macro to 1 when the vector table is moved.
+;       _RAM_ONLY_CONFIGURATION
+;       Define this macro to 1 when a RAM only configuration is used
+;------------------------------------------------------------------------------
+
+#define _VECTOR_TABLE_MOVE      0
+
+#if _VECTOR_TABLE_MOVE != 1
+;------------------------------------------------------------------------------
+;       Reset address
+;------------------------------------------------------------------------------
+
+        PROGRAM ?M5282_RESET
+
+        RSEG    CSTACK:DATA(2)
+
+        EXTERN  ?CSTART_DEVICE
+
+        COMMON  INTVEC:CODE(2)
+        ORG     0x00
+        DC32    SFE(CSTACK)
+        DC32    ?CSTART_DEVICE
+
+        ENDMOD
+#endif
+
+#if _RAM_ONLY_CONFIGURATION != 1
+;------------------------------------------------------------------------------
+;       Clear CFM configuration field
+;------------------------------------------------------------------------------
+
+        PROGRAM ?M5282_CFM
+
+        RSEG    CFMCONFIG:CODE(1)
+        DC32    0x00000000
+        DC32    0x00000000
+        DC32    0x00000000
+        DC32    0x00000000
+        DC32    0x00000000
+        DC32    0x00000000
+
+        ENDMOD
+#endif
+
+;------------------------------------------------------------------------------
+;       Device configuration.
+;------------------------------------------------------------------------------
+
+        MODULE  ?M5282_CSTART
+
+                COMMON  INTVEC:CODE(1)
+        RSEG    RCODE:CODE(1)
+
+        PUBLIC  __program_start
+        PUBLIC  ?CSTART_DEVICE
+                EXTERN  ramvector // куда попадает таблица прерываний
+                EXTERN  ?C_STARTUP
+
+        EXTERN  __FLASHBEGIN
+        EXTERN  __RAMBEGIN
+        EXTERN  __VBR
+        EXTERN  __IPSBAR
+
+#include "io5282.h"
+
+__program_start:
+?CSTART_DEVICE:
+        MOVE.L  #__FLASHBEGIN, D7
+        OR.L    #1, D7
+        MOVEC.L D7, FLASHBAR
+
+        MOVE.L  #__RAMBEGIN, D7
+        OR.L    #1, D7
+        MOVEC.L D7, RAMBAR
+
+        // иниициализируем SDRAM
+
+        // копируем таблицу прерываний в ramvector
+        MOVE.L  #sizeof(INTVEC),        D0
+        MOVEA.L #SFB(INTVEC),           A0
+
+        MOVE.L  #sizeof(INTVEC),        D0
+        MOVEA.L #SFB(INTVEC),           A0
+        MOVEA.L #ramvector,                     A1
+VB_COPY_LOOP:
+        MOVE.B  (A0)+,                  (A1)+
+        SUBQ    #1,                     D0
+        BNE.B   VB_COPY_LOOP
+
+        // в IAR в General Options->Vector base address
+        // должно стоять то же значение, что и ramvector
+        MOVE.L  #ramvector, D7
+        MOVEC.L D7, VBR
+
+
+        MOVE.L  #__IPSBAR, D7
+        OR.L    #1, D7
+        MOVE.L  D7, (IPSBAR_RESET).L
+
+        JMP     (?C_STARTUP).L
+
+        ENDMOD
+
+        END

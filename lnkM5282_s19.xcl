@@ -1,0 +1,119 @@
+//-----------------------------------------------------------------------------------------
+//*                                           
+//* IAR XLINK command file for the IAR ColdFire C/C++ Compiler                
+//*                                           
+//* This is an example XLINK command file for use with the MCF5282 derivative.  
+//* Usage: xlink <your_file(s)> -f <this_file>                        
+//*                                           
+//* Copyright (c) 2007-2008 IAR Systems AB.                    
+//*                                           
+//* $Revision: 1573 $                                      
+//-----------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+//      CPU Family 
+//-------------------------------------------------------------------------
+
+-ccf
+
+//-------------------------------------------------------------------------
+//      Vector base address.
+//      Remove comment and modify number if used from command line.
+//-------------------------------------------------------------------------
+
+//-D_VBR_ADDRESS=00002800
+
+//-------------------------------------------------------------------------
+//      Size of the heap.
+//      Remove comment and modify number if used from command line.
+//-------------------------------------------------------------------------
+
+//-D_HEAP_SIZE=1000
+
+//-------------------------------------------------------------------------
+//      Size of the stack.
+//      Remove comment and modify number if used from command line.
+//-------------------------------------------------------------------------
+
+//-D_CSTACK_SIZE=200
+
+//-------------------------------------------------------------------------
+//      Define the format functions used by printf/scanf.
+//      Default is full formatting.
+//      Remove appropriate comment(s) to get reduced formatting
+//      if used from command line.
+//-------------------------------------------------------------------------
+
+//-e_PrintfTiny=_Printf
+//-e_PrintfSmall=_Printf
+//-e_PrintfLarge=_Printf
+
+//-e_ScanfSmall=_Scanf
+//-e_ScanfLarge=_Scanf
+
+//-------------------------------------------------------------------------
+//      Number of dynamically initialized C++ objects with a static
+//      life span and number of atexit calls.
+//      Modify this number according to your program.
+//      Note: Hexadecimal number.
+//-------------------------------------------------------------------------
+
+-D_DYNEXIT_ELEMENTS=0
+
+
+-Z(XDATA)bootloader=00000000-00001FFF
+-Z(XDATA)api_app=1FE0-1FFF
+-Z(XDATA)dir_sect=2000-27FF
+
+//-------------------------------------------------------------------------
+//      Allocate the read only segments
+//-------------------------------------------------------------------------
+
+-Z(CONST)rom_langpack=00040000-00048000
+-Z(CONST)profile,power_sequencer_settings,const_values=0004A000-0007FFFF
+
+-Z(CONST)RESETVEC=2800:+8
+-Z(CONST)INTVEC=2800:+400
+-Z(CONST)CFMCONFIG=2C00-2C17
+
+-Z(CODE)RCODE,CODE,NEAR_C=2C18-7FFF
+
+-Z(CODE)FCODE,FAR_ID,NEARPID_ID,NEAR_ID,EARLYDIFUNCT,DIFUNCT,FAR_C=00002C18-00040000
+
+//-------------------------------------------------------------------------
+//      Allocate the read/write segments
+//-------------------------------------------------------------------------
+
+-Z(DATA)NEAR_I,NEAR_Z,NEAR_N=FFFFF000-FFFFFFFE,0000-7FFF
+
+-Z(DATA)RAMINTVEC=20000000-200003FF
+-Z(DATA)PIDBASE,NEARPID_I,NEARPID_Z,NEARPID_N=20000400-2000FFFF
+-Z(DATA)nonvolatile_sram=20000400-20004000
+-Z(DATA)FAR_Z,FAR_N,sdram,HEAP+_HEAP_SIZE=30000000-31000000
+
+-Z(DATA)FAR_I,.iar.dynexit+((_DYNEXIT_ELEMENTS+14)*C)=20000400-2000FFFF
+
+-Z(DATA)CSTACK+_CSTACK_SIZE#20000400-20010000
+
+// 0x40000000 0x43FFFFFF      // Memory Mapped Registers (IPSBAR= 0x40000000)
+
+//-------------------------------------------------------------------------
+//      Bug workaround
+//-------------------------------------------------------------------------
+
+-e__taabi_atexit=__aeabi_atexit
+-e__taabi_vec_cctor_nocookie_nodtor=__aeabi_vec_cctor_nocookie_nodtor
+-e__taabi_vec_ctor_cookie_nodtor=__aeabi_vec_ctor_cookie_nodtor
+-e__taabi_vec_ctor_nocookie_nodtor=__aeabi_vec_ctor_nocookie_nodtor
+-e__taabi_vec_dtor=__aeabi_vec_dtor
+-e__taabi_vec_dtor_cookie=__aeabi_vec_dtor_cookie
+-e__taabi_vec_delete=__aeabi_vec_delete
+-e__taabi_vec_delete3=__aeabi_vec_delete3
+-e__taabi_vec_delete3_nodtor=__aeabi_vec_delete3_nodtor
+-e__taabi_vec_new_cookie=__aeabi_vec_new_cookie
+-e__taabi_vec_new_cookie_noctor=__aeabi_vec_new_cookie_noctor
+-e__taabi_vec_new_cookie_nodtor=__aeabi_vec_new_cookie_nodtor
+-e__taabi_vec_new_nocookie=__aeabi_vec_new_nocookie
+
+//-------------------------------------------------------------------------
+//      End of File
+//-------------------------------------------------------------------------

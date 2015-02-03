@@ -1,0 +1,242 @@
+// Файл с обёртками для ISR, написаны в соотв. с требованиями uC/OS-II
+
+                EXTERN OSIntEnter
+                EXTERN OSIntExit
+				EXTERN  OSIntExit
+				EXTERN  OSIntNesting
+				EXTERN  OSTCBCur
+				
+				EXTERN 	ReservedHandler
+                EXTERN	UART1_Handler		
+                EXTERN  AccessErrorHandler
+                EXTERN  AddressErrorHandler
+                EXTERN  InllegalInstrHandler
+                EXTERN  DivByZeroHandler
+                EXTERN  PrivViolationHandler
+                EXTERN  TraceHandler
+                EXTERN  UnimplemLineA_OpcOdeHandler
+                EXTERN  UnimplemLineF_OpcOdeHandler
+                EXTERN  DebugHandler
+                EXTERN  FormatErrorHandler
+                EXTERN  SpuriousIntrHandler
+                EXTERN  Trap0Handler
+                EXTERN  Trap1Handler
+                EXTERN  Trap2Handler
+                EXTERN  Trap3Handler
+                EXTERN  Trap4Handler
+                EXTERN  Trap5Handler
+                EXTERN  Trap6Handler
+                EXTERN  Trap7Handler
+                EXTERN  Trap8Handler
+                EXTERN  Trap9Handler
+                EXTERN  Trap10Handler
+                EXTERN  Trap11Handler
+                EXTERN  Trap12Handler
+                EXTERN  Trap13Handler
+                EXTERN  Trap14Handler
+                ; EXTERN  Trap15Handler
+                EXTERN  UART0_Handler
+                EXTERN  UART2_Handler
+                EXTERN  DTIM0_Handler
+                EXTERN  ADCA_ConvHandler
+                EXTERN  ADCB_ConvHandler
+                EXTERN  ADC_IntrHandler
+                EXTERN  PIT0_IntrHandler
+                EXTERN  RTC_IntrHandler 
+				EXTERN 	isr_Watchdog
+                EXTERN  isr_EdgePortISR1
+                EXTERN  isr_EdgePortISR2
+                EXTERN  isr_EdgePortISR3
+                EXTERN  isr_EdgePortISR4
+                EXTERN  isr_EdgePortISR5
+                EXTERN  isr_EdgePortISR6
+                EXTERN  isr_EdgePortISR7
+                EXTERN  isr_QSPI
+				
+				EXTERN s_ptr ; T8_Dnepr_isr.c: указатель на стэк исключения
+		
+				PUBLIC 	ReservedHandler_wrap
+                PUBLIC  uart1_wrap
+                PUBLIC  AccessErrorHandler_wrap
+                PUBLIC  AccessErrorHandler_wrap
+                PUBLIC  AddressErrorHandler_wrap
+                PUBLIC  InllegalInstrHandler_wrap
+                PUBLIC  DivByZeroHandler_wrap
+                PUBLIC  PrivViolationHandler_wrap
+                PUBLIC  TraceHandler_wrap
+                PUBLIC  UnimplemLineA_OpcOdeHandler_wrap
+                PUBLIC  UnimplemLineF_OpcOdeHandler_wrap
+                PUBLIC  DebugHandler_wrap
+                PUBLIC  FormatErrorHandler_wrap
+                PUBLIC  SpuriousIntrHandler_wrap
+                PUBLIC  Trap0Handler_wrap
+                PUBLIC  Trap1Handler_wrap
+                PUBLIC  Trap2Handler_wrap
+                PUBLIC  Trap3Handler_wrap
+                PUBLIC  Trap4Handler_wrap
+                PUBLIC  Trap5Handler_wrap
+                PUBLIC  Trap6Handler_wrap
+                PUBLIC  Trap7Handler_wrap
+                PUBLIC  Trap8Handler_wrap
+                PUBLIC  Trap9Handler_wrap
+                PUBLIC  Trap10Handler_wrap
+                PUBLIC  Trap11Handler_wrap
+                PUBLIC  Trap12Handler_wrap
+                PUBLIC  Trap13Handler_wrap
+                PUBLIC  Trap14Handler_wrap
+                PUBLIC  UART0_Handler_wrap
+                PUBLIC  UART2_Handler_wrap
+                PUBLIC  DTIM0_Handler_wrap
+                PUBLIC  ADCA_ConvHandler_wrap
+                PUBLIC  ADCB_ConvHandler_wrap
+                PUBLIC  ADC_IntrHandler_wrap
+                PUBLIC  PIT0_IntrHandler_wrap
+                PUBLIC  isr_EdgePortISR1_wrap
+                PUBLIC  isr_EdgePortISR2_wrap
+                PUBLIC  isr_EdgePortISR3_wrap
+                PUBLIC  isr_EdgePortISR4_wrap
+                PUBLIC  isr_EdgePortISR5_wrap
+                PUBLIC  isr_EdgePortISR6_wrap
+                PUBLIC  isr_EdgePortISR7_wrap
+                PUBLIC  isr_QSPI_wrap
+                PUBLIC  isr_Watchdog_wrap
+		
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Макрос для обёртки ISR -- производятся действия, необходимые для корректного переключения контекста uC/OS-II.
+
+UCOS_ISR_WRAP_MACRO	MACRO proc
+	LOCAL _SkipSave
+	MOVE.L 	A7,	(s_ptr)
+	LEA      (-60,A7),A7         ; Save processor registers onto stack
+	MOVEM.L  D0-D7/A0-A6,(A7)
+	
+	MOVEQ.L  #0,D0              ; This use of D0 is absolutely necessary when
+	MOVE.B   (OSIntNesting),D0 ; using an optimizing compiler. Since ColdFire
+	ADDQ.L   #1,D0              ; can only add Long, whereas OSIntNesting is defined
+	MOVE.B   D0,(OSIntNesting) ; as INT8U in C code.
+	
+	CMPI.L   #1, d0		      ; if OSIntNesting == 1, then continue
+	BNE 	   (_SkipSave)          ; if Timer interrupts while in another ISR, skip the save
+	MOVEA.L   (OSTCBCur), A1    ; Otherwise, save stack pointer onto current task's stack
+	MOVE.L   A7,(A1)
+	
+_SkipSave:
+	JSR		(proc)
+    JSR      (OSIntExit)        ; Can either jump to C IntExit or use assembly
+	;  JMP      (OSIntExitCF)       ; language, either method seems to work
+	
+    MOVEM.L  (A7),D0-D7/A0-A6   ; Restore processor registers from stack after JSR
+    LEA      (60,A7),A7          ; If using JMP to IntExitCF, these commands are
+	
+	RTE                         ; skipped and the restore is at the end of IntExitCF
+	RTE
+	ENDM
+
+		
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+		NAME 	INT_ISR_WRAPS
+		RSEG	CODE
+
+uart1_wrap:
+		UCOS_ISR_WRAP_MACRO(UART1_Handler)
+	
+ReservedHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(ReservedHandler)
+AccessErrorHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(AccessErrorHandler)
+AddressErrorHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(AddressErrorHandler)
+InllegalInstrHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(InllegalInstrHandler)
+DivByZeroHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(DivByZeroHandler)
+PrivViolationHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(PrivViolationHandler)
+TraceHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(TraceHandler)
+UnimplemLineA_OpcOdeHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(UnimplemLineA_OpcOdeHandler)
+UnimplemLineF_OpcOdeHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(UnimplemLineF_OpcOdeHandler)
+DebugHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(DebugHandler)
+FormatErrorHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(FormatErrorHandler)
+SpuriousIntrHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(SpuriousIntrHandler)
+Trap0Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap0Handler)
+Trap1Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap1Handler)
+Trap2Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap2Handler)
+Trap3Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap3Handler)
+Trap4Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap4Handler)
+Trap5Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap5Handler)
+Trap6Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap6Handler)
+Trap7Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap7Handler)
+Trap8Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap8Handler)
+Trap9Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap9Handler)
+Trap10Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap10Handler)
+Trap11Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap11Handler)
+Trap12Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap12Handler)
+Trap13Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap13Handler)
+Trap14Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(Trap14Handler)
+//Trap15Handler_wrap:
+//                UCOS_ISR_WRAP_MACRO(Trap15Handler)
+UART0_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(UART0_Handler)
+UART2_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(UART2_Handler)
+DTIM0_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(DTIM0_Handler)
+ADCA_ConvHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(ADCA_ConvHandler)
+ADCB_ConvHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(ADCB_ConvHandler)
+ADC_IntrHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(ADC_IntrHandler)
+PIT0_IntrHandler_wrap:
+                UCOS_ISR_WRAP_MACRO(PIT0_IntrHandler)
+isr_Watchdog_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_Watchdog)
+
+isr_EdgePortISR1_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_EdgePortISR1)
+isr_EdgePortISR2_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_EdgePortISR2)
+isr_EdgePortISR3_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_EdgePortISR3)
+isr_EdgePortISR4_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_EdgePortISR4)
+isr_EdgePortISR5_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_EdgePortISR5)
+isr_EdgePortISR6_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_EdgePortISR6)
+isr_EdgePortISR7_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_EdgePortISR7)
+
+isr_QSPI_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_QSPI)
+
+//RTC_IntrHandler _wrap:
+//                UCOS_ISR_WRAP_MACRO(RTC_IntrHandler )
+
+		END
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
