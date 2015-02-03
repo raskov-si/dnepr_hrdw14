@@ -96,12 +96,32 @@ _BOOL IPMI_Read_FRU_Headers( PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, IPMI
 //! Читает Product Info Area.
 _BOOL IPMI_Read_ProductInfo( PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, size_t offset, IPMI_ProductInfo* product_info );
 _BOOL IPMI_Read_CommonHeader( PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, IPMI_CommonHeader* header );
-_BOOL IPMI_Find_n_Read_PSU_MultiArea( PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, IPMI_FRU* fru,
+_BOOL IPMI_Find_n_Read_PSU_MultiArea( PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, u8 m2Addr, IPMI_FRU* fru,
 				IPMI_MultiRecordHeader* multi_header, IPMI_MultiRecord_PowerSupplyInformation *psu_area );
 
 //! Прошивает EEPROM в PSU в соответствии с fru.
 _BOOL IPMI_Write_FRU( PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, IPMI_FRU* fru,
 					IPMI_MultiRecordHeader* multi_header, IPMI_MultiRecord_PowerSupplyInformation *psu_area );
 
+_BOOL ipmi_read_common_header
+(
+  PMB_PeriphInterfaceTypedef  *pmb_bus,     /*!< [in]   таблица функций обратного вызова для транзакций по шине */
+  u8                          mAddr,        /*!< [in]   адрес I2C EEPROM блока питания                          */
+  IPMI_FRU                    *fru          /*!< [out]  структура для считываемых параметров                    */ 
+);
+
+_BOOL ipmi_read_product_info
+(
+  PMB_PeriphInterfaceTypedef  *pmb_bus,     /*!< [in]   таблица функций обратного вызова для транзакций по шине */
+  u8                          mAddr,        /*!< [in]   адрес I2C EEPROM блока питания                          */
+  u8                          m2Addr,       /*!< [in] адрес мастер-контроллера БП на i2c шине                     */  
+  IPMI_FRU                    *fru          /*!< [out]  структура для считываемых параметров                    */ 
+);
+
+_BOOL ipmi_get_adress_acknowledge
+(
+  PMB_PeriphInterfaceTypedef  *pmb_bus,     /*!< [in]   таблица функций обратного вызова для транзакций по шине */
+  u8                          mAddr         /*!< [in]   адрес I2C EEPROM блока питания                          */
+);
 
 #endif // IPMI_H__

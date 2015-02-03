@@ -19,6 +19,7 @@
 #include "common_lib/T8_CircBuffer.h"
 #include "Profile/inc/profile_processing.h"
 #include "Application/inc/T8_Dnepr_Profile_params.h"
+#include "Application/inc/T8_Dnepr_ProfileStorage.h"
 
 void backplane_uart_isr_hook(const unsigned int);
 void taskCU (void *pdata);

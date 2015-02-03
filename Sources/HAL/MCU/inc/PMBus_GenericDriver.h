@@ -129,6 +129,11 @@ _BOOL PMB_InitPorts();
 */
 _BOOL PMB_DeInitPorts();
 
+
+
+_BOOL PMB_GetAcknowledge(unsigned char mAddr);
+
+
 /*!
 \}
 */ //Peripherial_General_Functions

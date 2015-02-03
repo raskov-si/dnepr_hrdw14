@@ -38,12 +38,65 @@ typedef enum {
 	UNSET 			//!< модуль неустановлен
 } UnitConnectionType_t;
 
+typedef struct __Multirecord_Header
+{
+	u8 type ;
+	u8 det ;
+	u8 len ;
+	u8 sum ;
+	u8 header_sum ;
+} Multirecord_Header_t;
+
+//typedef enum 
+//{
+//  PSU_PMBUS_INTERFACE = 0,
+//  PSU_PSMI_INTERFACE,
+//} t_psu_interface_type;
+
+typedef struct {
+    u8    maincontroller_adress;
+    u8    eeprom_adress;
+} t_psu_adresses;
+
+
+
 /*! List of unit addresses on the bus. */
-const u8 naPsuAddress[4]={PMB_EMERSON_PSU_ADDR_00, PMB_EMERSON_PSU_ADDR_01, PMB_EMERSON_PSU_ADDR_10, PMB_EMERSON_PSU_ADDR_11};
+static u8 naPsuAddress[4] = {PMB_PSU_ADDR1_00, PMB_PSU_ADDR1_01, PMB_PSU_ADDR1_10, PMB_PSU_ADDR1_11};
+
+static const t_psu_adresses  psu_adresses[3][4] = 
+{
+/* Emerson (Astec) */
+  {
+    {PMB_PSU_ADDR1_00, PMB_FRU_ADDR1_00},
+    {PMB_PSU_ADDR1_01, PMB_FRU_ADDR1_01},
+    {PMB_PSU_ADDR1_10, PMB_FRU_ADDR1_10},
+    {PMB_PSU_ADDR1_11, PMB_FRU_ADDR1_11},
+  },
+/* muRata мощьностью более 1000W  */  
+  {
+    {PMB_PSU_ADDR2_00, PMB_FRU_ADDR1_00},
+    {PMB_PSU_ADDR2_01, PMB_FRU_ADDR1_01},
+    {PMB_PSU_ADDR2_10, PMB_FRU_ADDR1_10},
+    {PMB_PSU_ADDR2_11, PMB_FRU_ADDR1_11},
+  },  
+/* muRata мощьностью менее 1000W  */
+  {
+    {PMB_PSU_ADDR3_00, PMB_FRU_ADDR2_00},
+    {PMB_PSU_ADDR3_01, PMB_FRU_ADDR2_01},
+    {PMB_PSU_ADDR3_10, PMB_FRU_ADDR2_10},
+    {PMB_PSU_ADDR3_11, PMB_FRU_ADDR2_11},
+  },  
+};
+
+const u8 naEmersonPsuAddress[4]={PMB_PSU_ADDR1_00, PMB_PSU_ADDR1_01, PMB_PSU_ADDR1_10, PMB_PSU_ADDR1_11};
 /*! List of FRU EEPROM addresses on the bus. */
-const u8 naEmersonFruAddress[4]={PMB_EMERSON_FRU_ADDR_00, PMB_EMERSON_FRU_ADDR_01, PMB_EMERSON_FRU_ADDR_10, PMB_EMERSON_FRU_ADDR_11};
+const u8 naEmersonFruAddress[4]={PMB_FRU_ADDR1_00, PMB_FRU_ADDR1_01, PMB_FRU_ADDR1_10, PMB_FRU_ADDR1_11};
+
+/*! List of unit addresses on the bus. */
+const u8 naMurataPsuAddress[4]={PMB_PSU_ADDR2_00, PMB_PSU_ADDR2_01, PMB_PSU_ADDR2_10, PMB_PSU_ADDR2_11};
 /*! List of FRU EEPROM in Murata PSU addresses on the bus. */
-const u8 naMurataFruAddress[4]={PMB_MURATA_FRU_ADDR_00, PMB_MURATA_FRU_ADDR_01, PMB_MURATA_FRU_ADDR_10, PMB_MURATA_FRU_ADDR_11};
+const u8 naMurataFruAddress[4]={PMB_FRU_ADDR2_00, PMB_FRU_ADDR2_01, PMB_FRU_ADDR2_10, PMB_FRU_ADDR2_11};
+
 //! какой тип связи поддерживает какой модуль
 static UnitConnectionType_t __unit_conn_type[4] = { UNSET, UNSET, UNSET, UNSET };
 //! Коэффициенты для чтения параметров в формате Direct
@@ -55,6 +108,29 @@ static _BOOL __pmbus_coefs_read[4] = { FALSE, FALSE, FALSE, FALSE };
 const char saPmbusUnits[][13]={	"DS1200DC-3", "DS1200-3", "\0"};
 /*! List of PSMI-compatible units */
 const char saPsmiUnits[][13]={	"DS650DC-3", "DS850DC-3", "\0"};
+
+//ip addr add 192.168.180.1/255.255.255.0 broadcast 192.168.1.255 dev eth0
+
+static const struct {  
+	char                    *manufacturer_name;
+	char                    *name;
+	char                    *model;
+        u16                     max_power;
+        s16                     min_input_voltage;
+        s16                     max_input_voltage;
+//        t_psu_interface_type    interface_type;
+        UnitConnectionType_t    protocol_type;
+} psu_known_product[] = 
+{
+  /* произв,     название,    модель,                   мощность, мин вх нпр(10 мв), макс вх напр(10 мв),  тип протокола */
+  {"Murata-PS", "TQ1804",     "D1U3CS-D-850-12-HC3C",   850,      4000,               7200,                 PSMI_UNIT  },
+  {"Murata-PS", "M1831",      "D1U3CS-D-1600-12-HC3EC", 1600,     4000,               7200,                 PMBUS_UNIT },
+  {"ASTEC",     "DS650DC-3",  "DS650DC-3",              650,      3700,               7500,                 PSMI_UNIT  },
+  {"ASTEC",     "DS850DC-3",  "DS850DC-3",              850,      3800,               7500,                 PSMI_UNIT  },
+  {"ASTEC",     "DS1200DC-3", "DS1200DC-3",             1200,     2,                  1,                    PMBUS_UNIT },
+  {"ASTEC",     "DS1200-3",   "DS1200-3",               1200,     9000,               26400,                PMBUS_UNIT }    //переменка
+};
+
 
 /* Pointer to peripherial access stricture and a \c define assigned to it */
 PMB_PeriphInterfaceTypedef* tPsuPeriphInterface = NULL;
@@ -120,135 +196,313 @@ _BOOL __PSU_InitUnitInfo(PSU_UnitInfoTypedef* PSU_UnitInfoStructure){
 	\param PSU_UnitInfoStructure Target structure.
 	\retval 1.
 	*/
-	PSU_UnitInfoStructure->fPower			=	0.;
+	PSU_UnitInfoStructure->fPower			=	0.0;
 	PSU_UnitInfoStructure->nFruAddress		=	0;
 	PSU_UnitInfoStructure->nPsuAddress		=	0;
-	PSU_UnitInfoStructure->bPmbusSupport	=	0;
+	PSU_UnitInfoStructure->bPmbusSupport	        =	0;
 	PSU_UnitInfoStructure->bPsmiSupport		=	0;
 	strncpy( PSU_UnitInfoStructure->sManufacturer,	"None", PSU_MFR_MAXLEN );
-	strncpy( PSU_UnitInfoStructure->sModel, 		"None", PSU_MODEL_MAXLEN );
-	strncpy( PSU_UnitInfoStructure->sModelId, 		"None", PSU_MODEL_ID_MAXLEN );
+	strncpy( PSU_UnitInfoStructure->sModel, 	"None", PSU_MODEL_MAXLEN );
+	strncpy( PSU_UnitInfoStructure->sModelId, 	"None", PSU_MODEL_ID_MAXLEN );
 	return 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-typedef struct __Multirecord_Header
+/*=============================================================================================================*/
+/*!  \brief заполнение области PSU данными из таблицы поддерживаемых блоков питания с известными параметрами
+
+     \return признак опознания устройства по имени
+     \retval TRUE, FALSE
+     \sa ipmi_known_product
+*/
+/*=============================================================================================================*/
+static _BOOL psu_find_manufacture_and_fullfill_psu_area
+(
+    const IPMI_FRU                            *fru,               /* [in]  данные о полях в EEPROM */
+    const char                                *manufacturer_name, /* [in]  наименование производителя */
+    const char                                *model,             /* [in]  полное наименование модели  */ 
+    _BOOL                                     power_flag,         /* [in]  FALSE - надо взять мощьность из таблицы констант                          */
+    IPMI_MultiRecord_PowerSupplyInformation   *psu_area,          /* [out] указатель для чтения данных Power Supply Information (Record Type 0x00)  */
+    UnitConnectionType_t                      *protocol_type      /* [out] тип протокола используемый модулем () */
+)
 {
-	u8 type ;
-	u8 det ;
-	u8 len ;
-	u8 sum ;
-	u8 header_sum ;
-} Multirecord_Header_t;
+  u8  i;
+  
+  /* если отсутвует область статических данных о мощьности берем ее из сведений о производителе */
+  for ( i = 0; i < (sizeof psu_known_product / sizeof psu_known_product[0]) && (fru->header.product_area_offset != 0); i++)
+  {
+      if (    (strcmp (psu_known_product[i].manufacturer_name, manufacturer_name) == 0)
+          &&  (strncmp (psu_known_product[i].model, model, 13) == 0 )    
+      )
+      {
+          /* ватты */
+        if ( power_flag == FALSE ) {
+            psu_area->overall_capacity                = psu_known_product[i].max_power;
+            psu_area->low_end_input_voltage_range_1   = psu_known_product[i].min_input_voltage;
+            psu_area->high_end_input_voltage_range_1  = psu_known_product[i].max_input_voltage;  
+        }
+        
+        *protocol_type = psu_known_product[i].protocol_type;                    
+        return TRUE;
+      }
+  }
+               
+  return power_flag;               
+}
 
 
+/*=============================================================================================================*/
+/*! \brief   Читает FRU блока питания с указанным номером и заполняет структуру unitInfoStruct. Определяет тип протокола.
 
-_BOOL PSU_Setup(const u8 nUnitNumber, PSU_UnitInfoTypedef* unitInfoStruct){
-	/*!
-	\brief Fills fields of the \c unitInfoStruct with values from the FRU table. Определяет тип протокола.
-	\details Common for all PS units (PMBus, PSMI) since it's separate from PSU device.
-	\details Also may work with some other units as it's compatibbe with Intel IPMI specification.
-	\param nUnitNumber Index of unit address in \c naPsuAddress and \c naEmersonFruAddress arrays. Same as (Number of I2C unit) - 1.
-	\param unitInfoStruct Target structure.
-	\retval TRUE если знаем про этот БП.
-	*/
+    \details Общая функция для всех блоков питания (PMBus, PSMI). Также может работать с другими блоками питания,
+    \details совместимыми со спецификацией Intel IPMI.
+    \return признак того что блок питания опознан и поддерживается в данном ПО
+    \retval TRUE, FALSE
+    \sa  PSU_UnitInfoTypedef,
+*/
+/*=============================================================================================================*/
+_BOOL PSU_Setup
+(
+  const u8            nUnitNumber,        /*!< [in]  номер блока питания, начиная с 1               */
+  PSU_UnitInfoTypedef *unitInfoStruct     /*!< [out] заполняемая прочитанными параметрами структура */
+)
+{
+  s32                                       i, j;
+//  u8                                        internal_offset ;
+//  u8                                        chassis_offset ;
+//  u8                                        board_offset ;
+//  u8                                        product_offset ;
+//  u8                                        multirecord_offset ;
+  IPMI_FRU                                  fru ;
+  IPMI_MultiRecordHeader                    multi_header;
+  IPMI_MultiRecord_PowerSupplyInformation   psu_area;
+  _BOOL                                     ret                     = FALSE ;
+  UnitConnectionType_t                      portcl_flag;
+  
+  assert(PMB_PERIPH_INTERFACE_STRUCT_PTR != NULL);
+  
+  /* \todo проверяем адрес murata по умолчанию конфигурим нужный ???  */
 
-	s32 i ;
-	_BOOL ret = TRUE ;
-	u8 internal_offset ;
-	u8 chassis_offset ;
-	u8 board_offset ;
-	u8 product_offset ;
-	u8 multirecord_offset ;
-	IPMI_FRU fru ;
-	IPMI_MultiRecordHeader multi_header;
-	IPMI_MultiRecord_PowerSupplyInformation psu_area;
+  
+  /* на шине PMBus ищем адреса контроллеров pmbus в зависимости от слота */
+  for( j = 0; j < 3 ; j++ )  {
+     u32 times = 5;
+     u8  tmp;
+     
+     do {
+//        ret = ipmi_get_adress_acknowledge( PMB_PERIPH_INTERFACE_STRUCT_PTR, psu_adresses[j][nUnitNumber-1].maincontroller_adress );
+          ret = ipmi_read_common_header( PMB_PERIPH_INTERFACE_STRUCT_PTR, psu_adresses[j][nUnitNumber-1].eeprom_adress, &fru );
+     } while ( (ret != TRUE) && (--times != 0) );
+      
+      if ( (ret == TRUE) )
+     { break;  }       
+  }
+  
+  if (j == 3)
+  {  return FALSE;  } 
+  
+  /* выбираем адреса */  
+  unitInfoStruct->nFruAddress = psu_adresses[j][nUnitNumber-1].eeprom_adress;
+  unitInfoStruct->nPsuAddress = psu_adresses[j][nUnitNumber-1].maincontroller_adress;
 
-	assert(PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL);
+  /* пытаемся читать общий для всех устройтсв заголовок, если он читается то считаем адрес доступным */
+  if ( ipmi_read_common_header( PMB_PERIPH_INTERFACE_STRUCT_PTR, psu_adresses[j][nUnitNumber-1].eeprom_adress, &fru ) )  {        
+        
+  /* если есть область product_info, читаем информацию о производителе с eeprom
+     если нет то пытаемся считать информацию с контроллера */
+    if ( ret = ipmi_read_product_info(PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, unitInfoStruct->nPsuAddress, &fru) )  {
+ 
+      unitInfoStruct->sManufacturer[0] = 0 ;
+      strncpy( unitInfoStruct->sManufacturer, (s8*)fru.product_info.manufacturer_name, fru.product_info.manufacturer_name_length );
+      unitInfoStruct->sModel[0] = 0 ;
+      strncpy( unitInfoStruct->sModel, fru.product_info.model, fru.product_info.model_length );	
+      unitInfoStruct->sModelId[0] = 0 ;
+      strncpy( unitInfoStruct->sModelId, (s8*)fru.product_info.name, fru.product_info.name_length );        
+      unitInfoStruct->sUniqueSerial[0] = 0 ;
+      strncpy( unitInfoStruct->sUniqueSerial, (s8*)fru.product_info.asset_tag, fru.product_info.asset_tag_len );                                 
+      
+      // убираем пробелы в начале
+      while( (unitInfoStruct->sModel[0] == 0x20) && (unitInfoStruct->sModel[1] != 0) ){
+	  for( i = 1; (unitInfoStruct->sModel[i] != 0) && (i < PSU_MODEL_MAXLEN); ++i ){
+		unitInfoStruct->sModel[i-1] = unitInfoStruct->sModel[i] ;
+	  }
+      }
 
-	// адрес памяти с IPMI
-	
-	unitInfoStruct->nPsuAddress=naPsuAddress[nUnitNumber-1];
+      while( (unitInfoStruct->sManufacturer[0] == 0x20) && (unitInfoStruct->sManufacturer[1] != 0) ){
+	  for( i = 1; (unitInfoStruct->sManufacturer[i] != 0) && (i < PSU_MFR_MAXLEN); ++i ){
+		unitInfoStruct->sManufacturer[i-1] = unitInfoStruct->sManufacturer[i] ;
+	  }
+      }
 
-	// читаем структуру IPMI из Emerson
-	unitInfoStruct->nFruAddress=naEmersonFruAddress[nUnitNumber-1];
-	if( IPMI_Read_FRU_Headers( PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, &fru ) ){
-			ret = ret && IPMI_Find_n_Read_PSU_MultiArea( PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, &fru, &multi_header, &psu_area );
-	// если не получилось, читаем IPMI из адресов, специфических для Murata
-	} else {
-		unitInfoStruct->nFruAddress=naMurataFruAddress[nUnitNumber-1];
-		if( ret = ret && IPMI_Read_FRU_Headers( PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, &fru ) ){
-			ret = ret && IPMI_Find_n_Read_PSU_MultiArea( PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, &fru, &multi_header, &psu_area );
-		}
-	}
+      while( (unitInfoStruct->sModelId[0] == 0x20) && (unitInfoStruct->sModelId[1] != 0) ){
+	  for( i = 1; (unitInfoStruct->sModelId[i] != 0) && (i < PSU_MODEL_ID_MAXLEN); ++i ){
+		unitInfoStruct->sModelId[i-1] = unitInfoStruct->sModelId[i] ;
+	  }
+      }
+      
+      
+      // убираем последние пробелы
+      // идём пока не встретим пробел или 0 или кончится длина массива
+      for( i = 0; (unitInfoStruct->sModel[i] != 0x20) && (unitInfoStruct->sModel[i] != 0) && (i < PSU_MODEL_MAXLEN); ++i ) {
+        continue;
+      }
+      
+      if( (i < PSU_MODEL_MAXLEN) && (unitInfoStruct->sModel[i] == 0x20) ) {
+	  unitInfoStruct->sModel[i] = 0 ;
+      }
+      
+      
+      for( i = 0; (unitInfoStruct->sManufacturer[i] != 0x20) && (unitInfoStruct->sManufacturer[i] != 0) && (i < PSU_MFR_MAXLEN); ++i ) {
+        continue;
+      }
+      
+      if( (i < PSU_MFR_MAXLEN) && (unitInfoStruct->sManufacturer[i] == 0x20) ) {
+	  unitInfoStruct->sManufacturer[i] = 0 ;
+      }
+      
 
-	if( !ret ){
-		return ret ;
-	}
-
-	unitInfoStruct->sManufacturer[0] = 0 ;
-	strncpy( unitInfoStruct->sManufacturer, (s8*)fru.product_info.manufacturer_name, fru.product_info.manufacturer_name_length );
-	unitInfoStruct->sModel[0] = 0 ;
-	strncpy( unitInfoStruct->sModel, (s8*)fru.product_info.name, fru.product_info.name_length );
-	unitInfoStruct->sModelId[0] = 0 ;
-	strncpy( unitInfoStruct->sModelId, (s8*)fru.product_info.serial_number, fru.product_info.serial_number_len );
-	unitInfoStruct->sUniqueSerial[0] = 0 ;
-	strncpy( unitInfoStruct->sUniqueSerial, (s8*)fru.product_info.asset_tag, fru.product_info.asset_tag_len );
-	unitInfoStruct->fPower = (f32)psu_area.overall_capacity ;
-	unitInfoStruct->fLowIn = (f32)psu_area.low_end_input_voltage_range_1 / 100. ;
-	unitInfoStruct->fHighIn = (f32)psu_area.high_end_input_voltage_range_1 / 100. ;
-	
-	// убираем пробелы в начале
-	while( (unitInfoStruct->sModel[0] == 0x20) && (unitInfoStruct->sModel[1] != 0) ){
-		for( i = 1; (unitInfoStruct->sModel[i] != 0) && (i < PSU_MODEL_MAXLEN); ++i ){
-			unitInfoStruct->sModel[i-1] = unitInfoStruct->sModel[i] ;
-		}
-	}
-	// убираем последние пробелы
-	// идём пока не встретим пробел или 0 или кончится длина массива
-	for( i = 0; (unitInfoStruct->sModel[i] != 0x20) && (unitInfoStruct->sModel[i] != 0) && (i < PSU_MODEL_MAXLEN); ++i );
-	if( (i < PSU_MODEL_MAXLEN) && (unitInfoStruct->sModel[i] == 0x20) ){
-		unitInfoStruct->sModel[i] = 0 ;
-	}
-
-	// ищем имя модели среди известных БП с PMBus
-	for( i = 0; saPmbusUnits[i][0] != '\0'; i++ ){
-		// вот наша модель
-		if(strncmp( unitInfoStruct->sModel, saPmbusUnits[i], 13) == 0){
-			// вместо измерения коэфф-тов ставим константы. Те, которые читаются дают какую-то ерунду. А эти числа стоят в даташите в примерах
-			PSU_PMB_SetCoefficients( nUnitNumber, 1, 0, 2 );
-
-			__unit_conn_type[nUnitNumber-1] = PMBUS_UNIT ;
-			unitInfoStruct->bPmbusSupport = 1;
-			unitInfoStruct->bPsmiSupport = 0;
-			
-			// читаем мощность в FRU
-			__PMB_ReadByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, 1, &internal_offset );
-			__PMB_ReadByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, 2, &chassis_offset );
-			__PMB_ReadByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, 3, &board_offset );
-			__PMB_ReadByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, 4, &product_offset );
-			__PMB_ReadByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, 5, &multirecord_offset );
-
-			return TRUE ;
-		}
-	}
-	// ищем имя модели среди известных БП с PSMI
-	for( i = 0; saPsmiUnits[i][0] != '\0'; i++ ){
-		// вот наша модель
-		if(strncmp( unitInfoStruct->sModel, saPsmiUnits[i], 13) == 0){
-			__unit_conn_type[nUnitNumber-1] = PSMI_UNIT ;
-			unitInfoStruct->bPmbusSupport = 0;
-			unitInfoStruct->bPsmiSupport = 1;
-
-			return TRUE ;
-		}
-	}
-
-	// не нашли ни в одном массиве моделей -- неизвестный модуль
-	__unit_conn_type[nUnitNumber-1] = UNKNOWN_UNIT ;
+      for( i = 0; (unitInfoStruct->sModelId[i] != 0x20) && (unitInfoStruct->sModelId[i] != 0) && (i < PSU_MODEL_ID_MAXLEN); ++i ) {
+        continue;
+      }
+      
+      if( (i < PSU_MODEL_ID_MAXLEN) && (unitInfoStruct->sModelId[i] == 0x20) ) {
+	  unitInfoStruct->sModelId[i] = 0 ;
+      }
+      
+            
+    } /* if ( ret = (ret && ipmi_read_product_info(PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, unitInfoStruct->nPsuAddress, &fru)) ) */
+    
+    if (ret == FALSE) {
+      fru.header.product_area_offset = 0;
+    }
+        
+   /* если есть область MultiRecord/PSU, читаем статические параметры с eeprom
+      если нет, то пытаемся считать информацию с контроллера, */
+    /* если считать статические параметры (максимальную мощьность) не удается, но есть product_info
+       находим данную модель в списке поддерживаемых и берем максимальную мощность оттуда */
+    /* плюс определяем по какому протоколу работает блок pmbus/psmi */
+    ret = psu_find_manufacture_and_fullfill_psu_area (
+                  &fru,                                    
+                  unitInfoStruct->sManufacturer,
+                  unitInfoStruct->sModel,  
+                  IPMI_Find_n_Read_PSU_MultiArea( PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, unitInfoStruct->nPsuAddress, &fru, &multi_header, &psu_area ),
+                  &psu_area,
+                  &portcl_flag);
+          
+    if ( ret == FALSE ) {
+        __unit_conn_type[nUnitNumber-1] = UNKNOWN_UNIT ;
 	unitInfoStruct->bPmbusSupport = 0;
-	unitInfoStruct->bPsmiSupport = 0;
+	unitInfoStruct->bPsmiSupport = 0;      
+        return ret;
+    }
+    
+    naPsuAddress[nUnitNumber-1] = psu_adresses[j][nUnitNumber-1].maincontroller_adress;
+    __unit_conn_type[nUnitNumber-1] = portcl_flag ;    
+    if ( portcl_flag == PMBUS_UNIT) {
+        unitInfoStruct->bPmbusSupport = 1;
+    } else {
+        unitInfoStruct->bPsmiSupport = 0;
+    }
+          
+    unitInfoStruct->fPower  = (f32)psu_area.overall_capacity ;
+    unitInfoStruct->fLowIn  = (f32)psu_area.low_end_input_voltage_range_1 / 100. ;
+    unitInfoStruct->fHighIn = (f32)psu_area.high_end_input_voltage_range_1 / 100. ;
+    			            
+  } /* if (ret = ipmi_read_common_header( PMB_PERIPH_INTERFACE_STRUCT_PTR, psu_adresses[j][nUnitNumber-1].eeprom_adress, &fru ) ) */                   
+
+        
+  /* пробуем читать общие для блоков питания заголовки из адресов Emerson, 
+     если не получилось, читаем IPMI из адресов, специфических для Murata */	
+//  unitInfoStruct->nPsuAddress=naEmersonPsuAddress[nUnitNumber-1];
+//  unitInfoStruct->nFruAddress=naEmersonFruAddress[nUnitNumber-1];
+//  
+//  if( IPMI_Read_FRU_Headers( PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, &fru ) ) {
+//    
+//            ret = IPMI_Find_n_Read_PSU_MultiArea( PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, unitInfoStruct->nPsuAddress, &fru, &multi_header, &psu_area );
+//            naPsuAddress[nUnitNumber-1] = naEmersonPsuAddress[nUnitNumber-1];
+//  } else {
+//            unitInfoStruct->nPsuAddress=naMurataPsuAddress[nUnitNumber-1];
+//            unitInfoStruct->nFruAddress=naMurataFruAddress[nUnitNumber-1];
+//            
+//            if( ret = IPMI_Read_FRU_Headers( PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, &fru ) ) {
+//                  naPsuAddress[nUnitNumber-1] = naMurataPsuAddress[nUnitNumber-1];              
+//	          ret = IPMI_Find_n_Read_PSU_MultiArea( PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, unitInfoStruct->nPsuAddress, &fru, &multi_header, &psu_area );
+//            }
+//  } /* if( IPMI_Read_FRU_Headers( PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, &fru ) ) */
+//  
+//
+//  
+//            unitInfoStruct->sManufacturer[0] = 0 ;
+//    	    strncpy( unitInfoStruct->sManufacturer, (s8*)fru.product_info.manufacturer_name, fru.product_info.manufacturer_name_length );
+//      	    unitInfoStruct->sModel[0] = 0 ;
+//	    strncpy( unitInfoStruct->sModel, (s8*)fru.product_info.name, fru.product_info.name_length );
+//            unitInfoStruct->sModelId[0] = 0 ;
+//	    strncpy( unitInfoStruct->sModelId, (s8*)fru.product_info.serial_number, fru.product_info.serial_number_len );
+//	    unitInfoStruct->sUniqueSerial[0] = 0 ;
+//	    strncpy( unitInfoStruct->sUniqueSerial, (s8*)fru.product_info.asset_tag, fru.product_info.asset_tag_len );
+//
+//
+//        if( !ret ) {
+//            return ret ;
+//        }
+//
+//        unitInfoStruct->fPower = (f32)psu_area.overall_capacity ;
+//	unitInfoStruct->fLowIn = (f32)psu_area.low_end_input_voltage_range_1 / 100. ;
+//	unitInfoStruct->fHighIn = (f32)psu_area.high_end_input_voltage_range_1 / 100. ;
+	
+
+
+//	// убираем пробелы в начале
+//	while( (unitInfoStruct->sModel[0] == 0x20) && (unitInfoStruct->sModel[1] != 0) ){
+//		for( i = 1; (unitInfoStruct->sModel[i] != 0) && (i < PSU_MODEL_MAXLEN); ++i ){
+//			unitInfoStruct->sModel[i-1] = unitInfoStruct->sModel[i] ;
+//		}
+//	}
+//	// убираем последние пробелы
+//	// идём пока не встретим пробел или 0 или кончится длина массива
+//	for( i = 0; (unitInfoStruct->sModel[i] != 0x20) && (unitInfoStruct->sModel[i] != 0) && (i < PSU_MODEL_MAXLEN); ++i );
+//	if( (i < PSU_MODEL_MAXLEN) && (unitInfoStruct->sModel[i] == 0x20) ){
+//		unitInfoStruct->sModel[i] = 0 ;
+//	}
+  
+//	// ищем имя модели среди известных БП с PMBus
+//	for( i = 0; saPmbusUnits[i][0] != '\0'; i++ ){
+//		// вот наша модель
+//		if(strncmp( unitInfoStruct->sModel, saPmbusUnits[i], 13) == 0){
+//			// вместо измерения коэфф-тов ставим константы. Те, которые читаются дают какую-то ерунду. А эти числа стоят в даташите в примерах
+//			PSU_PMB_SetCoefficients( nUnitNumber, 1, 0, 2 );
+//
+//			__unit_conn_type[nUnitNumber-1] = PMBUS_UNIT ;
+//			unitInfoStruct->bPmbusSupport = 1;
+//			unitInfoStruct->bPsmiSupport = 0;
+//			
+//			// читаем мощность в FRU
+//			__PMB_ReadByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, 1, &internal_offset );
+//			__PMB_ReadByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, 2, &chassis_offset );
+//			__PMB_ReadByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, 3, &board_offset );
+//			__PMB_ReadByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, 4, &product_offset );
+//			__PMB_ReadByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, unitInfoStruct->nFruAddress, 5, &multirecord_offset );
+//
+//			return TRUE ;
+//		}
+//	}
+//	// ищем имя модели среди известных БП с PSMI
+//	for( i = 0; saPsmiUnits[i][0] != '\0'; i++ ){
+//		// вот наша модель
+//		if(strncmp( unitInfoStruct->sModel, saPsmiUnits[i], 13) == 0){
+//			__unit_conn_type[nUnitNumber-1] = PSMI_UNIT ;
+//			unitInfoStruct->bPmbusSupport = 0;
+//			unitInfoStruct->bPsmiSupport = 1;
+//
+//			return TRUE ;
+//		}
+//	}
+//
+//	// не нашли ни в одном массиве моделей -- неизвестный модуль
+//	__unit_conn_type[nUnitNumber-1] = UNKNOWN_UNIT ;
+//	unitInfoStruct->bPmbusSupport = 0;
+//	unitInfoStruct->bPsmiSupport = 0;
 	return FALSE;
 }
 
@@ -289,7 +543,7 @@ _BOOL PSU_WriteEEPROM( const u8 nUnitNumber, const s8* sManufacturer, const s8* 
 	multi_header.header_checksum = 0 ;
 
 	// переворачиваем все многобайтовые поля
-	#define SWAP_BYTES_16W(x)   x = (_WORD(_LSB(x), _MSB(x) ))
+//	#define SWAP_BYTES_16W(x)   x = (_WORD(_LSB(x), _MSB(x) ))
 	psu_area.overall_capacity = power ;
 	SWAP_BYTES_16W(	psu_area.overall_capacity );
 	psu_area.peak_va = 0 ;
@@ -564,7 +818,7 @@ static f32 __PSU_PMBus_ConverDirectVal( const u8 nUnitNumber, const s32 val )
 	return ((f32)val * pow( 10.0, -r ) - b) / m ;
 }
 
-static f32 __PSU_PMBus_ConvertLinearVal( u16 val )
+f32 __PSU_PMBus_ConvertLinearVal( u16 val )
 {
 	s16 n, y ;
 	f32 x ;
@@ -624,8 +878,22 @@ f32 PSU_PMBus_ReadTemp(u8 nUnitNumber )
 {
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 val;
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_TEMPERATURE_2, &val );
-
+//        f32 temp;
+        
+        OSTimeDly( 50 );
+	
+        __PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_TEMPERATURE_2, &val );
+        
+//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VOUT, &val );
+//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IOUT, &val );
+	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VIN, &val );
+//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IIN, &val );
+//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_FAN_SPEED_1, &val );
+//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSU_PMBUS_STATUS_REG, &val );
+//        temp = __PSU_PMBus_ConvertLinearVal(val);
+        
+//        return temp;
+        
 	return __PSU_PMBus_ConverDirectVal( nUnitNumber, (s32)val );
 }
 
@@ -687,9 +955,9 @@ _BOOL PSU_GetUnitMeasurements(u8 nUnitNumber, PSU_UnitMeasurements* tUnitMeasues
 {
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	assert( tUnitMeasuesStructure != NULL );
-
+        
 	if( __unit_conn_type[nUnitNumber-1] == PMBUS_UNIT ){
-		tUnitMeasuesStructure->fTemperature = PSU_PMBus_ReadTemp( nUnitNumber );
+		tUnitMeasuesStructure->fTemperature     = PSU_PMBus_ReadTemp( nUnitNumber );
 		tUnitMeasuesStructure->fVout 		= PSU_PMBus_ReadVout( nUnitNumber );
 		tUnitMeasuesStructure->fVin 		= PSU_PMBus_ReadVin( nUnitNumber );
 		tUnitMeasuesStructure->fIout 		= PSU_PMBus_ReadIout( nUnitNumber );
@@ -700,7 +968,7 @@ _BOOL PSU_GetUnitMeasurements(u8 nUnitNumber, PSU_UnitMeasurements* tUnitMeasues
 	} else if( __unit_conn_type[nUnitNumber-1] == PSMI_UNIT ){
 		PSU_PSMI_GetUnitStatus( nUnitNumber, &__psmi_unit_measues_buffer );
 
-		tUnitMeasuesStructure->fTemperature = __psmi_unit_measues_buffer.fTemperature[1] ;
+		tUnitMeasuesStructure->fTemperature     = __psmi_unit_measues_buffer.fTemperature[1] ;
 		tUnitMeasuesStructure->fVout 		= __psmi_unit_measues_buffer.fVout[0]; // 0 -- 12 В, 1 -- 3.3 В
 		tUnitMeasuesStructure->fVin 		= __psmi_unit_measues_buffer.fVin ;
 		tUnitMeasuesStructure->fIout 		= __psmi_unit_measues_buffer.fIout[0];

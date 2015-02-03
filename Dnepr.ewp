@@ -1833,6 +1833,9 @@
     <group>
       <name>inc</name>
       <file>
+        <name>$PROJ_DIR$\Sources\common_lib\cheksum.h</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\Sources\common_lib\crc.h</name>
       </file>
       <file>
@@ -1847,6 +1850,9 @@
     </group>
     <group>
       <name>src</name>
+      <file>
+        <name>$PROJ_DIR$\Sources\common_lib\cheksum.c</name>
+      </file>
       <file>
         <name>$PROJ_DIR$\Sources\common_lib\crc.c</name>
       </file>

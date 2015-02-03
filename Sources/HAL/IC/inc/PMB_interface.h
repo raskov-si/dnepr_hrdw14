@@ -23,6 +23,9 @@ struct __PMB_PeriphInterfaceTypedef{
 	_BOOL (*PMB_WriteMultipleBytes) (PMB_PeriphInterfaceTypedef* p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity);
 	_BOOL (*PMB_ReadMultipleWords)  (PMB_PeriphInterfaceTypedef* p, u8 mAddr, u8 mCmd, u16* anData, u8 nBytesQuantity);
 	_BOOL (*PMB_WriteMultipleWords) (PMB_PeriphInterfaceTypedef* p, u8 mAddr, u8 mCmd, u16* anData, u8 nBytesQuantity);
+	_BOOL (*PMB_GetAcknowledge)     (PMB_PeriphInterfaceTypedef* p, u8 mAddr);
+        
+	
 
 	void *bus_info ; //!< локальная информация для функций PMBus
 } ;

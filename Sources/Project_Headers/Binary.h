@@ -53,5 +53,8 @@
 //В обратную сторону - аналогично (это указатель на начало массива)
 #define __BYTE(x) ((unsigned char*)&(x))
 
+#define SWAP_BYTES_16W(x)   x = (_WORD(_LSB(x), _MSB(x) ))
+
+
 
 #endif

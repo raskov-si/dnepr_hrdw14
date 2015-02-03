@@ -10,6 +10,7 @@
 #include "Application/inc/T8_Dnepr_ProfileStorage.h"
 #include "Application/inc/T8_Dnepr_Profile_params.h"
 #include "HAL/BSP/inc/T8_Dnepr_BPEEPROM.h"
+#include "HAL/BSP/inc/T8_Dnepr_LED.h"
 #include "HAL/BSP/inc/T8_Dnepr_filesystem.h"
 
 #include <string.h>
@@ -25,15 +26,59 @@
 
 #include "pr_ch.h"
 
-static void ProfileStorage_SyncParam_thread( void *pdata );
-static _BOOL Dnepr_ProfileStorage_FS_Sync() ;
-static _BOOL Dnepr_ProfileStorage_eeprom_sync() ;
-static _BOOL write_colors( const u8* param_name, u8 failure_color, u8 degrade_color, u8 normal_color);
-static _BOOL read_colors( const u8* param_name, u8* failure_color, u8* degrade_color, u8* normal_color );
+static void   ProfileStorage_SyncParam_thread( void *pdata );
+static _BOOL  Dnepr_ProfileStorage_FS_Sync() ;
+static _BOOL  Dnepr_ProfileStorage_eeprom_sync() ;
+static _BOOL  write_colors( const u8* param_name, u8 failure_color, u8 degrade_color, u8 normal_color);
+static _BOOL  read_colors( const u8* param_name, u8* failure_color, u8* degrade_color, u8* normal_color );
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma data_alignment=4
 static OS_STK  taskSyncParamThr[2048];
+
+/*=============================================================================================================*/
+/*! \brief Проверяет контакт с eeprom в течении указанного времени.
+
+    \details Если контакт есть тут же совершается выход. 
+    \details В течении постоянного запроса статуса eeprom без положительного результата все светодиоды 
+    \details мигают красным
+    \sa  Dnepr_BPEEPROM_CheckPresent, T8_Dnepr_SetLedStatus
+*/
+/*=============================================================================================================*/
+void  dnepr_wait_eeprom_contact 
+(
+    u32  time           /*!< [in] время в тесении которого должен появиться контакт */
+)
+{     
+    _BOOL   ret = FALSE;
+    u32     time_counter = OSTimeGet() + 15*1144;
+    
+    
+    T8_Dnepr_LedStatusTypedef alarm_nocontact_leds = {
+	    				                (T8_Dnepr_LedTypedef){RED, TRUE},
+        						(T8_Dnepr_LedTypedef){RED, TRUE},
+	        					(T8_Dnepr_LedTypedef){RED, TRUE}
+                                                     };
+    T8_Dnepr_LedStatusTypedef init_leds =            {
+							(T8_Dnepr_LedTypedef){GREEN, TRUE},
+        						(T8_Dnepr_LedTypedef){GREEN, TRUE},
+	        					(T8_Dnepr_LedTypedef){GREEN, TRUE}
+                                                     };
+            
+
+          
+    do  {
+            ret = Dnepr_BPEEPROM_CheckPresent();
+            if ( ret != TRUE ) {
+                T8_Dnepr_SetLedStatus( &alarm_nocontact_leds );
+            }                  
+   } while ( (ret != TRUE) && (time_counter > OSTimeGet()) );
+                       
+   T8_Dnepr_SetLedStatus( &init_leds );            
+}
+
+
 
 void Dnepr_ProfileStorage_Init()
 {

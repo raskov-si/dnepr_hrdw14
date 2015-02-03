@@ -163,6 +163,15 @@ u8 Dnepr_I2C_Read_ARA()
 									return ret ;
 
 
+
+static _BOOL
+__PMB_GetAcknowledge(PMB_PeriphInterfaceTypedef *p, u8 mAddr )
+{
+	PMBUS_TRANSACTION_BEGIN();
+	ret = PMB_GetAcknowledge( mAddr );
+	PMBUS_TRANSACTION_END() ;
+}
+
 static _BOOL
 __PMB_ReadByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult )
 {
@@ -372,7 +381,7 @@ __I2C_WriteMultipleWords( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16*
 PMB_PeriphInterfaceTypedef name =												\
 { 	__PMB_ReadByte, __PMB_ReadWord, __PMB_WriteByte, __PMB_WriteWord, 			\
 	__PMB_SendCommand, __PMB_ReadMultipleBytes, __PMB_WriteMultipleBytes,		\
-	__PMB_ReadMultipleWords, __PMB_WriteMultipleWords, bus_info }
+	__PMB_ReadMultipleWords, __PMB_WriteMultipleWords, __PMB_GetAcknowledge, bus_info }
 
 Dnepr_I2C_driver_internal_info __pmb_businfo_ext = { I2C_DNEPR_PMBUS_EXT, FALSE, DNEPR_I2C_NOSLOT };
 DEFINE_PMBus_Struct( __pmb_ext, &__pmb_businfo_ext );

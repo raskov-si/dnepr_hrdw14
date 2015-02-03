@@ -82,6 +82,9 @@ u32 i2c_wait_while_bus_busy();
 
 void i2c_GPIO_reset(void);
 
+//test
+u32 I2CgetAcknowledge(u8 id);
+
 extern void* I2CRESOURCE_ID;
 
 #endif /* I2C_H_ */

@@ -21,6 +21,11 @@ _BOOL PMB_DeInitPorts(void){
 	return 1;
 }
 
+
+_BOOL PMB_GetAcknowledge(unsigned char mAddr) {	
+	return ( I2CgetAcknowledge( PMB_ADDR(mAddr) ) == OK ) ? TRUE : FALSE ;
+}
+
 _BOOL PMB_SendCommand(unsigned char mAddr, unsigned char mCmd){	
 	return ( I2CwriteByte(PMB_ADDR(mAddr), mCmd)==OK ) ? 1 : 0 ;
 }
@@ -73,3 +78,4 @@ _BOOL PMB_WriteMultipleBytes(unsigned char mAddr, unsigned char mCmd, unsigned c
 _BOOL PMB_WriteMultipleWords(unsigned char mAddr, unsigned char mCmd, unsigned short int* anData, unsigned char nWordsQuantity){	
 	return ( I2CWriteShortLHArray(PMB_ADDR(mAddr), mCmd, anData, nWordsQuantity)==OK ) ? 1 : 0 ;
 }
+

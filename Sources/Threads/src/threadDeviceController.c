@@ -205,21 +205,21 @@ void taskDeviceController(void *pdata)
 	memcpy( &prev_psu_status, &cur_psu_status, sizeof(T8_Dnepr_PsStatusTypedef) );
 	Dnepr_DControl_ResetMaxPower(); // сразу при включении обновляем статусы питания
 	
-	__last_pmbus_alarm = llUptime ;
+	__last_pmbus_alarm = llUptime ;        
 
 	while(TRUE){
-        qCurMessage = (task_message_t*)OSQPend( __qRcvQueue, PMBUS_ALARM_TIMEOUT, &return_code );
-        assert( (return_code == OS_ERR_NONE) || (return_code == OS_ERR_TIMEOUT) );
-        // если прошел таймаут и необходимо перечитать PSU -- посылаем сами себе команду
-        if( return_code == OS_ERR_TIMEOUT ){
+          qCurMessage = (task_message_t*)OSQPend( __qRcvQueue, PMBUS_ALARM_TIMEOUT, &return_code );
+          assert( (return_code == OS_ERR_NONE) || (return_code == OS_ERR_TIMEOUT) );
+          // если прошел таймаут и необходимо перечитать PSU -- посылаем сами себе команду
+          if( return_code == OS_ERR_TIMEOUT ){
         	// раз в 5 секунд реагируем на alarm
-        	if( Dnepr_EdgePort_is_IRQ4_active() &&
+          	if( Dnepr_EdgePort_is_IRQ4_active() &&
         		((llUptime - __last_pmbus_alarm) > PMBUS_ALARM_TIMEOUT) ){
         		__last_pmbus_alarm = llUptime ;
         		__pmbus_alarm_handler() ;
         	}
         	continue ;
-        }
+        } /* while(TRUE) */
 
         switch( qCurMessage->message_type ){
         	case PSU_VALUES:
@@ -229,12 +229,14 @@ void taskDeviceController(void *pdata)
 				pPSUInfo2 = Dnepr_Backplane_GetPSU_Info( 1 );
 				__fPowerLimit1 = pPSUInfo1 ? pPSUInfo1->fPower : 0.0 ;
 				__fPowerLimit2 = pPSUInfo2 ? pPSUInfo2->fPower : 0.0 ;
-        		// если не удаётся прочитать мощность -- перечитываем через паузу
+
+                              // если не удаётся прочитать мощность -- перечитываем через паузу                                
+                                /* если максимальная мощьность не считывается то лимиты делаем максимальными !! */
 				if( (__fPowerLimit1 < 10.) || (__fPowerLimit1 > 3000.) ||
 					(!Dnepr_Backplane_GetPSU_Status()->tPs1.bPowerGood) ){
 					__fPowerLimit1 = FLT_MAX ;
 				}
-        		if( (__fPowerLimit2 < 10.) || (__fPowerLimit2 > 3000.) ||
+                		if( (__fPowerLimit2 < 10.) || (__fPowerLimit2 > 3000.) ||
         			(!Dnepr_Backplane_GetPSU_Status()->tPs2.bPowerGood) ){
 					__fPowerLimit2= FLT_MAX ;
 				}
@@ -271,17 +273,20 @@ void taskDeviceController(void *pdata)
 	        	// Настраиваем вентиляторы.
 	        	__set_fans() ;
         	break ;
+                
         	// вызывается при необходимости провести включение
         	case INIT_HOTSWAPS:
 	        	__slot_power_onoff();
 	        	__set_fans() ;
         	break ;
+                
         	// вызывается при необходимости включить устройства, которые не были включены
         	// из-за недостатка мощности
         	case REINIT_ONOFF:
         		__slot_power_onoff_init() ;
         		__set_fans() ;
         	break ;
+                
         	// прерывание от PMBus alarm
         	// если в последние PMBUS_ALARM_TIMEOUT, его не было -- реагируем.
         	case PMBUS_ALARM :
@@ -297,6 +302,7 @@ void taskDeviceController(void *pdata)
         			__pmbus_alarm_handler() ;
         		}
         	break ;
+                
         	case PRESENT_INTERRUPT :
 				// берём предыдущие present'ы
 				memcpy( &prev_presents, I2C_DNEPR_GetPresentDevices(), sizeof(I2C_DNEPR_PresentDevicesTypedef) );
@@ -333,15 +339,18 @@ void taskDeviceController(void *pdata)
 				}
 				memcpy( &prev_psu_status, &cur_psu_status, sizeof(T8_Dnepr_PsStatusTypedef) );
         	break ;
+                
         	case SFP_INTERRUPT :
 		    	Dnepr_Refresh_SFP_Presents() ;
         	break ;
+                
         	// в профиле поменялось разрешение запуска слота
         	case POWER_ALLOW :
         		if( I2C_DNEPR_GetPresentDevices()->bSlotPresent[qCurMessage->slot_num_2_write] ){
 	        		__slot_power_dev_plug( qCurMessage->slot_num_2_write, TRUE );
 	        	}
         	break ;
+                
         	// В профиле поменяли настройки регулированием вентиляторов.
         	case FAN_SETTINGS_CHANGED :
         		__set_fans() ;

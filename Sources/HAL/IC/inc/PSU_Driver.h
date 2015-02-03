@@ -54,45 +54,66 @@
 #define PSU_STATUS_NONE_OF_THE_ABOVE B16(00000000, 00000001)
 
 
-#define PSU_CHANNEL_ERROR 			ERROR
+#define PSU_CHANNEL_ERROR 	      ERROR
 
-#define PSU_PMBUS_STATUS_REG		0xEF
+#define PSU_PMBUS_STATUS_REG	      0xEF
+
+#define PSU_MFR_MAXLEN                32
+#define PSU_MODEL_MAXLEN              32
+#define PSU_MODEL_ID_MAXLEN           32
+#define PSU_UNIQUE_SERIAL_MAXLEN      32
 
 
-/*! Emerson (Astec) PSU I2C addresses */
-enum PMB_EMERSON_PSU_ADDR{
-	PMB_EMERSON_PSU_ADDR_00 = 0x78,  /*!< PSU address if A1=Low, A0=Low */
-	PMB_EMERSON_PSU_ADDR_01 = 0x7A,  /*!< PSU address if A1=Low, A0=High */
-	PMB_EMERSON_PSU_ADDR_10 = 0x7C,  /*!< PSU address if A1=High, A0=Low */
-	PMB_EMERSON_PSU_ADDR_11 = 0x7E   /*!< PSU address if A1=High, A0=High */
+/*! адреса Main Controller I2C (динамические параметры) для Emerson (Astec) PSU  */
+enum PMB_PSU_ADDR1{
+	PMB_PSU_ADDR1_00 = 0x78,  /*!< (0x3C << 1) PSU адрес A1=Low, A0=Low */
+	PMB_PSU_ADDR1_01 = 0x7A,  /*!< (0x3D << 1) PSU адрес A1=Low, A0=High */
+	PMB_PSU_ADDR1_10 = 0x7C,  /*!< (0x3E << 1) PSU адрес A1=High, A0=Low */
+	PMB_PSU_ADDR1_11 = 0x7E   /*!< (0x3F << 1) PSU адрес A1=High, A0=High */
 };
 
-/*! Emerson (Astec) PSU's EEPROM I2C addresses */
-enum PMB_EMERSON_FRU_ADDR{
-	PMB_EMERSON_FRU_ADDR_00 = 0xA9,  //!< FRU address if A1=Low, A0=Low
-	PMB_EMERSON_FRU_ADDR_01 = 0xAB,  //!< FRU address if A1=Low, A0=High
-	PMB_EMERSON_FRU_ADDR_10 = 0xAD,  //!< FRU address if A1=High, A0=Low
-	PMB_EMERSON_FRU_ADDR_11 = 0xAF   //!< FRU address if A1=High, A0=High
+/*! адреса Main Controller I2C (динамические параметры) для muRata мощьностью более 1000W  */
+enum PMB_PSU_ADDR2{
+	PMB_PSU_ADDR2_00 = 0xB8,  /*!< (0x5C << 1) PSU адрес A1=Low, A0=Low */
+	PMB_PSU_ADDR2_01 = 0xBA,  /*!< (0x5D << 1) PSU адрес A1=Low, A0=High */
+	PMB_PSU_ADDR2_10 = 0xBC,  /*!< (0x5E << 1) PSU адрес A1=High, A0=Low */
+	PMB_PSU_ADDR2_11 = 0xBE   /*!< (0x5F << 1) PSU адрес A1=High, A0=High */
 };
 
-enum PMB_MURATA_ADDR{
-	PMB_MURATA_PSU_ADDR_00 = 0xB1,  /*!< PSU address if A1=Low, A0=Low */
-	PMB_MURATA_PSU_ADDR_01 = 0xB3,  /*!< PSU address if A1=Low, A0=High */
-	PMB_MURATA_PSU_ADDR_10 = 0xB5,  /*!< PSU address if A1=High, A0=Low */
-	PMB_MURATA_PSU_ADDR_11 = 0xB7   /*!< PSU address if A1=High, A0=High */
+/*! адреса Main Controller I2C (динамические параметры) для muRata мощьностью менее 1000W   */
+enum PMB_PSU_ADDR3{
+	PMB_PSU_ADDR3_00 = 0xB0,  /*!< (0x58 << 1) PSU адрес A1=Low, A0=Low */
+	PMB_PSU_ADDR3_01 = 0xB2,  /*!< (0x59 << 1) PSU адрес A1=Low, A0=High */
+	PMB_PSU_ADDR3_10 = 0xB4,  /*!< (0x5A << 1) PSU адрес A1=High, A0=Low */
+	PMB_PSU_ADDR3_11 = 0xB6   /*!< (0x5B << 1) PSU адрес A1=High, A0=High */
 };
 
-enum PMB_MURATA_FRU_ADDR{
-	PMB_MURATA_FRU_ADDR_00 = 0xA1,  //!< FRU address if A1=Low, A0=Low
-	PMB_MURATA_FRU_ADDR_01 = 0xA3,  //!< FRU address if A1=Low, A0=High
-	PMB_MURATA_FRU_ADDR_10 = 0xA5,  //!< FRU address if A1=High, A0=Low
-	PMB_MURATA_FRU_ADDR_11 = 0xA7   //!< FRU address if A1=High, A0=High
+
+/*! адреса PSU's EEPROM I2C (статические параметры) для Emerson (Astec) PSU, для muRata мощьностью более 1000W  */
+enum PMB_FRU_ADDR1{
+	PMB_FRU_ADDR1_00 = 0xA8,  /*!< (0x54 << 1) FRU адрес A1=Low, A0=Low   */
+	PMB_FRU_ADDR1_01 = 0xAA,  /*!< (0x55 << 1) FRU адрес A1=Low, A0=High  */
+	PMB_FRU_ADDR1_10 = 0xAC,  /*!< (0x56 << 1) FRU адрес A1=High, A0=Low  */
+	PMB_FRU_ADDR1_11 = 0xAE   /*!< (0x57 << 1) FRU адрес A1=High, A0=High */
 };
 
-#define PSU_MFR_MAXLEN 32
-#define PSU_MODEL_MAXLEN 32
-#define PSU_MODEL_ID_MAXLEN 32
-#define PSU_UNIQUE_SERIAL_MAXLEN	32
+
+/*! адреса PSU's EEPROM I2C (статические параметры)  для muRata мощьностью менее 1000W  */
+enum PMB_FRU_ADDR2{
+	PMB_FRU_ADDR2_00 = 0xA0,  /*!< (0x50 << 1) FRU адрес A1=Low, A0=Low   */
+	PMB_FRU_ADDR2_01 = 0xA2,  /*!< (0x51 << 1) FRU адрес A1=Low, A0=High  */
+	PMB_FRU_ADDR2_10 = 0xA4,  /*!< (0x52 << 1) FRU адрес A1=High, A0=Low  */
+	PMB_FRU_ADDR2_11 = 0xA6   /*!< (0x53 << 1) FRU адрес A1=High, A0=High */
+};
+
+
+
+
+
+
+
+
+
 
 /*!
 \defgroup PSU_Driver
@@ -118,6 +139,7 @@ typedef struct __PSU_UnitInfoTypedef{
 	u8 bPmbusSupport :1;                			/*!< Whether supports PMBus interface */
 	u8 bPsmiSupport  :1;                			/*!< Whether supports PSMI interface */
 }PSU_UnitInfoTypedef;
+
 
 //! \brief текущие измерения из БП безотносительно типа связи с ним (PSMI или PMBUS)
 typedef struct __PSU_UnitMeasurements 

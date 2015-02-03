@@ -23,6 +23,7 @@ typedef enum _I2C_PINS{SCL=0, SDA=1} I2C_PIN;
 
 ////////////////////////////////////////////////////////////////////
 #define I2C_ERROR_EXIT(x) { \
+  	MCF_I2C_I2CR &= ~MCF_I2C_I2CR_MSTA; \
 	I2Cinit() ; \
 	x \
 	return flag; \
@@ -427,6 +428,44 @@ u32 I2CwriteByte(u8 id, u8 data) {
 
 	return flag;
 }
+
+u32 I2CgetAcknowledge(u8 id)
+{
+	u32 flag=ERROR;
+        
+	id = id << 1;
+//	ENTER_SAVE_SECTION
+	if (i2c_wait_while_bus_busy() == ERROR) {
+		I2Cinit();
+		if (MCF_I2C_I2SR & MCF_I2C_I2SR_IBB) {
+//			EXIT_SAVE_SECTION
+			return ERROR;
+		}
+	}
+        
+// setting in Tx mode
+	MCF_I2C_I2CR |= MCF_I2C_I2CR_MTX;
+// generates start condition
+	MCF_I2C_I2CR |= MCF_I2C_I2CR_MSTA;
+	MCF_I2C_I2SR = 0 ;
+        MCF_I2C_I2DR = id | 0x01;					/* device id to read */
+	flag = i2c_wait_byte_transfer(WAIT_ACK);
+                
+	if (flag == ERROR)
+		I2C_ERROR_EXIT()
+
+/* generates stop condition */
+	MCF_I2C_I2CR &= ~MCF_I2C_I2CR_MSTA;
+
+	// ждём стопового сигнала
+	i2c_wait_while_bus_busy();
+
+	return flag;                  
+}
+
+
+
+
 
 
 u32 I2CWriteShortLH(u8 id, u8 address, u16 data){
