@@ -1189,7 +1189,7 @@
         </option>
         <option>
           <name>CCDiagSuppress</name>
-          <state></state>
+          <state>Go005, Pe177</state>
         </option>
         <option>
           <name>CCDiagRemark</name>
@@ -1940,7 +1940,7 @@
           <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_SlotEEPROM.h</name>
         </file>
         <file>
-          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_UART_Profile.h</name>
+          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_Uart_Profile.h</name>
         </file>
       </group>
       <group>

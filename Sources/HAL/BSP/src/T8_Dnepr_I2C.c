@@ -139,11 +139,11 @@ u8 Dnepr_I2C_Read_ARA()
 									assert( p );																				\
 									if( !((Dnepr_I2C_driver_internal_info*)(p->bus_info))->dont_block ){						\
 										T8_Dnepr_TS_I2C_Lock() ;																\
-									}																							\
+									} 																							\
 									/* надо переключить SELECT */ 																\
 									if( slot_num != DNEPR_I2C_NOSLOT ){															\
 										for( i = 0; i < 5; i++ ){																\
-											if( Dnepr_Select( slot_num, &swtch ) ){												\
+											if( Dnepr_Select( (Dnepr_Select_t)slot_num, &swtch ) ){												\
 												break ;																			\
 											}																					\
 										}																						\
@@ -151,9 +151,9 @@ u8 Dnepr_I2C_Read_ARA()
 										if( swtch ){																			\
 											OSTimeDly( 1 );																		\
 										}																						\
-									}																							\
+									}																						\
 									if( I2C_Dnepr_CurrentBus() != ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->bus_channel )\
-										I2C_DNEPR_SelectBus( ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->bus_channel );
+										I2C_DNEPR_SelectBus( ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->bus_channel ); 
 
 
 #define PMBUS_TRANSACTION_END()																									\
@@ -258,7 +258,7 @@ __PMB_WriteMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* 
 	}																													\
 	if( slot_num != DNEPR_I2C_NOSLOT ){																					\
 		for( i = 0; i < 5; i++ ){																\
-			if( Dnepr_Select( slot_num, &swtch ) ){												\
+			if( Dnepr_Select( (Dnepr_Select_t)slot_num, &swtch ) ){												\
 				break ;																			\
 			}																					\
 		}																						\
@@ -449,7 +449,7 @@ I2C_PeriphInterfaceTypedef *Dnepr_I2C_Get_I2C_BP_Driver( const u8 nSlot )
 	return &__i2c_bp ;
 }
 
-Dnepr_I2C_driver_internal_info __i2c_businfo_9544A = { 0, TRUE, DNEPR_I2C_NOSLOT };
+Dnepr_I2C_driver_internal_info __i2c_businfo_9544A = { I2C_DNEPR_NONE, TRUE, DNEPR_I2C_NOSLOT };
 DEFINE_I2C_Struct( __i2c_9544A, &__i2c_businfo_9544A );
 I2C_PeriphInterfaceTypedef *Dnepr_I2C_Get_I2C_9544A_Driver()
 {	return &__i2c_9544A ; }

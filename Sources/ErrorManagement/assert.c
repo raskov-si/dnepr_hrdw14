@@ -51,7 +51,9 @@ void ASSERT_FailedAssertionHandler(const char* sCondition, const char* sFile, co
 	ASSERT_SendMessage(&__tAssertConditionParameters);	
 	//Going to loop/handler/...
 	ASSERT_Idle();
-	
+        
+        STOP_ATOMIC() ;
+
 	return;
 }
 
@@ -87,11 +89,12 @@ void ASSERT_SendMessage(ASSERT_ConditionParamsTypedef* tConditionParamsStructure
 	/* Loop inside function for debug cases */
 	#ifdef ASSERT_MESSAGE_DEBUG_MODE
 	while(1);
-	#endif //ASSERT_MESSAGE_DEBUG_MODE
+        #else //ASSERT_MESSAGE_DEBUG_MODE
 	
 	/* After all messages are sent, idle loop. */
 	ASSERT_Idle(); 
 	return;
+	#endif //ASSERT_MESSAGE_DEBUG_MODE
 }
 
 void ASSERT_Idle(void){

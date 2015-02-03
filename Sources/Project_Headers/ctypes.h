@@ -13,6 +13,9 @@
 #undef _MSL_NO_MATH_LIB
 */
 
+#include    <stdint.h>
+#include    <ysizet.h>
+
 //#define OK 1
 //#define ERROR 0xFFFFFFFF
 typedef unsigned char	 		u8;
@@ -30,6 +33,8 @@ typedef volatile long			vs32;
 typedef unsigned long long  u64;
 typedef float				f32;
 typedef double				f64;
+//typedef	u32			        size_t;
+
 
 #ifndef _BOOL
 #define _BOOL unsigned char

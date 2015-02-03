@@ -141,7 +141,6 @@ u32 SYSGetParamFlag(u32 p_id) {
 }
 u32 SYSGetParamValue(u32 p_id,  void* buff, u32 buff_len) {
 	u32 p_flag,p_type;
-	u32 flag=ERROR;
 	if ((p_id >= g_paramsQuantity) || (param_ix[p_id].parent == NULL ))
 		return ERROR;
 
@@ -719,7 +718,6 @@ void ta_involver();
 
 void SYS_Init() {
 
-	u32 i=0;
 	PARAM* param_header;
 
 	void* p = (void*)(&pT0);
@@ -770,12 +768,11 @@ u32 SYS_convert_sect_number(u32 sect_n) {
 		case 200: return 18;
 		default:  return ERROR;
 	}
-	return ERROR;
 }
 
 u32 SYS_profstat_add(PARAM* par) {
 	u32 i;
-	u8 sect_ix;
+	u32 sect_ix;
 	prof_info.lines_quantity++;
 	sect_ix = SYS_convert_sect_number(par->par_type);
 	if (sect_ix != ERROR) {
@@ -797,7 +794,6 @@ u32 SYS_profstat_add(PARAM* par) {
 
 u32 SYSSetIndexBySN(u32 sn) {
 	u32 start_id;
-	u32 p_id=ERROR;
 	PARAM* p;
 //*****BLOCK OF INITIAL CHECKS*****
 	if (sn == 0)

@@ -96,7 +96,7 @@
 #define MV88E6095_MGMT_REG				0x05
 #define RSVD2CPU						0x08
 
-#define MV88E6095_PCS_CTRL_REG			0x01
+//#define MV88E6095_PCS_CTRL_REG			0x01
 #define NOT_FORCE_SPD	0x03
 #define FORCE_LINK		0x10
 #define LINK_FORCED_VALUE(x)	((1&(x))<<5)

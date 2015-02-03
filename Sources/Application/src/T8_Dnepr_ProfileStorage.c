@@ -441,8 +441,8 @@ static _BOOL write_colors( const u8* param_name, u8 failure_color, u8 degrade_co
 	u8 col_name[64];
 	col_name[ 0 ] = 0 ;
 	u8 cols[3] = { failure_color, degrade_color, normal_color };
-	strcpy( col_name, param_name );
-	strncat( col_name, "_col", sizeof(col_name) );
+	strcpy( (char*)col_name, (const char*)param_name );
+	strncat( (char*)col_name, "_col", sizeof(col_name) );
 	return Dnepr_filesystem_Write( col_name, cols, sizeof( cols ));
 }
 
@@ -451,10 +451,9 @@ static _BOOL read_colors( const u8* param_name, u8* failure_color, u8* degrade_c
 	u8 col_name[64];
 	col_name[ 0 ] = 0 ;
 	u8 cols[3] ;
-	_BOOL ret ;
 	size_t cols_len ;
-	strcpy( col_name, param_name );
-	strncat( col_name, "_col", sizeof(col_name) );
+	strcpy( (char*)col_name, (const char*)param_name );
+	strncat( (char*)col_name, "_col", sizeof(col_name) );
 	if( !Dnepr_filesystem_Read( col_name, cols, &cols_len, sizeof(cols) ) ){
 		return FALSE ;
 	}

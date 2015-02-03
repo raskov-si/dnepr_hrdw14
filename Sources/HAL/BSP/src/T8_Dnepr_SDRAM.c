@@ -9,7 +9,7 @@
 #include "uCOS_II.H"
 
 static _BOOL __status = FALSE ;
-static size_t __check_time = 0 ;
+static volatile unsigned long long __check_time = 0 ;
 
 void Dnepr_SDRAM_init( u32 sdram_address, u32 system_clock_khz )
 {

@@ -28,7 +28,7 @@ typedef enum {
 	CMD_0x77=0x77
 } SECT_READ_CMD_SUBTYPE;
 
-static s8* profile_string = NULL ;
+//static s8* profile_string = NULL ;
 
 extern const u8 langpack_header[] ;
 const u8* profile_32Kblock = langpack_header ;
@@ -211,8 +211,8 @@ ReturnStatus parameter_write( const s8* buf_str, s8* const answer_ ) {
 	u32 temp, value_length;
 	u16 crc1, crc2 = 0;
 	u8 semi;
-	u8 device_addr ;
-	device_addr = Dnepr_Profile_Address();
+//	u8 device_addr ;
+//	device_addr = Dnepr_Profile_Address();
 // Check CRC
 	for (i=0, semi=0, value_length=0; buf_str[i] && (semi < 3); i++) {
 		if (buf_str[i] == ';') {

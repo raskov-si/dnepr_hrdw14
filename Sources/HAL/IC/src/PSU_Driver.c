@@ -316,7 +316,7 @@ _BOOL PSU_Setup
       unitInfoStruct->sManufacturer[0] = 0 ;
       strncpy( unitInfoStruct->sManufacturer, (s8*)fru.product_info.manufacturer_name, fru.product_info.manufacturer_name_length );
       unitInfoStruct->sModel[0] = 0 ;
-      strncpy( unitInfoStruct->sModel, fru.product_info.model, fru.product_info.model_length );	
+      strncpy( unitInfoStruct->sModel, (const char*)fru.product_info.model, fru.product_info.model_length );	
       unitInfoStruct->sModelId[0] = 0 ;
       strncpy( unitInfoStruct->sModelId, (s8*)fru.product_info.name, fru.product_info.name_length );        
       unitInfoStruct->sUniqueSerial[0] = 0 ;

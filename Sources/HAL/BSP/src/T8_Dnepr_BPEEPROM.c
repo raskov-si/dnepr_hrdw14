@@ -47,7 +47,8 @@ _BOOL Dnepr_BPEEPROM_CheckPresent()
 	return FALSE ;
     } else {
 	__eeprom_present = TRUE ;
-    }  
+    }
+    return __eeprom_present;
 }
 
 

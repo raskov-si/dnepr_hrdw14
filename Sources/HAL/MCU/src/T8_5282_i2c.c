@@ -284,7 +284,7 @@ u32 I2C_receiveByte(u8 id, u8 address, u8* data) {
 u32 I2CReceiveArray(u8 id, u32 start_address, I2C_ADDRESS_LENGTH address_len, 
 		u8* buff, u32 data_len, I2C_DATA_INTEGRITY integrity) {
 	u32 flag=ERROR;
-	u16 tmp_data;
+	volatile u16 tmp_data;
 	s16 i;
 	/*if (data_len < 2) {
 		return I2C_receiveByte(id, start_address, buff);

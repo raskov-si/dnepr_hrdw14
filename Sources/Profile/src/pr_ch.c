@@ -84,12 +84,12 @@ u32 PROFILE_IPADDRValueUpdate(PARAM_INDEX* p_ix, void* buff) {
 	STORAGE_ATOMIC() ; // нужен для MEMCPY
 	u32 flag=ERROR;
 	u32 i, str_len;
-	s8 ipaddr_str[IPADDR_LEN];
+	u8 ipaddr_str[IPADDR_LEN];
 	void* write_addr;
 	if (p_ix != NULL) {
 		str_len = strlen(buff) + 1;
 		if (IPADDR_LEN >= str_len) {
-			strcpy(ipaddr_str, buff);
+			strcpy((char*)ipaddr_str, buff);
 			for (i=0; ipaddr_str[i]; i++) {
 				if (ipaddr_str[i] == ';')
 					ipaddr_str[i] = '.';
@@ -104,6 +104,7 @@ u32 PROFILE_IPADDRValueUpdate(PARAM_INDEX* p_ix, void* buff) {
 	return flag;
 #undef IPADDR_LEN
 }
+
 u32 PROFILE_CHARLINEValueUpdate(PARAM_INDEX* p_ix, void* buff) {
 	STORAGE_ATOMIC() ; // нужен для MEMCPY
 	u32 flag=ERROR;

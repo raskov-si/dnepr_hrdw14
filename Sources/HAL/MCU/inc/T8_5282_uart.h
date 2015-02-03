@@ -12,7 +12,7 @@
 #include "ErrorManagement\status_codes.h"
 
 #define TERMINAL_UART  0
-#define BACKPLANE_UART 	2 // TODO: â PUSK4 ä.á. 1
+//#define BACKPLANE_UART 	2 // TODO: â PUSK4 ä.á. 1
 
 
 /********************************************************************/

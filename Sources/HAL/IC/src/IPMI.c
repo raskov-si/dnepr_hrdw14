@@ -391,7 +391,6 @@ _BOOL IPMI_Write_FRU( PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, IPMI_FRU* f
 					IPMI_MultiRecordHeader* multi_header, IPMI_MultiRecord_PowerSupplyInformation *psu_area )
 {
 	size_t i_offset = IPMI_COMMONHEADER_ADDR ;
-	size_t i ;
 	_BOOL ret = TRUE ;
 	assert( pmb_bus );
 	assert( fru );

@@ -246,7 +246,7 @@ void Dnepr_Fans_Init( )
 	_BOOL retry = TRUE ;
 	u32 retry_times = 10 ;
 	
-	MAX31785_SetMfrMode( MAX31785_MFR_ALERT_ENABLED );
+	MAX31785_SetMfrMode( (u8)MAX31785_MFR_ALERT_ENABLED );
 	do {
 		for( i = 0; i < 6; i++ ){
 			retry &= MAX31785_FanRampOnFault( i, 0 );

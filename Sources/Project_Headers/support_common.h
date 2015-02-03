@@ -8,13 +8,14 @@
 #ifndef _SUPPORT_COMMON_H_
 #define _SUPPORT_COMMON_H_
 
+/* Common standard types */
+#include "ctypes.h"
+
+
 /*
  * Include the derivative header files
  */
 #include "io5282.h"
-
-/* Common standard types */
-#include "ctypes.h"
 
 /* Binary macros */
 #include "Binary.h"
@@ -37,7 +38,6 @@
 #define round(x)	((x >= 0) ? (int)(x + 0.5) : (int)(x - 0.5))
 
 #define ADDRESS			u32
-typedef	u32			size_t;
 #define INSTRUCTION		u16
 #define ILLEGAL			0x4AFC
 #define CPU_WORD_SIZE		16
