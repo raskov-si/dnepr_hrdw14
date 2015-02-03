@@ -1,7 +1,7 @@
 s8  val_Header2[23] = "3.0;dnepr1;dnepra;2;5";
 s8  val_CMHwNumber[33] = "1.4";
 s8  val_SwNumber[33] = "0";
-s8  val_CMSwNumber[33] = "3.3.19";
+s8  val_CMSwNumber[33] = "3.3.20";
 s8  val_CMSrNumber[33] = " ";
 s8  val_CMPtNumber[33] = " ";
 s8  val_Destination[65] = " ";
@@ -146,6 +146,8 @@ u32 val_CMSFP1TxEnable = 0;
 u32 val_CMSFP2TxEnable = 0;
 u32 val_CMSFP1ThrReset = 1;
 u32 val_CMSFP2ThrReset = 1;
+u32 val_CMSFP1AutoNeg = 1;
+u32 val_CMSFP2AutoNeg = 1;
 u32 val_VFormatEEPROM = 0;
 u32 val_FUFanSpeedSet = 50;
 u32 val_FUFanMode = 0;

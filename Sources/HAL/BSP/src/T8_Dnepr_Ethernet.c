@@ -51,3 +51,40 @@ _err:
 	return ERROR ;
 }
 
+/*=============================================================================================================*/
+/*!  \brief ”правл€ем режимом автоопределени€ типа сети auto-negotiation дл€ SFP
+     \details ќтключаем или включаем режим в зависимости от флага mode_flag дл€ конкретного порта switch'а 
+     \details MV88E6095 PORT9 дл€ SFP1, PORT10 дл€ SFP2
+     \details ѕо умолчанию после сброса данный режим включен
+
+     \sa MV88E6095_multichip_smi_read, cmsfpautoneg_update 
+*/
+/*=============================================================================================================*/
+void dnepr_ethernet_sfpport_autoneg_mode
+( 
+    u8      sfp_num,                        /*!< [in] номер sfp 1,2                                   */
+    u8      mode_flag                       /*!< [in] включить или выключить режим  0 - выкл, 1 - вкл */
+)
+{  
+    u8      port;
+    u16     temp_reg;
+    
+    switch (sfp_num)
+    {
+    case 1:     port = MV88E6095_PORT10;     break;  /* sfp1 - нижн€€  L port10  */
+    case 2:     port = MV88E6095_PORT9;      break;  /* sfp2 - верхн€€ U port9   */
+    default:    return;
+    }
+  
+    MV88E6095_multichip_smi_read( MV88E6095_2_CHIPADDR, port, MV88E6095_PCS_CTRL_REG, &temp_reg  );  
+    if ( mode_flag == 0 )    {
+        /* отключаем режим auto-negotiation */
+        temp_reg &= ~(MV88E6095_PCS_CTRL_REG_FORCE_SPEED_MASK | MV88E6095_PCS_CTRL_REG_AUTONEG_ENABLE);        
+        temp_reg |= MV88E6095_PCS_CTRL_REG_FORCE_SPEED(MV88E6095_PCS_CTRL_REG_FORCE_SPEED_VALUE_1000B);
+    } else {
+        /* включаем режим auto-negotiation */
+        temp_reg &= ~(MV88E6095_PCS_CTRL_REG_FORCE_SPEED_MASK);        
+        temp_reg |= MV88E6095_PCS_CTRL_REG_FORCE_SPEED(MV88E6095_PCS_CTRL_REG_FORCE_SPEED_VALUE_AUTO) | MV88E6095_PCS_CTRL_REG_AUTONEG_ENABLE ;
+    }
+    MV88E6095_multichip_smi_write( MV88E6095_2_CHIPADDR, port, MV88E6095_PCS_CTRL_REG, temp_reg  );
+}

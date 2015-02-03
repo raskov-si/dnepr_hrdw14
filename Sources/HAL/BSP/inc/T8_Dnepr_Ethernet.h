@@ -13,3 +13,8 @@
 #include "support_common.h"
 
 u32 Dnepr_Ethernet_Init( const u8* maddr );
+void dnepr_ethernet_sfpport_autoneg_mode
+( 
+    u8      sfp_num,                        /*!< [in] номер sfp 1,2                                   */
+    u8      mode_flag                       /*!< [in] включить или выключить режим  0 - выкл, 1 - вкл */
+);

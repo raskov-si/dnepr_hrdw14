@@ -56,6 +56,13 @@ const T8_SFP_OPTICAL_CHANNEL* Dnepr_Measure_SFP_U_Info() ;
 //! \brief изменяет состояние выводов лазеров обоих SFP
 void Dnepr_Measure_SFP_ChangeState( const _BOOL sfp_1_on_, const _BOOL sfp_2_on_ );
 
+void dnepr_measure_SFP_change_autoneg_mode
+(
+    u8 sfp_num,                         /*!< [in] номер sfp по порядку                      */
+    u8 autoneg_state                    /*!< [in] состояние в которое нужно переключиться   */
+);
+
+
 //! определяет значение информационный параметр SFP?DDMState
 typedef enum {
 	DDM_COMPLIANCE_NOT_COMPLY_SFF8472 = 1,

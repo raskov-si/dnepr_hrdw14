@@ -5,12 +5,16 @@
 \date oct 2013
 */
 
-#define PCA9551_addr 	0xC4
 
 #include "support_common.h"
 #include "HAL/BSP/inc/T8_Dnepr_LED.h"
 #include "HAL/BSP/inc/T8_Dnepr_I2C.h"
 #include "HAL/IC/inc/NXP_PCA9551.h"
+
+#define PCA9551_addr 	0xC4
+
+static PCA9551_LED_States __led_states ;
+
 
 _BOOL T8_Dnepr_Led_Init()
 {
@@ -52,7 +56,6 @@ static void __set_led_state( PCA9551_LED_State_t* green, PCA9551_LED_State_t* re
 	}
 }
 
-static PCA9551_LED_States __led_states ;
 _BOOL T8_Dnepr_SetLedStatus(T8_Dnepr_LedStatusTypedef* tLedStatusStructure)
 {
 	__led_states.state0 = PCA9551_LED_OFF ;

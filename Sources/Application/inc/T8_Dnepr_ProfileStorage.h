@@ -27,5 +27,10 @@ u32 Dnepr_BOOLValueUpdate(PARAM_INDEX* p_ix, void* buff);
 
 u32 Dnepr_GetParamColors(u32 p_id, u8* failure_color, u8* degrade_color, u8* normal_color);
 u32 Dnepr_WriteParamColors(u32 p_id, u8 failure_color, u8 degrade_color, u8 normal_color);
+void  dnepr_wait_eeprom_contact 
+(
+    u32  time           /*!< [in] время в тесении которого должен появиться контакт */
+);
+
 
 #endif

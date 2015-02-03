@@ -39,6 +39,18 @@ static STEEPROM_HW_Interface __eeprom_iface = { ST_M95M01_ReadArray,
 static STEEPROM_PartitionHandler	__primary_part ;
 static STEEPROM_PartitionHandler	__secondary_part ;
 
+
+_BOOL Dnepr_BPEEPROM_CheckPresent()
+{
+    if( !ST_M95M01_CheckPresence() ){
+	__eeprom_present = FALSE ;
+	return FALSE ;
+    } else {
+	__eeprom_present = TRUE ;
+    }  
+}
+
+
 _BOOL Dnepr_BPEEPROM_Init()
 {
 	_BOOL prm_success = FALSE ;

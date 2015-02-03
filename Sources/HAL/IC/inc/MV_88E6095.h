@@ -50,7 +50,19 @@
 #define MV88E6095_SPEED(x)		(((x)&0x300)>>8)
 #define MV88E6095_DUPLEX(x)		(((x)&0x400)>>10)
 
+#define MV88E6095_PCS_CTRL_REG		        (0x01)
+    #define MV88E6095_PCS_CTRL_REG_NOT_FORCE_SPD            (0x03)
+    #define MV88E6095_PCS_CTRL_REG_FORCE_LINK	            (0x10)
+    #define MV88E6095_PCS_CTRL_REG_LINK_FORCED_VALUE(x)     ((1&(x))<<5)
 
+    #define MV88E6095_PCS_CTRL_REG_FORCE_SPEED_MASK         (3u<<0)
+    #define MV88E6095_PCS_CTRL_REG_FORCE_SPEED(x)           ((3u&(x))<<0)
+         #define MV88E6095_PCS_CTRL_REG_FORCE_SPEED_VALUE_10B       (0u)
+         #define MV88E6095_PCS_CTRL_REG_FORCE_SPEED_VALUE_100B      (1u)
+         #define MV88E6095_PCS_CTRL_REG_FORCE_SPEED_VALUE_1000B     (2u)
+         #define MV88E6095_PCS_CTRL_REG_FORCE_SPEED_VALUE_AUTO      (3u)
+
+    #define MV88E6095_PCS_CTRL_REG_AUTONEG_ENABLE           (1u<<10)
 
 
 #define MV88E6095_STATS_OP_REG	0x1D

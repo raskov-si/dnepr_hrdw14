@@ -880,7 +880,7 @@ f32 PSU_PMBus_ReadTemp(u8 nUnitNumber )
 	u16 val;
 //        f32 temp;
         
-        OSTimeDly( 50 );
+        OSTimeDly( 100 );
 	
         __PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_TEMPERATURE_2, &val );
         

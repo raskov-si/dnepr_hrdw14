@@ -48,12 +48,13 @@ _BOOL Dnepr_BPEEPROM_Read(u8* sName, u8* pbData, size_t *actual_len, const size_
 //! \retval TRUE если запись удалась хотя бы в один раздел
 _BOOL Dnepr_BPEEPROM_Write(u8* sName, u8* pbData, const size_t actual_len );
 
-
 //! переформатирует eeprom, делает пустым, прибл. 8 секунда на раздел -- 16 всего
 _BOOL Dnepr_eeprom_format(); 
 //! проходит по параметрам с флагом EEPROM_PARAM, и переписывает значение из EEPROM, если нужно
 _BOOL Dnepr_eeprom_sync();
 //! возвращает текущее состояние EEPROM
 BPEEPROM_State Dnepr_eeprom_GetState() ;
+
+_BOOL Dnepr_BPEEPROM_CheckPresent();
 
 #endif

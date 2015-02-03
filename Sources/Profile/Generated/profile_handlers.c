@@ -90,6 +90,8 @@ u32 cmsfptxenable_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len);
 u32 cmsfptxenable_update(PARAM_INDEX* p_ix, void* buff);
 u32 cmsfpthrreset_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len);
 u32 cmsfpthrreset_update(PARAM_INDEX* p_ix, void* buff);
+u32 cmsfpautoneg_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len);
+u32 cmsfpautoneg_update(PARAM_INDEX* p_ix, void* buff);
 u32 cmreset_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len);
 u32 cmreset_update(PARAM_INDEX* p_ix, void* buff);
 u32 vformateeprom_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len);

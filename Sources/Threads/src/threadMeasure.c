@@ -13,6 +13,7 @@
 #include "HAL/BSP/inc/T8_Dnepr_Fans.h"
 #include "HAL/BSP/inc/T8_Dnepr_I2C.h"
 #include "HAL/BSP/inc/T8_Dnepr_BPEEPROM.h"
+#include "HAL/BSP/inc/T8_Dnepr_Ethernet.h"
 #include "HAL/BSP/inc/T8_Dnepr_BP_CurrentMeasure.h"
 #include "HAL/BSP/inc/T8_Dnepr_GPIO.h"
 #include "Application/inc/T8_Dnepr_TaskSynchronization.h"
@@ -47,6 +48,9 @@ void	app_service(void);
 // настройки вкл/выкл SFP из Profile/Generated/value.c
 extern u32 val_CMSFP1TxEnable; // L - нижний
 extern u32 val_CMSFP2TxEnable ; // U - верхний
+extern u32 val_CMSFP1AutoNeg; // L - нижний
+extern u32 val_CMSFP2AutoNeg ; // U - верхний
+
 
 // предельные значени€ оборотов вентил€торов по умолчанию
 extern u32 val_FUFanDefaulMaxRPM, val_FUFanDefaulMinRPM ;
@@ -78,6 +82,13 @@ static T8_SFP_OPTICAL_CHANNEL _sfp_u_params ;
 static _BOOL __sfp_1_on ; //!< включен лазер 1й sfp
 static _BOOL __sfp_2_on ; //!< включен лазер 2й sfp
 static _BOOL __sfp_on_changed = FALSE ; //!< TRUE, когда помен€ли __sfp_*_on, но ещЄ не вызвали I2C_Dnepr_SFP_OnOff
+
+static struct
+{
+  _BOOL    state;               /*!< включен или нет режим auto-negotiation */
+  _BOOL    changed_flag;        /*!< флаг о том что параметры изменились    */
+} autoneg_state_now[2] = {0};
+
 
 //! устанавливаетс€ в соотв. со считанным регистром 92 по адресу A0h из sfp
 static SFP_DDM_COMPLIANCE __sfp1_ddm_compliance = DDM_COMPLIANCE_NO_ANSWER ;
@@ -218,6 +229,15 @@ void taskMeasure(void *pdata)
 			I2C_Dnepr_SFP_OnOff( __sfp_1_on, __sfp_2_on );
 			__sfp_on_changed = FALSE ;
 		}
+                /* включаем или отключаем режим автоопределени€ типа сети */
+                if (autoneg_state_now[0].changed_flag) {
+                    dnepr_ethernet_sfpport_autoneg_mode(1, autoneg_state_now[0].state);
+                    autoneg_state_now[0].changed_flag = FALSE;
+                }
+                if (autoneg_state_now[1].changed_flag) {
+                    dnepr_ethernet_sfpport_autoneg_mode(2, autoneg_state_now[1].state);
+                    autoneg_state_now[1].changed_flag = FALSE;                  
+                }                               
 		// производим калибровку платы вентил€ции
 		if(  __do_calibration ){
 			Dnepr_Fans_Calibrate( &__fans_calib_data );
@@ -438,6 +458,25 @@ void Dnepr_Measure_SFP_ChangeState( const _BOOL sfp_1_on_, const _BOOL sfp_2_on_
 	}
 }
 
+/*=============================================================================================================*/
+/*!  \brief функци€ устанавливающа€ флаги сигнализирующие о том, что надо помен€ть состо€ние режима Auto-Negotiation
+
+     \sa autoneg_state_now
+*/
+/*=============================================================================================================*/
+void dnepr_measure_SFP_change_autoneg_mode
+(
+    u8 sfp_num,                         /*!< [in] номер sfp по пор€дку                      */
+    u8 autoneg_state                    /*!< [in] состо€ние в которое нужно переключитьс€   */
+)
+{
+    if ( autoneg_state_now[sfp_num-1].state != autoneg_state ) {
+        autoneg_state_now[sfp_num-1].state        = autoneg_state;
+        autoneg_state_now[sfp_num-1].changed_flag = TRUE;
+    }
+}
+
+
 MAX_DS28CM00_ContentsTypedef *Dnepr_Measure_SerialNumber()
 {
 	if((__init_done == TRUE) && MAX_DS28CM00_CheckCRC(&tSnContents_internal))
@@ -512,6 +551,12 @@ static void _Init()
 	__sfp_1_on = val_CMSFP1TxEnable ;
 	__sfp_2_on = val_CMSFP2TxEnable ;
 	I2C_Dnepr_SFP_OnOff( __sfp_1_on, __sfp_2_on );
+        
+        autoneg_state_now[0].state = val_CMSFP1AutoNeg;
+        dnepr_ethernet_sfpport_autoneg_mode(1, autoneg_state_now[0].state);        
+        autoneg_state_now[1].state = val_CMSFP2AutoNeg;
+        dnepr_ethernet_sfpport_autoneg_mode(2, autoneg_state_now[1].state);
+        
 
 	__init_done = TRUE ;
 }

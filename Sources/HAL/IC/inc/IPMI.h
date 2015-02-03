@@ -31,17 +31,17 @@ typedef struct __IPMI_ProductInfo {
 	u8 product_area_length ;		//!< длина этой записи в словах по 8 байт
 	u8 language_code ;
 	u8 manufacturer_name_length ;
-	u8 manufacturer_name[IPMI_STRINGS_LEN] ;
+	u8 manufacturer_name[IPMI_STRINGS_LEN+1] ;
 	u8 name_length ;
-	u8 name[IPMI_STRINGS_LEN] ;
+	u8 name[IPMI_STRINGS_LEN+1] ;
 	u8 model_length ;
-	u8 model[IPMI_STRINGS_LEN] ;
+	u8 model[IPMI_STRINGS_LEN+1] ;
 	u8 serial_number_len ;
-	u8 serial_number[IPMI_STRINGS_LEN] ;
+	u8 serial_number[IPMI_STRINGS_LEN+1] ;
 	u8 asset_tag_len ;
-	u8 asset_tag[IPMI_STRINGS_LEN] ;
+	u8 asset_tag[IPMI_STRINGS_LEN+1] ;
 	u8 fru_file_id_len ;
-	u8 fru_file_id[IPMI_STRINGS_LEN] ;
+	u8 fru_file_id[IPMI_STRINGS_LEN+1] ;
 	// контрольную сумму не реализуем
 } IPMI_ProductInfo ;
 

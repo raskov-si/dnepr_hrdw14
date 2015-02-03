@@ -90,7 +90,8 @@ static _BOOL __bPSULimitSource = TRUE ; //!< TRUE -- берём предел мощности из БП
 
 static void __pmbus_alarm_handler() ;
 static void __slot_power_dev_plug( const u8 slot_num, const _BOOL pluginout );
-static void __slot_power_onoff_init();
+void __slot_power_onoff_init();
+//static void __slot_power_onoff_init();
 static void __slot_power_onoff();
 
 static f32 __curPowerLimit();
@@ -168,9 +169,9 @@ void DeviceController_Init(void)
 
  	Dnepr_SlotEEPROM_Init() ;
 
- 	// читаем все EEPROM и HotSwap Controller'ы и задерживаем включение тех, которые
- 	// ещё не включились
- 	__slot_power_onoff_init() ;
+// 	// читаем все EEPROM и HotSwap Controller'ы и задерживаем включение тех, которые
+// 	// ещё не включились
+// 	__slot_power_onoff_init() ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -718,7 +719,8 @@ static LT_LTC4222_FaultAlertRegisterTypedef	hs_alert_reg = {
 // При включении Днепра проходит EEPROM и HotSwap'ы всех слотовых устройств,
 // считывает их состояния, переинициализирует HotSwapы, запускает пересмотр
 // включения устройств
-static void __slot_power_onoff_init()
+void __slot_power_onoff_init()
+//static void __slot_power_onoff_init()
 {
 	size_t i, j ;
 	LT_LTC4222_AdcVoltagesStructure     tAdcVoltagesStructure;

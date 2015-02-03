@@ -35,6 +35,8 @@ static taskCU_message_t	cu_message ;
 // настройки вкл/выкл SFP из Profile/Generated/value.c
 extern u32 val_CMSFP1TxEnable; // L - нижний
 extern u32 val_CMSFP2TxEnable ; // U - верхний
+extern u32 val_CMSFP1AutoNeg; // L - нижний
+extern u32 val_CMSFP2AutoNeg ; // U - верхний
 
 extern s8 val_FUVendor[17] ;
 extern s8 val_FUHwNumberSet[33] ;
@@ -62,8 +64,8 @@ void Dnepr_params_Init()
 	GL_PARAM_BUFF_RDY[1] = 0;
 
 	Dnepr_NVParams_Init(  );
-	// инициализируем SFP после включени€
-	Dnepr_Measure_SFP_ChangeState( val_CMSFP1TxEnable == 1, val_CMSFP2TxEnable == 1 );
+//	// инициализируем SFP после включени€
+//	Dnepr_Measure_SFP_ChangeState( val_CMSFP1TxEnable == 1, val_CMSFP2TxEnable == 1 );
 }
 
 void Dnepr_params_Init2_after_EEPROM()
@@ -519,6 +521,30 @@ u32 cmmcuwatchdogrebootcnt_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SFP 
+
+u32 cmsfpautoneg_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len) 
+{
+  if( PROFILE_INTValueAccess( p_ix, buff, buff_len ) == ERROR ) {
+	return ERROR ;	
+  }
+  return OK ;  
+}
+
+
+u32 cmsfpautoneg_update(PARAM_INDEX* p_ix, void* buff) 
+{
+    u32 mode_value;
+    
+    if( Dnepr_INTValueUpdate( p_ix, buff ) == ERROR ) {
+        return ERROR ;
+    }
+    
+    mode_value = *((u32*)p_ix->parent->value_ptr);
+    dnepr_measure_SFP_change_autoneg_mode(p_ix->parent->owner+1, (u8)mode_value);
+  
+    return OK ;  
+}
+
 
 u32 cmsfpthrreset_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len) {
 	*(u32*)buff = 1 ; // на чтение всегда OFF

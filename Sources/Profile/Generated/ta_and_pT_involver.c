@@ -1,6 +1,6 @@
 #include "Profile/inc/sys.h"
 
-extern PARAM const pT399;
+extern PARAM const pT403;
 
 extern const unsigned char ta0[];
 extern const unsigned char ta1[];
@@ -401,6 +401,10 @@ extern const unsigned char ta395[];
 extern const unsigned char ta396[];
 extern const unsigned char ta397[];
 extern const unsigned char ta398[];
+extern const unsigned char ta399[];
+extern const unsigned char ta400[];
+extern const unsigned char ta401[];
+extern const unsigned char ta402[];
 
 extern const s8 lang_pack[] ;
 extern const u8 padding[] ;
@@ -813,6 +817,10 @@ void ta_involver()
 	buff = ta396[0];
 	buff = ta397[0];
 	buff = ta398[0];
+	buff = ta399[0];
+	buff = ta400[0];
+	buff = ta401[0];
+	buff = ta402[0];
 
-	pt_buff.alter_length = pT399.alter_length ;
+	pt_buff.alter_length = pT403.alter_length ;
 }

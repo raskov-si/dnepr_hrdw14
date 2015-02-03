@@ -760,20 +760,20 @@
         </option>
         <option>
           <name>GenerateExtraOutput</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>XExtraOutOverride</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>ExtraOutputFile</name>
-          <state>Dnepr.a68</state>
+          <state>Dnepr.s19</state>
         </option>
         <option>
           <name>ExtraOutputFormat</name>
           <version>11</version>
-          <state>23</state>
+          <state>28</state>
         </option>
         <option>
           <name>ExtraFormatVariant</name>
@@ -1441,7 +1441,7 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild>$PROJ_DIR$\Sources\scripts\prebuild.bat $PROJ_DIR$</prebuild>
-        <postbuild>python.exe $PROJ_DIR$\Sources\scripts\postbuild.py -v $PROJ_DIR$\Sources\Profile\Generated\value.c -c DNEP0020 -i $PROJ_DIR$\Release\Exe\Dnepr.s19</postbuild>
+        <postbuild>python.exe $PROJ_DIR$\Sources\scripts\release_postbuild.py -v $PROJ_DIR$\Sources\Profile\Generated\value.c -c DNEP0020 -i $PROJ_DIR$\Release\Exe\Dnepr.s19</postbuild>
       </data>
     </settings>
     <settings>
@@ -1940,7 +1940,7 @@
           <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_SlotEEPROM.h</name>
         </file>
         <file>
-          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_Uart_Profile.h</name>
+          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_UART_Profile.h</name>
         </file>
       </group>
       <group>

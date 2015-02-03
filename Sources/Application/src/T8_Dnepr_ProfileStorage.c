@@ -46,13 +46,16 @@ static OS_STK  taskSyncParamThr[2048];
     \sa  Dnepr_BPEEPROM_CheckPresent, T8_Dnepr_SetLedStatus
 */
 /*=============================================================================================================*/
+extern void __slot_power_onoff_init();
+
 void  dnepr_wait_eeprom_contact 
 (
     u32  time           /*!< [in] время в тесении которого должен появиться контакт */
 )
 {     
     _BOOL   ret = FALSE;
-    u32     time_counter = OSTimeGet() + 15*1144;
+    u32     time_begin  = OSTimeGet();
+    u32     time_counter; 
     
     
     T8_Dnepr_LedStatusTypedef alarm_nocontact_leds = {
@@ -65,17 +68,25 @@ void  dnepr_wait_eeprom_contact
         						(T8_Dnepr_LedTypedef){GREEN, TRUE},
 	        					(T8_Dnepr_LedTypedef){GREEN, TRUE}
                                                      };
-            
-
-          
+    T8_Dnepr_SetLedStatus( &alarm_nocontact_leds );
+                   
     do  {
             ret = Dnepr_BPEEPROM_CheckPresent();
-            if ( ret != TRUE ) {
-                T8_Dnepr_SetLedStatus( &alarm_nocontact_leds );
-            }                  
-   } while ( (ret != TRUE) && (time_counter > OSTimeGet()) );
-                       
-   T8_Dnepr_SetLedStatus( &init_leds );            
+            time_counter = OSTimeGet();            
+    } while ( (ret != TRUE) && ( (time_begin + time) > time_counter) );
+   
+    T8_Dnepr_SetLedStatus( &init_leds );            
+   
+    // читаем все EEPROM и HotSwap Controller'ы и задерживаем включение тех, которые
+    // ещё не включились
+    __slot_power_onoff_init() ;
+    
+    /* ждем пару секунд в случае если контакт был с самого начала */
+    /* для того чтобы прошли переходные процессы при втыкании */
+    do {
+        time_counter = OSTimeGet();
+    }  while ( (time_begin + 2000) > time_counter );
+    
 }
 
 

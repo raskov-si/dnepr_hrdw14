@@ -29,7 +29,7 @@ static u8 __ipmi_len_2_type_len( IPMI_StrType_t type, const size_t len );
 static size_t __ipmi_len_type_2_len( u8 type_n_len, IPMI_StrType_t* type );
 
 static _BOOL __write_sz_n_str(PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, size_t offset, u8 len, u8* str );
-static _BOOL __read_sz_n_str(PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, size_t offset, u8 *len, u8* str );
+static _BOOL __read_sz_n_str(PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, size_t offset, u8 *len, u8* str, u8 maxlen );
 
 static _BOOL __PMB_WriteMultipleBytes(PMB_PeriphInterfaceTypedef* p, u8 mAddr, u8 mCmd, u8* anData, u8 len );
 static _BOOL __PMB_ReadMultipleBytes(PMB_PeriphInterfaceTypedef* p, u8 mAddr, u8 mCmd, u8* anData, u8 len );
@@ -43,7 +43,7 @@ static _BOOL __PMB_ReadByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8
 
 _BOOL IPMI_Read_CommonHeader( PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, IPMI_CommonHeader* header )
 {
-	OSTimeDly( 50 );
+	OSTimeDly( 100 );
 	return __PMB_ReadMultipleBytes( pmb_bus, mAddr, IPMI_COMMONHEADER_ADDR, (u8*)header, sizeof(IPMI_CommonHeader) );
 }
 
@@ -55,21 +55,25 @@ _BOOL IPMI_Read_ProductInfo( PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, size
 	
 	// читаем IPMI_ProductInfo до первой строки (потому что длина строки становится известна только когда прочитаем)
 	len_2_read = (u8*)&product_info->manufacturer_name_length - (u8*)product_info ;
-	OSTimeDly( 50 );
+	OSTimeDly( 100 );
 	ret = ret && __PMB_ReadMultipleBytes( pmb_bus, mAddr, i_offset, (u8*)product_info, len_2_read );
+        
+        if ( (product_info->format_version & 0xF) != 0x01 )   {  
+            return FALSE;
+        }
 	
 	i_offset += len_2_read ;
-	ret = ret && __read_sz_n_str( pmb_bus, mAddr, i_offset, &product_info->manufacturer_name_length, (u8*)&product_info->manufacturer_name );
+	ret = ret && __read_sz_n_str( pmb_bus, mAddr, i_offset, &product_info->manufacturer_name_length, (u8*)&product_info->manufacturer_name, IPMI_STRINGS_LEN );
 	i_offset += product_info->manufacturer_name_length + 1 ;
-	ret = ret && __read_sz_n_str( pmb_bus, mAddr, i_offset, &product_info->name_length, (u8*)&product_info->name );
+	ret = ret && __read_sz_n_str( pmb_bus, mAddr, i_offset, &product_info->name_length, (u8*)&product_info->name, IPMI_STRINGS_LEN );
 	i_offset += product_info->name_length + 1 ;
-	ret = ret && __read_sz_n_str( pmb_bus, mAddr, i_offset, &product_info->model_length, (u8*)&product_info->model );
+	ret = ret && __read_sz_n_str( pmb_bus, mAddr, i_offset, &product_info->model_length, (u8*)&product_info->model, IPMI_STRINGS_LEN );
 	i_offset += product_info->model_length + 1 ;
-	ret = ret && __read_sz_n_str( pmb_bus, mAddr, i_offset, &product_info->serial_number_len, (u8*)&product_info->serial_number );
+	ret = ret && __read_sz_n_str( pmb_bus, mAddr, i_offset, &product_info->serial_number_len, (u8*)&product_info->serial_number, IPMI_STRINGS_LEN );
 	i_offset += product_info->serial_number_len + 1 ;
-	ret = ret && __read_sz_n_str( pmb_bus, mAddr, i_offset, &product_info->asset_tag_len, (u8*)&product_info->asset_tag );
+	ret = ret && __read_sz_n_str( pmb_bus, mAddr, i_offset, &product_info->asset_tag_len, (u8*)&product_info->asset_tag, IPMI_STRINGS_LEN );
 	i_offset += product_info->asset_tag_len + 1 ;
-	ret = ret && __read_sz_n_str( pmb_bus, mAddr, i_offset, &product_info->fru_file_id_len, (u8*)&product_info->fru_file_id );
+	ret = ret && __read_sz_n_str( pmb_bus, mAddr, i_offset, &product_info->fru_file_id_len, (u8*)&product_info->fru_file_id, IPMI_STRINGS_LEN );
 	i_offset += product_info->fru_file_id_len + 1 ;
 
 	return ret ;
@@ -113,7 +117,7 @@ _BOOL IPMI_Find_n_Read_PSU_MultiArea
             /* если присутствует область multirecord, то считываем находим подобласть с типом IPMI_MRT_POWER_SUPPLY=0 и считываем параметры с нее */
             offset = fru->header.multirecord_area_offset * 8;
   	    do {
-		  OSTimeDly( 50 );
+		  OSTimeDly( 100 );
   		  ret = __PMB_ReadMultipleBytes( pmb_bus, mAddr, offset, (u8*)multi_header, sizeof(IPMI_MultiRecordHeader) );
 		  offset += sizeof(IPMI_MultiRecordHeader) + multi_header->length ;
 		  ++nAreas;
@@ -122,7 +126,7 @@ _BOOL IPMI_Find_n_Read_PSU_MultiArea
 	    if(multi_header->type_id == IPMI_MRT_POWER_SUPPLY) {
               
 		offset -= multi_header->length ;
-		OSTimeDly( 50 );
+		OSTimeDly( 100 );
                 
 		ret = ret && __PMB_ReadMultipleBytes( pmb_bus, mAddr, offset, (u8*)psu_area, sizeof(IPMI_MultiRecord_PowerSupplyInformation) );
 		offset += multi_header->length ;
@@ -263,7 +267,7 @@ _BOOL ipmi_get_adress_acknowledge
   
   assert( pmb_bus );
 
-  OSTimeDly( 50 );
+  OSTimeDly( 100 );
   return __PMB_ReadByte (pmb_bus, mAddr, PMB_OPERATION, &temp );
   /* emerson 650 отказывается работать когда первая транзакция на шине оказывается незавершенной, 
      после этого не отвечает ни на какие комманды */
@@ -288,23 +292,30 @@ _BOOL ipmi_read_common_header
 )
 {
   _BOOL ret = FALSE ;
+  u8    try_cnt = 3;
   
-  assert( pmb_bus );
-  assert( fru );
+    assert( pmb_bus );
+    assert( fru );
   
-  OSTimeDly( 50 );
-  /* читаем Common Header */
-  ret = __PMB_ReadMultipleBytes( pmb_bus, mAddr, IPMI_COMMONHEADER_ADDR, (u8*)&fru->header, sizeof(IPMI_CommonHeader) );
-  if ( ret == TRUE )
-  {
-      if ( cheksum_zero_sum( (u8*)&fru->header, sizeof(IPMI_CommonHeader) - 1 ) != ((u8*)&fru->header)[sizeof(IPMI_CommonHeader) - 1] )
-      {  return FALSE; }  
+    while ( (ret != TRUE) && (try_cnt--) )
+    {
+        OSTimeDly( 100 );
+        /* читаем Common Header */
+        ret = __PMB_ReadMultipleBytes( pmb_bus, mAddr, IPMI_COMMONHEADER_ADDR, (u8*)&fru->header, sizeof(IPMI_CommonHeader) );
+        if ( ret == TRUE )  {
+            if ( cheksum_zero_sum( (u8*)&fru->header, sizeof(IPMI_CommonHeader) - 1 ) != ((u8*)&fru->header)[sizeof(IPMI_CommonHeader) - 1] )  {  
+              ret = FALSE;
+              continue;
+            }  
     
-      if ( fru->header.format_version != 0x01 )
-      {  return FALSE; }  
-  }
+            if ( fru->header.format_version != 0x01 )   {  
+              ret = FALSE;
+              continue;
+            }  
+        }
+    }
   
-  return ret;    
+    return ret;    
 }
 
 
@@ -332,10 +343,10 @@ _BOOL ipmi_read_product_info
     
     if( fru->header.product_area_offset != 0 ){
         /* читаем Product Info если есть */
-        OSTimeDly( 50 );      
+        OSTimeDly( 100 );      
 	ret = IPMI_Read_ProductInfo( pmb_bus, mAddr, fru->header.product_area_offset*8, &fru->product_info );
         
-        /*!< \todo  добавить проверку контрольной суммы   */        
+
     }
            
     return ret ;    
@@ -364,7 +375,7 @@ _BOOL IPMI_Read_FRU_Headers
 	assert( fru );
         
 	/* читаем Common Header */
-	OSTimeDly( 50 );
+	OSTimeDly( 100 );
 	ret = __PMB_ReadMultipleBytes( pmb_bus, mAddr, IPMI_COMMONHEADER_ADDR, (u8*)&fru->header, sizeof(IPMI_CommonHeader) );
 	
 	if( fru->header.product_area_offset != 0 ){
@@ -460,20 +471,21 @@ static u8 __ipmi_len_2_type_len( IPMI_StrType_t type, const size_t len )
 }
 
 // читает побайтно из адреса mAddr и смещения offset сначала байт с длиной строки, сразу следом строку
-static _BOOL __read_sz_n_str(PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, size_t offset, u8 *len, u8* str)
+static _BOOL __read_sz_n_str(PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, size_t offset, u8 *len, u8* str, u8 maxlen)
 {
 	_BOOL ret ;
 	IPMI_StrType_t type ;
 
-	OSTimeDly( 50 );
+	OSTimeDly( 100 );
 	ret = pmb_bus->PMB_ReadByte( pmb_bus, mAddr, offset, len );
 	*len = __ipmi_len_type_2_len( *len, &type );
+        *len = (*len > maxlen) ? maxlen : *len;
 	// если тип строки не 3 (см раздел 13 документа Platform Management FRU Information Storage Definition)
 	// разбирать его не умеем
 	if(type != IPMI_STR_TYPE_LANG ){
 		str[0] = 0 ;
 	} else {
-		OSTimeDly( 50 );
+		OSTimeDly( 100 );
 		ret = ret && __PMB_ReadMultipleBytes( pmb_bus, mAddr, offset+1, str, *len );
 		str[ *len ] = 0 ;
 	}

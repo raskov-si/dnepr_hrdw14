@@ -91,8 +91,8 @@ int main(void)
 
 static void taskInit(void *pdata)
 {
-    INT8U return_code = OS_ERR_NONE;
-
+    INT8U   return_code = OS_ERR_NONE;
+    
 	pdata = pdata ;
 
 	// инициализируем системный таймер и задачи
@@ -114,10 +114,16 @@ static void taskInit(void *pdata)
 	T8_Dnepr_TS_Init();
 	// устанавливаем выводы и gpio
 	DNEPR_PinsInit();
-	// i2c, spi, mdio, свитчи, hotswap, eeprom backplane'а...
+	/* Инициализация программных модулей i2c, spi, mdio, свитчи, hotswap, eeprom backplane'а... */
 	DNEPR_InitPeripherials();
+        
 	// задерживаем включение не работающих слотовых устройств
 	DeviceController_Init() ;
+        
+        /* пытаемся обнаружить backplane eeprom с данными профиля в течении 15 секунд, после этого все равно включаемся */
+        //15*OS_TMR_CFG_TICKS_PER_SEC;
+        dnepr_wait_eeprom_contact(15*1000);
+        
 	// Инициализуруем параметры профиля.
 	Dnepr_ProfileStorage_Init() ;
 		
