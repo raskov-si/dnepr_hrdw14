@@ -8,39 +8,47 @@
 #ifndef __SYS_ARCH_H__
 #define __SYS_ARCH_H__
 
+#ifdef	__cplusplus
+    extern "C" {
+#endif
+      
 #include "support_common.h"
 
-#include "OS_CPU.H"
-#include "OS_CFG.H"
+//#include "OS_CPU.H"
+//#include "OS_CFG.H"
 #include "uCOS_II.H"
 
-typedef OS_EVENT sys_sem_t ;
-typedef OS_EVENT sys_mbox_t ;
+#define LWIP_STK_SIZE                  1200
+#define LWIP_TASK_MAX                  5
+#define LWIP_START_PRIO                5     //so priority of lwip tasks is from 5-9
+#define MAX_QUEUES                     35    // 
+#define MAX_QUEUE_ENTRIES              35    // number of mboxs
+#define SYS_MBOX_NULL                  (void*)0
+#define SYS_SEM_NULL                   (void*)0
 
-typedef u8 sys_thread_t ;
 
+typedef struct
+{
+    OS_EVENT *pQ;
+    void     *pvQEntries[MAX_QUEUE_ENTRIES];
+} TQ_DESCR,  *PQ_DESCR;
+
+typedef OS_EVENT        sys_sem_t;
+typedef TQ_DESCR        sys_mbox_t;
+typedef OS_CPU_SR       sys_prot_t;
+typedef INT8U           sys_thread_t;
 typedef void (*lwip_thread_fn)(void *arg);
 
 
-//! Is called to initialize the sys_arch layer.
-void sys_init(void);
-
-//! Creates a new semaphore.
-err_t sys_sem_new(sys_sem_t *sem, u8_t count);
-
-void sys_sem_signal(sys_sem_t *sem);
-u32_t sys_arch_sem_wait(sys_sem_t *sem, u32_t timeout);
-void sys_sem_free(sys_sem_t *sem);
-
-err_t sys_mbox_new(sys_mbox_t *mbox, int size);
-void sys_mbox_free(sys_mbox_t *mbox);
-void sys_mbox_post(sys_mbox_t *mbox, void *msg);
-u32_t sys_arch_mbox_fetch(sys_mbox_t *mbox, void **msg, u32_t timeout);
-u32_t sys_arch_mbox_tryfetch(sys_mbox_t *mbox, void **msg);
-err_t sys_mbox_trypost(sys_mbox_t *mbox, void *msg);
-int sys_mbox_valid(sys_mbox_t *mbox);
+//typedef OS_EVENT sys_sem_t ;
+//typedef OS_EVENT sys_mbox_t ;
+//
+//typedef u8 sys_thread_t ;
+//
 
 
-sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg, int stacksize, int prio);
-
+#ifdef	__cplusplus
+    }
 #endif
+
+#endif	/* __SYS_ARCH_H__ */

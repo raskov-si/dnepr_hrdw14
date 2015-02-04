@@ -5,9 +5,16 @@
 \date jule 2012
 */
 
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+
+#include "common_lib/memory.h"
+
 #include "HAL/BSP/inc/T8_Dnepr_Ethernet.h"
 #include "HAL/IC/inc/MV_88E6095.h"
 #include "HAL/MCU/inc/T8_5282_MII.h"
+
 
 /*!
 \brief Инициализирует два MV88E6095 как тупой свитч, без RSTP, все порты включены
@@ -87,4 +94,90 @@ void dnepr_ethernet_sfpport_autoneg_mode
         temp_reg |= MV88E6095_PCS_CTRL_REG_FORCE_SPEED(MV88E6095_PCS_CTRL_REG_FORCE_SPEED_VALUE_AUTO) | MV88E6095_PCS_CTRL_REG_AUTONEG_ENABLE ;
     }
     MV88E6095_multichip_smi_write( MV88E6095_2_CHIPADDR, port, MV88E6095_PCS_CTRL_REG, temp_reg  );
+}
+
+
+
+/*=============================================================================================================*/
+/*!  \brief Переводим MAC-адрес из строкового в числовое выражение
+*/
+/*=============================================================================================================*/
+void dnepr_ethernet_str_2_mac
+( 
+    u8*         out,            /*!< [out] получаемое числовое значение (массив из 6 элементов)   */
+    const char* str             /*!< [in]  входящая строка с IP-адресом                           */
+)
+{
+	u32 flag=FALSE;
+	s8 mac_byte[3];
+	u8 new_mac_addr[6];
+	u8 mac_byte_num=0;
+	u8 i,k, data_len;
+	flag = TRUE;
+
+	if( !out || !str ){
+		return ;
+	}
+
+	data_len = strnlen( str, 18 );
+
+	for (i=0, k=0; (i<data_len) && (flag == TRUE); i++) {
+		if ((str[i] != ':') && (str[i] != '-') && (str[i] != '.')) {
+			if (k<2)
+				mac_byte[k++] = str[i];
+			else
+				flag = FALSE;
+		}
+		else if (k && (k<3)) {
+			mac_byte[k] = 0;
+			k = 0;
+			errno = 0;
+			if (mac_byte_num < 6) {
+				new_mac_addr[mac_byte_num++] = strtol(mac_byte, NULL, 16);
+				if (errno == ERANGE)
+					flag = FALSE;
+			}
+			else
+				flag = FALSE;
+		}
+	}
+//Last byte. We don't find delimiter, but find 0
+	if ((mac_byte_num == 5) && (flag == TRUE))
+		if (k && (k<3)) {
+			mac_byte[k] = 0;
+			errno = 0;
+			new_mac_addr[mac_byte_num++] = strtol(mac_byte, NULL, 16);
+			if (errno == ERANGE)
+				flag = FALSE;
+	}
+	if (flag == TRUE){
+		memcpy( out, new_mac_addr, sizeof(new_mac_addr) );
+	}
+}
+
+
+
+/*=============================================================================================================*/
+/*!  \brief Переводим MAC-адрес из числового в строковое выражение
+*/
+/*=============================================================================================================*/
+void dnepr_ethernet_mac_2_str
+( 
+    char        *str,           /*!< [out]  выходящая строка с IP-адресом                           */
+    const u8    *mac            /*!< [in]   числовое значение MAC-адреса (массив из 6 элементов)    */    
+)
+{
+	size_t i ;
+	size_t istr = 0 ;
+	static const char alf[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+
+	assert( str != NULL );
+
+	for( i = 0; i < 6; ++i ){
+		str[istr++] = alf[ (mac[ i ] & 0xF0) >> 4 ];
+		str[istr++] = alf[mac[ i ] & 0x0F ];
+		if( i < 5 ){
+			str[istr++] = ':' ;
+		}
+	}
 }

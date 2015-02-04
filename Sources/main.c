@@ -32,6 +32,8 @@
 #include "Threads/inc/threadMeasure.h"
 #include "Threads/inc/threadWatchdog.h"
 #include "Threads/inc/threadDeviceController.h"
+#include "Threads/inc/thread_snmp.h"
+
 #include <string.h> /* strlen() */
 
 #include "T8_Atomiccode.h"
@@ -49,6 +51,9 @@ static OS_STK  taskInitStk[256];
 static OS_STK  taskMeasureStk[1024];
 #pragma data_alignment=4
 static OS_STK  taskDControllerStk[1024];
+#pragma data_alignment=4
+static OS_STK  task_snmp_stk[512];             /*!< Стек для задачи работы с snmp (lwip)  */
+
 
 static void taskInit(void *pdata);
 void taskMeasure(void *pdata);
@@ -122,14 +127,17 @@ static void taskInit(void *pdata)
         
         /* пытаемся обнаружить backplane eeprom с данными профиля в течении 15 секунд, после этого все равно включаемся */
         //15*OS_TMR_CFG_TICKS_PER_SEC;
-        dnepr_wait_eeprom_contact(15*1000);
+        dnepr_wait_eeprom_contact(5*1000);
         
 	// Инициализуруем параметры профиля.
 	Dnepr_ProfileStorage_Init() ;
-		
-	assert(OSTaskCreateExt(taskWatchdog, (void *)0, (void *)&taskWatchdogStk[127], taskWDT_PRIO, taskWDT_PRIO, (void *)&taskWatchdogStk, 127, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
-    OSTaskNameSet( taskWDT_PRIO, "taskWatchdog", &return_code ) ;
-    assert( return_code == OS_ERR_NONE ) ;
+        
+        {
+            /* сторожевой таймер (запуск, периодический сброс) */
+            assert(OSTaskCreateExt(taskWatchdog, (void *)0, (void *)&taskWatchdogStk[127], taskWDT_PRIO, taskWDT_PRIO, (void *)&taskWatchdogStk, 128, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+            OSTaskNameSet( taskWDT_PRIO, "taskWatchdog", &return_code ) ;
+            assert( return_code == OS_ERR_NONE ) ;
+        }
 
     assert(OSTaskCreateExt(taskMeasure, (void *)0, (void *)&taskMeasureStk[1023], taskMeasure_PRIO, taskMeasure_PRIO, (void *)&taskMeasureStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE );
     OSTaskNameSet( taskMeasure_PRIO, "taskMeasure", &return_code ) ;
@@ -142,6 +150,18 @@ static void taskInit(void *pdata)
 	assert(OSTaskCreateExt(taskDeviceController, (void *)0, (void *)&taskDControllerStk[1023], tackDController_PRIO, tackDController_PRIO, (void *)&taskDControllerStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
     OSTaskNameSet( tackDController_PRIO, "taskDeviceController", &return_code ) ;
     assert( return_code == OS_ERR_NONE ) ;
+    
+    {
+        /* сетевые функции CU */
+      
+        assert(OSTaskCreateExt(task_snmp, (void *)0, (void *)&task_snmp_stk[511], TASK_SNMP_PRIORITY, TASK_SNMP_PRIORITY, (void *)&task_snmp_stk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+        OSTaskNameSet( TASK_SNMP_PRIORITY, "task_snmp", &return_code ) ;
+        assert( return_code == OS_ERR_NONE ) ;
+      
+//        assert(OSTaskCreateExt(task_vlan_rstp, (void *)0, (void *)&taskNetStk[511], taskNet_PRIO, taskNet_PRIO, (void *)&taskNetStk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+//        OSTaskNameSet( taskNet_PRIO, "task_vlan_rstp", &return_code ) ;
+//        assert( return_code == OS_ERR_NONE ) ;
+    }
 
     OSTaskDel( OS_PRIO_SELF ) ;
 }

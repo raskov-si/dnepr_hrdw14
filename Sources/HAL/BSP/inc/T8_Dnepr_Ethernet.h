@@ -13,8 +13,16 @@
 #include "support_common.h"
 
 u32 Dnepr_Ethernet_Init( const u8* maddr );
+
 void dnepr_ethernet_sfpport_autoneg_mode
 ( 
     u8      sfp_num,                        /*!< [in] номер sfp 1,2                                   */
     u8      mode_flag                       /*!< [in] включить или выключить режим  0 - выкл, 1 - вкл */
 );
+
+void dnepr_ethernet_str_2_mac
+( 
+    u8*         out,            /*!< [out] получаемое числовое значение (массив из 6 элементов)   */
+    const char* str             /*!< [in]  входящая строка с IP-адресом                           */
+);
+

@@ -112,7 +112,7 @@
 #define BOOL_LEN		0x01
 
 //======== MFLAG u16 ==========
-#define NONMETER		0x0000
+#define NONMETER		0x0000          /*!< параметр  */
 //precision
 #define PRECISION0		0x0010
 #define PRECISION1		0x0011
@@ -122,15 +122,15 @@
 #define PRECISIONE		0x001E	/* printf in dddE+-dd */
 #define PRECISION_MASK	0x001F
 //flags
-#define GRP_ACCESS		0x0020
-#define PR_ONLY			0x0040
+#define GRP_ACCESS		0x0020          /*!< параметр  */
+#define PR_ONLY			0x0040          /*!< параметр  */
 #define TRP_COLOR		0x0100
 #define SFP_COLOR		0x0200
 #define BLK_COLOR		0x0400
 #define AL1_COLOR		0x0800
 #define AL2_COLOR		0x1000
 #define AL12_COLOR		(AL1_COLOR|AL2_COLOR)
-#define EEPROM_PARAM	0x2000	// параметр дублируется в EEPROM backplane'а
+#define EEPROM_PARAM	        (0x2000)	/*!< параметр дублируется в EEPROM backplane'а */
 //uint lead zero
 #define UINT_ZEROL0		0x0000
 #define UINT_ZEROL1		0x0001

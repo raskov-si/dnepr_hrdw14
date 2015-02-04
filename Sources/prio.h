@@ -28,6 +28,7 @@
 #define hs_mutex_PRIO 			16 	//!< приоритет мьютекса для защиты функций hotswap'а
 
 #define tackDController_PRIO	30
+#define TASK_SNMP_PRIORITY      (35)
 #define taskCU_PRIO     		40	//!< приоритет задачи работы с backplane-uart'ом
 
 #define taskMeasure_PRIO    	50	//!< приоритет задачи измерения динамических параметров

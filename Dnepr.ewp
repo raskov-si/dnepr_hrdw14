@@ -1793,6 +1793,9 @@
       <group>
         <name>inc</name>
         <file>
+          <name>$PROJ_DIR$\Sources\Threads\inc\thread_snmp.h</name>
+        </file>
+        <file>
           <name>$PROJ_DIR$\Sources\Threads\inc\threadCU.h</name>
         </file>
         <file>
@@ -1807,6 +1810,9 @@
       </group>
       <group>
         <name>src</name>
+        <file>
+          <name>$PROJ_DIR$\Sources\Threads\src\thread_snmp.c</name>
+        </file>
         <file>
           <name>$PROJ_DIR$\Sources\Threads\src\threadCU.c</name>
         </file>
