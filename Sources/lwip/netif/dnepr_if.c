@@ -1,3 +1,10 @@
+/*=============================================================================================================*/
+/*!  \file  dnepr_if.c
+*    \brief Порт ethernet для lwIP
+*    \details   
+*/
+/*=============================================================================================================*/
+
 #include "lwip/def.h"
 #include "lwip/mem.h"
 #include "lwip/pbuf.h"
@@ -18,7 +25,11 @@
 
 /* Define those to better describe your network interface. */
 #define IFNAME0 'e'
+#define IFNAME1 'n'
+#define MTU_FEC  (512)
 
+
+/*=============================================================================================================*/
 /**
  * Helper struct to hold private data used to operate your ethernet interface.
  * Keeping the ethernet address of the MAC in this struct is not necessary
@@ -32,37 +43,139 @@ struct ethernetif {
   u16 vlan ;
 };
 
+
+/*=============================================================================================================*/
+
+
+static void low_level_init(struct netif *netif);
+err_t       dnepr_eth0_if_link_output(struct netif *netif, struct pbuf *p); 
+err_t       dnepr_eth0_if_output(struct netif *netif, struct pbuf *p, ip_addr_t *ipaddr); 
+
+
+/*=============================================================================================================*/
+
+extern s8 val_CMPhyAddr[];
+
+/*=============================================================================================================*/
+
+/*-----------------------------------------Инициализация----------------------------------------------*/
+
+/*=============================================================================================================*/
+/*!  \brief Функция обратного вызова инициализирующая интерфейс ethernet для lwIP
+ *    \details  Should be called at the beginning of the program to set up the
+ *              network interface. It calls the function low_level_init() to do the
+ *              actual setup of the hardware.
+ *
+ *              This function should be passed as a parameter to netif_add().
+ *  \param  netif the lwip network interface structure for this ethernetif
+ *  \return ERR_OK if the loopif is initialized
+ *          ERR_MEM if private data couldn't be allocated
+ *          any other err_t on error
+ *  \sa netif_add, low_level_init
+ */
+/*=============================================================================================================*/
+err_t cb_dnepr_eth0_if_init(struct netif *netif)
+{
+    struct ethernetif     *ethernetif;
+
+    LWIP_PLATFORM_ASSERT( netif != NULL );
+    
+/* инициализируем netif */       
+    ethernetif = mem_malloc(sizeof(struct ethernetif));
+    if (ethernetif == NULL) {
+            return (s8)ERR_MEM;
+    } 
+    netif->state = ethernetif;                               /* указатель на пользовательскую структуру отображающую состояние */
+#if LWIP_NETIF_STATUS_CALLBACK
+//  netif->status_callback = ;
+#endif /* LWIP_NETIF_STATUS_CALLBACK */
+      
+    netif->name[0] = IFNAME0;                                /* имя интерфейса */
+    netif->name[1] = IFNAME1;    
+    
+#if LWIP_NETIF_HOSTNAME
+    netif->hostname = "lwip";                                /* Initialize interface hostname */
+#endif /* LWIP_NETIF_HOSTNAME */
+    
+    netif->hwaddr_len  = 6;                                  /* The number of bytes in the link address (e.g., MAC address for Ethernet) */                  
+     /*! \todo поменять на мак-адрес контроллера */
+    dnepr_ethernet_str_2_mac(netif->hwaddr, val_CMPhyAddr);  /* The hardware address itself. */
+
+    netif->mtu = MTU_FEC - 18;            //32               /* The MTU (maximum transmission unit) for the interface. */
+    
+    netif->flags = NETIF_FLAG_UP | NETIF_FLAG_LINK_UP | NETIF_FLAG_ETHERNET | NETIF_FLAG_BROADCAST;      /* пока без DHCP */
+   
+   /* We directly use etharp_output() here to save a function call.
+   * You can instead declare your own function an call etharp_output()
+   * from it if you have to do some checks before sending (e.g. if link
+   * is available...) */
+//  netif->output = etharp_output;
+#if LWIP_IPV6
+//  netif->output_ip6 = ethip6_output;
+#endif /* LWIP_IPV6 */
+//  netif->linkoutput = low_level_output;
+          
+#if LWIP_NETIF_LINK_CALLBACK
+//  /** This function is called when the netif link is set to up or down
+//   */
+//  netif->link_callback =;
+#endif /* LWIP_NETIF_LINK_CALLBACK */
+
+/*
+ * Initialize the snmp variables and counters inside the struct netif.
+ * The last argument should be replaced with your link speed, in units
+ * of bits per second.
+ */
+//    NETIF_INIT_SNMP(netif, snmp_ifType_ethernet_csmacd, LINK_SPEED_OF_YOUR_NETIF_IN_BPS);
+      
+/* инициализируем "железо" */
+    low_level_init(netif); 
+  
+    return (s8)ERR_OK;   
+}
+
+
+
+/*=============================================================================================================*/
+/*!  \brief Функция обратного вызова инициализирующая интерфейс ethernet для lwIP
+     \sa cb_dnepr_eth0_if_init
+*/
+/*=============================================================================================================*/
+static void low_level_init(struct netif *netif)
+{
+  
+  
+  (void)dnepr_ethernet_fec_init();   
+  (void)dnepr_ethernet_phy_init();  
+}
+
+
+
+/*-----------------------------------------Передача---------------------------------------------------*/
+
+err_t dnepr_eth0_if_link_output(struct netif *netif, struct pbuf *p); // Called when a raw link packet is ready to be transmitted. This function should not add any more headers. You must set netif->linkoutput to the address of this function.
+err_t dnepr_eth0_if_output(struct netif *netif, struct pbuf *p, ip_addr_t *ipaddr); //Called by ip_output when a packet is ready for transmission. Any link headers will be added here. This function should call the myif_link_output function when the packet is ready. You must set netif->output to the address of this function. If your driver supports ARP, you can simply set netif->output to etharp_output.
+
+/*-----------------------------------------Прием-------------------------------------------------------*/
+
+
+
+
+
+/*=============================================================================================================*/
+
+
+
+
+
+
+
+
+
+
 /* Forward declarations. */
 static void  ethernetif_input(struct netif *netif);
 
-/**
- * In this function, the hardware should be initialized.
- * Called from ethernetif_init().
- *
- * @param netif the already initialized lwip network interface structure
- *        for this ethernetif
- */
-static void
-low_level_init(struct netif *netif)
-{
-  struct ethernetif *ethernetif = netif->state;
-
-  /* set MAC hardware address length */
-  netif->hwaddr_len = ETHARP_HWADDR_LEN;
-
-  /* set MAC hardware address */
-// debug  
-//  t8_memcopy( netif->hwaddr, Dnepr_net_get_mac(), 6 );
-
-  /* maximum transfer unit */
-  netif->mtu = 1500;
-  
-  /* device capabilities */
-  /* don't set NETIF_FLAG_ETHARP if this device is not an ethernet one */
-  netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP;
- 
-  /* Do whatever else is needed to initialize interface. */  
-}
 
 /**
  * This function should do the actual transmission of the packet. The packet is
@@ -259,59 +372,3 @@ ethernetif_input(struct netif *netif)
   }
 }
 
-/**
- * Should be called at the beginning of the program to set up the
- * network interface. It calls the function low_level_init() to do the
- * actual setup of the hardware.
- *
- * This function should be passed as a parameter to netif_add().
- *
- * @param netif the lwip network interface structure for this ethernetif
- * @return ERR_OK if the loopif is initialized
- *         ERR_MEM if private data couldn't be allocated
- *         any other err_t on error
- */
-err_t
-ethernetif_init(struct netif *netif)
-{
-  struct ethernetif *ethernetif;
-
-  LWIP_ASSERT("netif != NULL", (netif != NULL));
-    
-  ethernetif = mem_malloc(sizeof(struct ethernetif));
-  if (ethernetif == NULL) {
-    LWIP_DEBUGF(NETIF_DEBUG, ("ethernetif_init: out of memory\n"));
-    return ERR_MEM;
-  }
-
-#if LWIP_NETIF_HOSTNAME
-  /* Initialize interface hostname */
-  netif->hostname = "lwip";
-#endif /* LWIP_NETIF_HOSTNAME */
-
-  /*
-   * Initialize the snmp variables and counters inside the struct netif.
-   * The last argument should be replaced with your link speed, in units
-   * of bits per second.
-   */
-  NETIF_INIT_SNMP(netif, snmp_ifType_ethernet_csmacd, LINK_SPEED_OF_YOUR_NETIF_IN_BPS);
-
-  netif->state = ethernetif;
-  netif->name[0] = IFNAME0;
-  /* We directly use etharp_output() here to save a function call.
-   * You can instead declare your own function an call etharp_output()
-   * from it if you have to do some checks before sending (e.g. if link
-   * is available...) */
-  netif->output = etharp_output;
-#if LWIP_IPV6
-  netif->output_ip6 = ethip6_output;
-#endif /* LWIP_IPV6 */
-  netif->linkoutput = low_level_output;
-  
-  ethernetif->ethaddr = (struct eth_addr *)&(netif->hwaddr[0]);
-  
-  /* initialize the hardware */
-  low_level_init(netif);
-
-  return ERR_OK;
-}

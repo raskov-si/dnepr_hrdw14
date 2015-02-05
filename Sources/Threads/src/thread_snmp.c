@@ -1,8 +1,8 @@
+/*=============================================================================================================*/
 /*!  \file thread_snmp.c
 *    \brief     поток задач обслуживания сетевого протокола
 *    \details   
 */
-
 /*=============================================================================================================*/
 
 #include "OS_CPU.H"
@@ -52,17 +52,16 @@ static u32 ping_time;
 
 
 
-extern s8 val_CMPhyAddr[];
 
-static struct
-{
-    u8          mac_address[6];   /*!< адрес ethernet */
-    
-    ip_addr_t   ip_adress;
-    ip_addr_t   netmask;
-    ip_addr_t   gw;
-    
-} snmp_stack_config;
+//static struct
+//{
+//    u8          mac_address[6];   /*!< адрес ethernet */
+//    
+//    ip_addr_t   ip_adress;
+//    ip_addr_t   netmask;
+//    ip_addr_t   gw;
+//    
+//} snmp_stack_config;
 
 static struct netif net;
 
@@ -202,23 +201,15 @@ static void ping_thread
 /*=============================================================================================================*/
 void task_snmp( void *pdata )
 {
-  
+
 /* Стартуем LwIP */
-//    net.hwaddr_len = 6 ;
-//    net.mtu = 32 ;
-//    net.flags = NETIF_FLAG_UP | NETIF_FLAG_LINK_UP ;
-//    
-//    /*! \todo поменять на мак-адрес контроллера */
-//    dnepr_ethernet_str_2_mac(snmp_stack_config.mac_address, val_CMPhyAddr);
-//    t8_memcopy( net.hwaddr, snmp_stack_config.mac_address, 6 );
-//    
-    /*  заполняем таблицу маршрутизации */
-    
 //    netif_add( &net, ip_addr_t *ipaddr, ip_addr_t *netmask,
- //      ip_addr_t *gw, void *state, netif_init_fn init, netif_input_fn input);
+//              ip_addr_t *gw, void *state, cb_dnepr_eth0_if_init(), netif_input_fn input);
+  
+    
 
 	// tcpip_init( __tcpip_init_done, NULL );
-	// ethernetif_init( &net );
+	// 
   
     /* ping */
 //    sys_thread_new("ping_thread", ping_thread, NULL, PING_THREAD_STACKSIZE, PING_THREAD_PRIO);

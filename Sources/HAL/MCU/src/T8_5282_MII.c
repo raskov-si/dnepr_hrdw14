@@ -126,3 +126,18 @@ u32 fec_mii_read(u32 phy_addr, u32 reg_addr, u16* data)
 }
 /********************************************************************/
 
+
+void t8_m5282_MII_fec_init(u32  input)
+{  
+//  MCF_FEC_RCR = (MAX_FRAME_LEN << 16) | RCR_MII_MODE;
+  MCF_FEC_GAUR = 0;
+  MCF_FEC_GALR = 0;
+  MCF_FEC_IAUR = 0;
+  MCF_FEC_IALR = 0;
+//  MCF_FEC_ETDSR = (uint32_t)txbd_ring;
+//  MCF_FEC_ERDSR = (uint32_t)rxbd_ring;
+  
+//  MCF_FEC_EMRBR = LWIP_MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE);
+//  MCF_FEC_ECR |= ECR_ETHER_EN;
+}
+

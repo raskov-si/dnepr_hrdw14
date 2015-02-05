@@ -14,6 +14,11 @@
 
 u32 Dnepr_Ethernet_Init( const u8* maddr );
 
+int dnepr_ethernet_fec_init(void); 
+
+int dnepr_ethernet_phy_init(void);
+
+
 void dnepr_ethernet_sfpport_autoneg_mode
 ( 
     u8      sfp_num,                        /*!< [in] номер sfp 1,2                                   */

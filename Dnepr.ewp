@@ -1538,7 +1538,7 @@
         </option>
         <option>
           <name>XclFile</name>
-          <state>$PROJ_DIR$\lnkM5282_s19.xcl</state>
+          <state>$PROJ_DIR$\lnkM5282_s19_new.xcl</state>
         </option>
         <option>
           <name>XclFileSlave</name>
@@ -1672,7 +1672,7 @@
         </option>
         <option>
           <name>OverlaySystemMap</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>RawBinaryFile</name>
@@ -2386,6 +2386,15 @@
       </file>
       <file>
         <name>$PROJ_DIR$\Sources\lwip\core\udp.c</name>
+      </file>
+    </group>
+    <group>
+      <name>inc</name>
+      <file>
+        <name>$PROJ_DIR$\Sources\lwip\include\arch\cc.h</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\Sources\lwip\include\arch\sys_arch.h</name>
       </file>
     </group>
     <group>

@@ -28,10 +28,15 @@
 
 /********************************************************************/
 //Fucntion Protoypes
+void t8_m5282_MII_fec_init(u32  input);
+//void t8_m5282_MII_fec_init(mode, );
+
+
 
 u32  fec_mii_write(u32, u32, u16);
 u32  fec_mii_read(u32, u32, u16*);
-void fec_mii_init(u32);
+
+
 void fec_mii_reg_printf(void);
 
 /********************************************************************/

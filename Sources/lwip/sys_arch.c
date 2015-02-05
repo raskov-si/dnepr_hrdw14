@@ -1,11 +1,15 @@
+/*=============================================================================================================*/
 /*!
 \file sys_arch.c
-\brief поток для работы сети -- RSTP и TCP/UDP/IP
+\brief    Порт уровня операционной ситемы lwIP под uC/OS-II
+\details  Предоставляет интерфейс между кодом lwIP и ядром операционной системы. Функции нужные для порта 
+          обозначены в файле документации sys_arch.txt идущим вместе со стеком.
 \author Baranov Mikhail, <a href="mailto:baranovm@t8.ru">baranovm@t8.ru</a>
-\date jun 2014
 */
+/*=============================================================================================================*/
 
 #include "arch/sys_arch.h"
+#include "arch/cc.h"
 #include "common_lib/memory.h"
 
 #include "lwip/debug.h"
@@ -21,7 +25,7 @@
 const  void * const         pvNullPointer = NULL;
 static OS_MEM              *pQueueMem;
 static char                 pcQueueMemoryPool[MAX_QUEUES * sizeof(TQ_DESCR)];
-static u8_t                 curr_prio_offset;
+static u8_t                 task_id;
 OS_STK                      LWIP_TASK_STK[LWIP_TASK_MAX][LWIP_STK_SIZE];
 
 /*=============================================================================================================*/
@@ -36,8 +40,90 @@ void sys_init(void)
     u8_t err;
     
     pQueueMem        = OSMemCreate((void*)pcQueueMemoryPool, MAX_QUEUES, sizeof(TQ_DESCR), &err);
-    curr_prio_offset = 0;
+    task_id = 0;
 }
+
+
+/*-----------------------------------------Семафоры---------------------------------------------------*/
+
+/*=============================================================================================================*/
+/*!  \brief Создает новый семафор.   */
+/*=============================================================================================================*/
+err_t sys_sem_new(sys_sem_t *sem, u8_t count)
+{    
+    if ( (sem = OSSemCreate(count)) != NULL ) {
+	return (err_t)ERR_OK ;
+    }
+    
+    return (err_t)ERR_MEM ;
+}
+
+/*=============================================================================================================*/
+/*!  \brief Удаляет семафор.   */
+/*=============================================================================================================*/
+void sys_sem_free(sys_sem_t *sem)
+{
+    u8 err ;
+    sem = OSSemDel( sem, OS_DEL_ALWAYS, &err );
+}
+
+
+/*=============================================================================================================*/
+/*!  \brief Увеличивает значение ресурса на единицу.   */
+/*=============================================================================================================*/
+void sys_sem_signal(sys_sem_t *sem)
+{
+    (void)OSSemPost(sem);
+}
+
+
+/*=============================================================================================================*/
+/*!  \brief ждет доступности семафора с указанным таймаутом. */
+/*=============================================================================================================*/
+u32_t sys_arch_sem_wait(sys_sem_t *sem, u32_t timeout)
+{
+    u8_t err;
+    u32_t ucos_timeout;
+    
+    ucos_timeout = 0;
+    if(timeout != 0) {
+        ucos_timeout = (timeout * OS_TICKS_PER_SEC)/1000;
+        if(ucos_timeout < 1) {
+            ucos_timeout = 1;
+        }
+        else if(ucos_timeout > 65535) {
+            ucos_timeout = 65535;
+        }
+    }
+    
+    OSSemPend (sem, ucos_timeout, &err);
+    
+    if ( err == OS_ERR_TIMEOUT ) {
+        return SYS_ARCH_TIMEOUT;
+    }
+    
+    return 0; 
+}
+
+/*=============================================================================================================*/
+/*!  \brief     Проверяет жив ли этот семафор  
+ *   \retval    1 for valid, 0 for invalid
+ */
+/*=============================================================================================================*/
+int sys_sem_valid(sys_sem_t *sem) 
+{
+  return (sem != NULL) ;
+}
+
+/*=============================================================================================================*/
+/*!  \brief Вызывается после обнуления семафора.   */
+/*=============================================================================================================*/
+void sys_sem_set_invalid(sys_sem_t *sem)
+{
+   sem = NULL;
+}
+
+
 
 
 /*-----------------------------------------Очереди сообщений---------------------------------------------------*/
@@ -138,7 +224,6 @@ u32_t sys_arch_mbox_fetch(sys_mbox_t *mbox, void **msg, u32_t timeout)
     
     
     if( timeout != 0 ) {
-        /* \todo Корректно определить OS_TICKS_PER_SEC !!!!!! */
         ucos_timeout = (timeout * OS_TICKS_PER_SEC)/1000;
         if (ucos_timeout < 1) {
             ucos_timeout = 1;
@@ -185,119 +270,45 @@ void sys_mbox_set_invalid(sys_mbox_t *mbox)
 
 
 
-/*-----------------------------------------Семафоры---------------------------------------------------*/
-
+/*-----------------------------------------Потоки---------------------------------------------------*/
 
 /*=============================================================================================================*/
-/*!  \brief Создает новый семафор.   */
+/*!  \brief Создает новый поток.  */
 /*=============================================================================================================*/
-err_t sys_sem_new(sys_sem_t *sem, u8_t count)
-{    
-    if ( (sem = OSSemCreate(count)) != NULL ) {
-	return (err_t)ERR_OK ;
-    }
+sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg, int stacksize, int prio)
+{
+    u8 ret ;
     
-    return (err_t)ERR_MEM ;
+    LWIP_PLATFORM_ASSERT ( stacksize <= LWIP_STK_SIZE );
+    
+    if (task_id < LWIP_TASK_MAX) {        
+	LWIP_PLATFORM_ASSERT(OSTaskCreateExt(thread, (void *)0, &LWIP_TASK_STK[task_id][stacksize-1], LWIP_START_PRIO+prio, task_id, &LWIP_TASK_STK[task_id][0], stacksize, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE );
+        OSTaskNameSet( prio, (INT8U*)name, (INT8U*)&ret ) ;
+        LWIP_PLATFORM_ASSERT( ret == OS_ERR_NONE ) ;
+        task_id++;
+    } 
+    
+    return (task_id);
 }
 
 /*=============================================================================================================*/
-/*!  \brief Удаляет семафор.   */
+/*!  \brief Входим в критическую секцию.   */
 /*=============================================================================================================*/
-void sys_sem_free(sys_sem_t *sem)
+sys_prot_t sys_arch_protect(void)
 {
-    u8 err ;
-    sem = OSSemDel( sem, OS_DEL_ALWAYS, &err );
+    sys_prot_t cpu_sr;
+    
+    OS_ENTER_CRITICAL();    
+    return cpu_sr;
 }
 
-
 /*=============================================================================================================*/
-/*!  \brief Увеличивает значение ресурса на единицу.   */
+/*!  \brief Выходим из критической секции.   */
 /*=============================================================================================================*/
-void sys_sem_signal(sys_sem_t *sem)
+void sys_arch_unprotect(sys_prot_t pval)
 {
-    (void)OSSemPost(sem);
+    sys_prot_t cpu_sr;
+    
+    cpu_sr = pval;
+    OS_EXIT_CRITICAL();
 }
-
-
-/*=============================================================================================================*/
-/*!  \brief ждет доступности семафора с указанным таймаутом. */
-/*=============================================================================================================*/
-/** Wait for a semaphore for the specified timeout
- * @param sem the semaphore to wait for
- * @param timeout timeout in milliseconds to wait (0 = wait forever)
- * @return time (in milliseconds) waited for the semaphore
- *         or SYS_ARCH_TIMEOUT on timeout */
-//u32_t sys_arch_sem_wait(sys_sem_t *sem, u32_t timeout)
-////u32_t sys_arch_sem_wait(sys_sem_t sem, u32_t timeout)
-//{
-//    u8_t err;
-//    u32_t ucos_timeout;
-//    ucos_timeout = 0;
-//    if(timeout != 0) {
-//        ucos_timeout = (timeout * OS_TICKS_PER_SEC)/1000;
-//        if(ucos_timeout < 1)
-//            ucos_timeout = 1;
-//        else if(ucos_timeout > 65535)
-//        ucos_timeout = 65535;
-//    }
-//    OSSemPend (sem, ucos_timeout, &err);
-//    if (err == OS_TIMEOUT) {
-//        return SYS_ARCH_TIMEOUT;  
-//    } else {
-//        return !SYS_ARCH_TIMEOUT;
-//    }
-//}
-
-
-
-
-/** Check if a sempahore is valid/allocated: return 1 for valid, 0 for invalid */
-int sys_sem_valid(sys_sem_t *sem);
-
-/** Set a semaphore invalid so that sys_sem_valid returns 0 */
-void sys_sem_set_invalid(sys_sem_t *sem);
-
-
-
-
-
-
-
-
-
-
-u32_t sys_arch_sem_wait(sys_sem_t *sem, u32_t timeout)
-{
-	u8 err ;
-	unsigned long long starttime = llUptime ;
-	unsigned long long fintime ;
-	OSSemPend( sem, timeout, &err );
-	fintime = llUptime ;
-	assert( (err == OS_ERR_NONE) || (err == OS_ERR_TIMEOUT) );
-	if( err == OS_ERR_TIMEOUT ){
-		return SYS_ARCH_TIMEOUT ;
-	} else {
-		if( fintime >= starttime ){
-			return fintime - starttime ;
-		} else {
-			return fintime + (0xFFFFFFFFFFFFFFFF - starttime) + 1;
-		}
-	}
-}
-
-
-
-
-//sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg, int stacksize, int prio)
-//{
-//	u8 *stack = (u8*)npalloc( stacksize );
-//	u8 ret ;
-//	assert( stack );
-//
-//	assert(OSTaskCreateExt(thread, (void *)0, (void *)&stack[stacksize-1], prio, prio, (void *)&stack, stacksize, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE );
-//    OSTaskNameSet( prio, (INT8U*)name, (INT8U*)&ret ) ;
-//    assert( ret == OS_ERR_NONE ) ;
-//
-//    return 0 ;
-//}
-//

@@ -24,11 +24,11 @@ typedef u32 mem_ptr_t ;
 #define X32_F "x"
 #define SZT_F "uz"
 
-#define BYTE_ORDER BIG_ENDIAN
+#define BYTE_ORDER                      BIG_ENDIAN
 
-#define LWIP_CHKSUM_ALGORITHM 3
+#define LWIP_CHKSUM_ALGORITHM           (3)
 
-#define SYS_ARCH_PROTECT(x)			OS_ENTER_CRITICAL()
+#define SYS_ARCH_PROTECT(x)		OS_ENTER_CRITICAL()
 #define SYS_ARCH_UNPROTECT(x)		OS_EXIT_CRITICAL()
 #define SYS_ARCH_DECL_PROTECT(x) 	STORAGE_ATOMIC()
 
@@ -37,8 +37,9 @@ typedef u32 mem_ptr_t ;
 #define PACK_STRUCT_BEGIN
 #define PACK_STRUCT_END
 
-#define LWIP_COMPAT_MUTEX 1
+#define LWIP_COMPAT_MUTEX                   (1)
 #define LWIP_PROVIDE_ERRNO
 
-#define LINK_SPEED_OF_YOUR_NETIF_IN_BPS 100000000
-#define LWIP_PLATFORM_ASSERT(x)			assert(x)
+#define LINK_SPEED_OF_YOUR_NETIF_IN_BPS     100000000
+#define LWIP_PLATFORM_ASSERT(x)		    assert(x)
+

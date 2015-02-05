@@ -46,7 +46,7 @@
 
 static  void  OSMutex_RdyAtPrio(OS_TCB *ptcb, INT8U prio);
 
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                                   ACCEPT MUTUAL EXCLUSION SEMAPHORE
