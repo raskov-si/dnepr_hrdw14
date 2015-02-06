@@ -5,11 +5,25 @@
  * Notes:
  */
 
-#ifndef _MII_H_
-#define _MII_H_
+#ifndef _T8_5282_H_
+#define _T8_5282_H_
+
+#ifdef	__cplusplus
+    extern "C" {
+#endif
 
 /********************************************************************/
 
+/* пересчет тактовой частоты MII */
+// Должно быть <=  2.5 МГц  a - желаемая частота MII в Кгц      
+/*        
+      FEC_MDC_KHZ = (FEC_MDC_KHZ <= 2500u) ? FEC_MDC_KHZ : 2500u         
+      FEC_MDC_KHZ = SYSTEM_CLOCK_KHZ / (MII_SPEED x 2)        
+      SYSTEM_CLOCK_KHZ / FEC_MDC_KHZ  = (MII_SPEED x 2)                
+      MII_SPEED = SYSTEM_CLOCK_KHZ / (FEC_MDC_KHZ * 2)
+*/      
+#define FEC_MII_CLOCK_DEV_CALC(a)  ( SYSTEM_CLOCK_KHZ / ( ((a <= 2500u) ? a : 2500u) * 2) )
+              
 /* MII Speed Settings */
 #define FEC_MII_10BASE_T        0
 #define FEC_MII_100BASE_TX      1
@@ -25,19 +39,30 @@
 #define FEC_MODE_7WIRE          0
 #define FEC_MODE_MII            1
 #define FEC_MODE_LOOPBACK       2   /* Internal Loopback */
+      
+      
 
-/********************************************************************/
+/*=============================================================================================================*/
+
+typedef struct _FEC_CONFIG
+{
+    u32     fec_mii_speed;              /*!< делитель частоты для MII, считается через FEC_MII_CLOCK_DEV_CALC   */
+    u8      fec_mode;                   /*!< режим FEC, FEC_MODE_7WIRE, FEC_MODE_MII, FEC_MODE_LOOPBACK         */
+    u8      mac_addr[6];		/*!< мак-адрес   */
+    u8      rcv_broadcast_clock;	//!< RX должен реагировать на broadcast пакеты или нет
+    u16     fec_max_eth_pocket;
+} t_fec_config;
+            
+/*=============================================================================================================*/
+      
 //Fucntion Protoypes
-void t8_m5282_MII_fec_init(u32  input);
-//void t8_m5282_MII_fec_init(mode, );
+void t8_m5282_fec_init(t_fec_config *input);
+
+u32  t8_m5282_fec_mdio_write(u32, u32, u16);
+u32  t8_m5282_fec_mdio_read(u32, u32, u16*);
 
 
-
-u32  fec_mii_write(u32, u32, u16);
-u32  fec_mii_read(u32, u32, u16*);
-
-
-void fec_mii_reg_printf(void);
+//void fec_mii_reg_printf(void);
 
 /********************************************************************/
 //Register Mask and Other
@@ -151,4 +176,8 @@ void fec_mii_reg_printf(void);
 
 /********************************************************************/
 
-#endif /* _MII_H_ */
+#ifdef	__cplusplus
+    }
+#endif
+
+#endif /* _T8_5282_H_ */

@@ -13,7 +13,7 @@
 
 #include "HAL/BSP/inc/T8_Dnepr_Ethernet.h"
 #include "HAL/IC/inc/MV_88E6095.h"
-#include "HAL/MCU/inc/T8_5282_MII.h"
+#include "HAL/MCU/inc/T8_5282_FEC.h"
 
 
 /*!
@@ -104,13 +104,20 @@ void dnepr_ethernet_sfpport_autoneg_mode
 *   \sa netif_add
 */
 /*=============================================================================================================*/
-int dnepr_ethernet_fec_init(void)
+int dnepr_ethernet_fec_init
+(
+    const u8 *mac_adress
+)
 {
-  /* Do whatever else is needed to initialize interface. */  
+  t_fec_config      mii_config;
   
-  t8_m5282_MII_fec_init(42);
-//  fec_mii_init (txbd_ring, rxbd_ring);
-  ;
+  mii_config.fec_mii_speed = FEC_MII_CLOCK_DEV_CALC(2500);
+  memcpy(mii_config.mac_addr, mac_adress, 6);
+  mii_config.fec_max_eth_pocket = MAX_ETH_PKT;
+  
+  
+  t8_m5282_fec_init(&mii_config);
+  
   return 0;
 }
 

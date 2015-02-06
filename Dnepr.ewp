@@ -1949,6 +1949,9 @@
           <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_SlotEEPROM.h</name>
         </file>
         <file>
+          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_SMI.h</name>
+        </file>
+        <file>
           <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_Uart_Profile.h</name>
         </file>
       </group>
@@ -2007,6 +2010,9 @@
         </file>
         <file>
           <name>$PROJ_DIR$\Sources\HAL\BSP\src\T8_Dnepr_SlotEEPROM.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\Sources\HAL\BSP\src\T8_Dnepr_SMI.c</name>
         </file>
         <file>
           <name>$PROJ_DIR$\Sources\HAL\BSP\src\T8_Dnepr_UART_Profile.c</name>
@@ -2162,13 +2168,13 @@
           <name>$PROJ_DIR$\Sources\HAL\MCU\inc\T8_5282_cfm.h</name>
         </file>
         <file>
+          <name>$PROJ_DIR$\Sources\HAL\MCU\inc\T8_5282_FEC.h</name>
+        </file>
+        <file>
           <name>$PROJ_DIR$\Sources\HAL\MCU\inc\T8_5282_i2c.h</name>
         </file>
         <file>
           <name>$PROJ_DIR$\Sources\HAL\MCU\inc\T8_5282_interrupts.h</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\Sources\HAL\MCU\inc\T8_5282_MII.h</name>
         </file>
         <file>
           <name>$PROJ_DIR$\Sources\HAL\MCU\inc\T8_5282_spi.h</name>
@@ -2198,13 +2204,13 @@
           <name>$PROJ_DIR$\Sources\HAL\MCU\src\T8_5282_cfm.c</name>
         </file>
         <file>
+          <name>$PROJ_DIR$\Sources\HAL\MCU\src\T8_5282_FEC.c</name>
+        </file>
+        <file>
           <name>$PROJ_DIR$\Sources\HAL\MCU\src\T8_5282_i2c.c</name>
         </file>
         <file>
           <name>$PROJ_DIR$\Sources\HAL\MCU\src\T8_5282_interrupts.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\Sources\HAL\MCU\src\T8_5282_MII.c</name>
         </file>
         <file>
           <name>$PROJ_DIR$\Sources\HAL\MCU\src\T8_5282_spi.c</name>

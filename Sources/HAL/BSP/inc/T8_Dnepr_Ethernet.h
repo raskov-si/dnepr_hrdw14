@@ -5,16 +5,27 @@
 \date jule 2012
 */
 
+
+#include "support_common.h"
+
 //! адрес  первого MV88E6095 по SMI в multichip mode
 #define MV88E6095_1_CHIPADDR			0x01
 //! адрес  второго MV88E6095 по SMI в multichip mode
 #define MV88E6095_2_CHIPADDR			0x10
 
-#include "support_common.h"
+/** Maximum packet size we can handle on a FEC. Since we don't
+ * scatter/gather this is both max buffer and max frame size, and
+ * applies to both transmit and receive.
+ */
+#define MAX_ETH_PKT 1522  /* The recommended default value to be programmed is 1518 or 1522 if VLAN tags are supported. */
+
 
 u32 Dnepr_Ethernet_Init( const u8* maddr );
 
-int dnepr_ethernet_fec_init(void); 
+int dnepr_ethernet_fec_init
+(
+    const u8 *mac_adress
+);
 
 int dnepr_ethernet_phy_init(void);
 

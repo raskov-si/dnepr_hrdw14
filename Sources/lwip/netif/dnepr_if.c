@@ -143,9 +143,7 @@ err_t cb_dnepr_eth0_if_init(struct netif *netif)
 /*=============================================================================================================*/
 static void low_level_init(struct netif *netif)
 {
-  
-  
-  (void)dnepr_ethernet_fec_init();   
+  (void)dnepr_ethernet_fec_init(netif->hwaddr);   
   (void)dnepr_ethernet_phy_init();  
 }
 

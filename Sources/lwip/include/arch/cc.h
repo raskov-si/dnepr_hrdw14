@@ -4,7 +4,13 @@
 \author Baranov Mikhail, <a href="mailto:baranovm@t8.ru">baranovm@t8.ru</a>
 \date jul 2014
 */
+#ifndef __CC_H__
+#define __CC_H__
 
+#ifdef	__cplusplus
+    extern "C" {
+#endif
+      
 #include "support_common.h"
 
 #define u8_t	u8
@@ -43,3 +49,8 @@ typedef u32 mem_ptr_t ;
 #define LINK_SPEED_OF_YOUR_NETIF_IN_BPS     100000000
 #define LWIP_PLATFORM_ASSERT(x)		    assert(x)
 
+#ifdef	__cplusplus
+    }
+#endif
+
+#endif	/* __CC_H__ */

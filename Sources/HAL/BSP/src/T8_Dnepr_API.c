@@ -22,6 +22,7 @@
 #include "HAL/BSP/inc/T8_Dnepr_QSPI.h"
 #include "HAL/BSP/inc/T8_Dnepr_I2C_Interface_Funcs_templates.h"
 #include "HAL/BSP/inc/T8_Dnepr_LED.h"
+#include "HAL/BSP/inc/T8_Dnepr_SMI.h"
 #include "HAL/BSP/inc/T8_Dnepr_Select.h"
 #include "HAL/BSP/inc/T8_Dnepr_BP_CurrentMeasure.h"
 
@@ -41,7 +42,7 @@ static I2C_DNEPR_PresentDevicesTypedef tCuPresentDevices;
 unsigned int nCuPresentDevicesInits=0;
 static TI_TCA9555_PortsTypedef tSfpPinsConfig;
 
-static SMI_PeriphInterfaceTypedef tSMIPeriphInterface ;
+//static SMI_PeriphInterfaceTypedef tSMIPeriphInterface ;
 static SPI_PeriphInterfaceTypedef tSpiBPADCInterface ;
 static SPI_PeriphInterfaceTypedef tSpiFLASHInterface ;
 static SPI_PeriphInterfaceTypedef tSpiEEPROMInterface ;
@@ -70,9 +71,10 @@ void DNEPR_InitPeripherials()
 	
 	/////////////////////////////////////////////////////////////////////////
 	// Ceòü: MDIO: 88E6095
-	tSMIPeriphInterface.SMI_Read 	= &fec_mii_read ;
-    tSMIPeriphInterface.SMI_Write	= &fec_mii_write ;
-    MV_88E6095_InitPeripheralInterface( &tSMIPeriphInterface ) ;
+//	tSMIPeriphInterface.SMI_Read 	= &t8_m5282_fec_mdio_read ;
+//        tSMIPeriphInterface.SMI_Write	= &t8_m5282_fec_mdio_write ;
+//        MV_88E6095_InitPeripheralInterface( &tSMIPeriphInterface ) ;
+        MV_88E6095_InitPeripheralInterface( dnepr_smi_get_driver_descriptor() ) ;
 
 	Dnepr_Ethernet_Init( switch_mac_addr_default ) ;
 

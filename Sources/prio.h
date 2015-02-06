@@ -24,8 +24,9 @@
 #define dyn_param_mutex_PRIO 	12 	//!< приоритет мьютекса для переключения буфера динамических параметров
 #define spi_mutex_PRIO 			13 	//!< приоритет мьютекса для переключения буфера параметров
 #define i2c_mutex_PRIO 			14 	//!< приоритет мьютекса для переключения буфера параметров
-#define ffs_mutex_PRIO 			15 	//!< приоритет мьютекса для защиты функций hotswap'а
-#define hs_mutex_PRIO 			16 	//!< приоритет мьютекса для защиты функций hotswap'а
+#define SMI_MUTEX_PRIO                  15      //!< приоритет мьютекса для смены параметров PHY (свитча)
+#define ffs_mutex_PRIO 			16 	//!< приоритет мьютекса для защиты функций hotswap'а
+#define hs_mutex_PRIO 			17 	//!< приоритет мьютекса для защиты функций hotswap'а
 
 #define tackDController_PRIO	30
 #define TASK_SNMP_PRIORITY      (35)

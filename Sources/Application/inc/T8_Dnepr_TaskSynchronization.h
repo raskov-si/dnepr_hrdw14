@@ -28,3 +28,10 @@ void T8_Dnepr_TS_I2C_Unlock() ;
 
 void T8_Dnepr_TS_FFS_Lock() ;
 void T8_Dnepr_TS_FFS_Unlock() ;
+
+
+/*------------------------------------------------------------------------------------------------------------------*/
+/* защищают интерфейс SMI */
+void t8_dnepr_ts_smi_lock(void);
+void t8_dnepr_ts_smi_unlock(void);
+

@@ -82,7 +82,7 @@ u32 MV88E6095_multichip_smi_read(	const u8 pcbDevAddr, const u8 virtDevAddr,
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+///// функции для одного чипа
 void MV88E6095_InitPort(u8 port_index) {
 	u16 mv_data;
 	u32 dev_addr;

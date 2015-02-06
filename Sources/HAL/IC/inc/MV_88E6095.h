@@ -7,7 +7,6 @@
 #ifndef MARAVELL_88E6095_H_
 #define MARAVELL_88E6095_H_
 
-#include "support_common.h"
 #include "HAL/IC/inc/SMI_interface.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -122,7 +121,7 @@
 #define MV88E6095_PORT10	0x1A
 
 #define MV88E6095_GLOBAL	0x1B
-#define MV88E6095_GLOBAL2	0x1C
+#define MV88E6095_GLOBAL_2	0x1C
 
 #define MV88E6095_PORT_DISABLED	0x0
 #define MV88E6095_PORT_LISTENING	0x1
