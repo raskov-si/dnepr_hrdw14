@@ -16,6 +16,18 @@
 #include "HAL/MCU/inc/T8_5282_FEC.h"
 
 
+/*=============================================================================================================*/
+
+#pragma data_alignment=16
+_Pragma("location=\"packets_sram\"")
+__no_init static t_txrx_desc rx_bd[ ETHERNET_RX_BD_NUMBER ] ;
+#pragma data_alignment=16
+_Pragma("location=\"packets_sram\"")
+__no_init static t_txrx_desc tx_bd[ ETHERNET_TX_BD_NUMBER ] ;
+
+/*=============================================================================================================*/
+
+
 /*!
 \brief Инициализирует два MV88E6095 как тупой свитч, без RSTP, все порты включены
 \param maddr массив 6ти байт мак-адреса, которым свитч должен слать пакеты flow control

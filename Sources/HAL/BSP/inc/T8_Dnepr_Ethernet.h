@@ -19,6 +19,9 @@
  */
 #define MAX_ETH_PKT 1522  /* The recommended default value to be programmed is 1518 or 1522 if VLAN tags are supported. */
 
+#define ETHERNET_RX_BD_NUMBER    (8)      /*!< количество дескрипторов приёмных буферов      */
+#define ETHERNET_TX_BD_NUMBER    (4)      /*!< количество дескрипторов буферов для отсылки   */
+
 
 u32 Dnepr_Ethernet_Init( const u8* maddr );
 

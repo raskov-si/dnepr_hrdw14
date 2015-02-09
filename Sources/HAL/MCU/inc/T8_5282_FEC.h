@@ -40,17 +40,63 @@
 #define FEC_MODE_MII            1
 #define FEC_MODE_LOOPBACK       2   /* Internal Loopback */
       
+ /* Status bits in buffer descriptors */
+#define MCF_FEC_TxBD_R                  0x8000
+#define MCF_FEC_TxBD_INUSE              0x4000
+#define MCF_FEC_TxBD_TO1                0x4000
+#define MCF_FEC_TxBD_W                  0x2000
+#define MCF_FEC_TxBD_TO2                0x1000
+#define MCF_FEC_TxBD_L                  0x0800
+#define MCF_FEC_TxBD_TC                 0x0400
+#define MCF_FEC_TxBD_DEF                0x0200
+#define MCF_FEC_TxBD_HB                 0x0100
+#define MCF_FEC_TxBD_LC                 0x0080
+#define MCF_FEC_TxBD_RL                 0x0040
+#define MCF_FEC_TxBD_UN                 0x0002
+#define MCF_FEC_TxBD_CSL                0x0001
+
+#define MCF_FEC_RxBD_E                  0x8000
+#define MCF_FEC_RxBD_INUSE              0x4000
+#define MCF_FEC_RxBD_R01                0x4000
+#define MCF_FEC_RxBD_W                  0x2000
+#define MCF_FEC_RxBD_R02                0x1000
+#define MCF_FEC_RxBD_L                  0x0800
+#define MCF_FEC_RxBD_M                  0x0100
+#define MCF_FEC_RxBD_BC                 0x0080
+#define MCF_FEC_RxBD_MC                 0x0040
+#define MCF_FEC_RxBD_LG                 0x0020
+#define MCF_FEC_RxBD_NO                 0x0010
+#define MCF_FEC_RxBD_CR                 0x0004
+#define MCF_FEC_RxBD_OV                 0x0002
+#define MCF_FEC_RxBD_TR                 0x0001
       
 
 /*=============================================================================================================*/
 
+/*! \brief дескриптор буфера FEC'а  */
+#pragma pack(push)
+#pragma pack(1)
+typedef struct BufferDescriptor 
+{
+   volatile u16  cstatus;     /*!< control and status */
+   volatile u16  length;      /*!< transfer length    */
+   volatile u8 * addr;        /*!< buffer address     */
+} t_txrx_desc;
+#pragma pack(pop)
+      
+/*! \brief конфигурация FEC'а  */
 typedef struct _FEC_CONFIG
 {
-    u32     fec_mii_speed;              /*!< делитель частоты для MII, считается через FEC_MII_CLOCK_DEV_CALC   */
-    u8      fec_mode;                   /*!< режим FEC, FEC_MODE_7WIRE, FEC_MODE_MII, FEC_MODE_LOOPBACK         */
-    u8      mac_addr[6];		/*!< мак-адрес   */
-    u8      rcv_broadcast_clock;	//!< RX должен реагировать на broadcast пакеты или нет
-    u16     fec_max_eth_pocket;
+    u32         fec_mii_speed;                  /*!< делитель частоты для MII, считается через FEC_MII_CLOCK_DEV_CALC               */
+    u8          fec_mode;                       /*!< режим FEC, FEC_MODE_7WIRE, FEC_MODE_MII, FEC_MODE_LOOPBACK                     */
+    u8          mac_addr[6];		        /*!< мак-адрес                                                                      */
+    u8          ignore_mac_adress_when_recv;    /*!< Promiscuous mode. Все ethernet фреймы принимаются даже при несовпадении адреса */
+    u8          rcv_broadcast_clock;	        /*!< RX должен реагировать на broadcast пакеты или нет                              */
+    u16         fec_max_eth_pocket;
+    t_txrx_desc *rxbd_ring;
+    u8          rxbd_ring_len;
+    t_txrx_desc *txbd_ring;
+    u8          txbd_ring_len;
 } t_fec_config;
             
 /*=============================================================================================================*/

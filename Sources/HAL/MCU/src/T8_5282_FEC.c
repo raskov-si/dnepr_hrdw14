@@ -20,7 +20,23 @@ void t8_m5282_fec_init
 (
     t_fec_config    *input
 )
-{        
+{   
+/* 
+ * Инициализация, которую необходимо сделать пользователю. Последовательность выполнения не важна 
+ *   Initialize EIMR
+ *   Clear EIR (write 0xFFFF_FFFF)
+ *   TFWR (optional)
+ *   IALR / IAUR
+ *   GAUR / GALR
+ *   PALR / PAUR (only needed for full duplex flow control)
+ *   OPD (only needed for full duplex flow control)
+ *   RCR
+ *   TCR
+ *   MSCR (optional)
+ *   Clear MIB_RAM  
+ */
+    u8      i;
+  
     MCF_FEC_ECR |= MCF_FEC_ECR_RESET;                                   /* Сброс FEC */
     while( MCF_FEC_ECR & MCF_FEC_ECR_RESET ) {
         continue;
@@ -47,24 +63,39 @@ void t8_m5282_fec_init
         | (input->mac_addr[5] <<16)
         | MCF_FEC_PAUR_TYPE(0x00008808)));
     
-    input->fec_max_eth_pocket = ( input->fec_max_eth_pocket > 0 ) ? input->fec_max_eth_pocket : 1518;
-    // FIXME: MCF_FEC_RCR_PROM !!!
-    MCF_FEC_RCR = MCF_FEC_RCR_MAX_FL(input->fec_max_eth_pocket) 
+    input->fec_max_eth_pocket = ( input->fec_max_eth_pocket > 0 ) ? input->fec_max_eth_pocket : 1518;   /* инициализация приемника */
+    MCF_FEC_RCR =    MCF_FEC_RCR_MAX_FL(input->fec_max_eth_pocket) 
                   |  MCF_FEC_RCR_FCE 
                   | ((input->fec_mode == FEC_MODE_7WIRE) ? FEC_MODE_7WIRE : MCF_FEC_RCR_MII_MODE )
+                  | (input->ignore_mac_adress_when_recv > 0 ? MCF_FEC_RCR_PROM : 0)
                   | (input->rcv_broadcast_clock > 0 ? 0: MCF_FEC_RCR_BC_REJ);
                   
     if (input->fec_mode == FEC_MODE_LOOPBACK) {
         MCF_FEC_RCR |= MCF_FEC_RCR_LOOP;
         MCF_FEC_RCR &= ~MCF_FEC_RCR_DRT;
     }
-                  
+
+    MCF_FEC_TCR = MCF_FEC_TCR_FDEN ;                                                  /* инициализация передатчика */
+    
+        
+    for( i = 0; i < input->rxbd_ring_len; i++ ){                                      /* инициализация приемного буфера */
+        input->rxbd_ring[ i ].addr = NULL ;
+        input->rxbd_ring[ i ].cstatus = 0 ;
+        input->rxbd_ring[ i ].length = 0 ;
+    }
+    input->rxbd_ring[ i-1 ].cstatus |= MCF_FEC_RxBD_W ;
+    
+    MCF_FEC_ERDSR = (u32)input->rxbd_ring;
+    MCF_FEC_EMRBR = input->rxbd_ring_len;
+    
     
 //  MCF_FEC_ETDSR = (uint32_t)txbd_ring;
-//  MCF_FEC_ERDSR = (uint32_t)rxbd_ring;
   
 //  MCF_FEC_EMRBR = LWIP_MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE);
 //  MCF_FEC_ECR |= ECR_ETHER_EN;
+    
+    MCF_FEC_ECR = MCF_FEC_ECR_ETHER_EN ;                                            /* включаем приемник с передатчиком */
+
 }
 
 
@@ -82,12 +113,10 @@ void t8_m5282_fec_init
 //
 //
 //
-//    // полный дуплекс
-//    MCF_FEC_TCR = MCF_FEC_TCR_FDEN ;
-//
 //    //Program receive buffer size
 //    MCF_FEC_EMRBR = FEC_MAX_RCV_BUFF_SIZE ;
-//    // Configure Rx BD ring
+//    
+// Configure Rx BD ring
 //    MCF_FEC_ERDSR = (u32)&__rx_bd[0];
 //    for( i = 0; i < FEC_RX_BD_NUMBER; i++ ){
 //        __rx_bd[ i ].bd_addr = 0 ;
@@ -95,6 +124,8 @@ void t8_m5282_fec_init
 //        __rx_bd[ i ].bd_length = 0 ;
 //    }
 //    __rx_bd[ i-1 ].bd_cstatus |= MCF_FEC_RxBD_W ;
+
+
 //
 //    // Configure Tx BD ring
 //    MCF_FEC_ETSDR =  (u32)&__tx_bd[0];
@@ -106,6 +137,8 @@ void t8_m5282_fec_init
 //    __tx_bd[ i-1 ].bd_cstatus |= MCF_FEC_TxBD_W ;
 //
 //    FECMulticastAddressSet(0x0180, 0xC2000000);
+
+
 //
 //    MCF_FEC_ECR = MCF_FEC_ECR_ETHER_EN ;
 //
