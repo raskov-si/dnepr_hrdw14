@@ -23,7 +23,6 @@ typedef enum _I2C_PINS{SCL=0, SDA=1} I2C_PIN;
 
 ////////////////////////////////////////////////////////////////////
 #define I2C_ERROR_EXIT(x) { \
-  	MCF_I2C_I2CR &= ~MCF_I2C_I2CR_MSTA; \
 	I2Cinit() ; \
 	x \
 	return flag; \

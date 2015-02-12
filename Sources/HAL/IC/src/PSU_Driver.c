@@ -7,14 +7,15 @@
 \todo Implement all functions for PMBus PSU.
 */
 
+#include <string.h>
+#include <stdio.h>
+#include <math.h>
+
 #include "HAL/IC/inc/PSU_Driver.h"
 #include "HAL/IC/inc/PSMI_Registers.h"
 #include "HAL/IC/inc/FRU_Registers.h"
 #include "HAL/IC/inc/IPMI.h"
 #include "Binary.h"
-#include <string.h>
-#include <stdio.h>
-#include <math.h>
 
 #include "OS_CPU.H"
 #include "OS_CFG.H"

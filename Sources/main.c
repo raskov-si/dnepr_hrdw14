@@ -29,6 +29,7 @@
 #include "Application/inc/T8_Dnepr_ProfileStorage.h"
 
 #include "Threads/inc/threadCU.h"
+#include "Threads/inc/threadTerminal.h"
 #include "Threads/inc/threadMeasure.h"
 #include "Threads/inc/threadWatchdog.h"
 #include "Threads/inc/threadDeviceController.h"
@@ -49,6 +50,10 @@ static OS_STK  taskInitStk[256];
 static OS_STK  taskMeasureStk[1024];
 #pragma data_alignment=4
 static OS_STK  taskDControllerStk[1024];
+#pragma data_alignment=4
+static OS_STK  task_terminal_stack[128];
+
+
 
 static void taskInit(void *pdata);
 void taskMeasure(void *pdata);
@@ -106,7 +111,7 @@ static void taskInit(void *pdata)
 			3, 0 // IPL, prio
 	);
 	
-	OSStatInit() ;
+	OSStatInit();
 
 	////////////////////////////////////////////////////////////////////////////
 	// инициализируем переферию тут, чтобы работал таймер ОС (для таймаута в I2C)
@@ -121,13 +126,12 @@ static void taskInit(void *pdata)
 	DeviceController_Init() ;
         
         /* пытаемся обнаружить backplane eeprom с данными профиля в течении 15 секунд, после этого все равно включаемся */
-        //15*OS_TMR_CFG_TICKS_PER_SEC;
-        dnepr_wait_eeprom_contact(15*1000);
+//        dnepr_wait_eeprom_contact(5*OS_TICKS_PER_SEC);
         
 	// Инициализуруем параметры профиля.
 	Dnepr_ProfileStorage_Init() ;
 		
-	assert(OSTaskCreateExt(taskWatchdog, (void *)0, (void *)&taskWatchdogStk[127], taskWDT_PRIO, taskWDT_PRIO, (void *)&taskWatchdogStk, 127, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+    assert(OSTaskCreateExt(taskWatchdog, (void *)0, (void *)&taskWatchdogStk[127], taskWDT_PRIO, taskWDT_PRIO, (void *)&taskWatchdogStk, 128, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
     OSTaskNameSet( taskWDT_PRIO, "taskWatchdog", &return_code ) ;
     assert( return_code == OS_ERR_NONE ) ;
 
@@ -135,13 +139,19 @@ static void taskInit(void *pdata)
     OSTaskNameSet( taskMeasure_PRIO, "taskMeasure", &return_code ) ;
     assert( return_code == OS_ERR_NONE ) ;
 
-	assert(OSTaskCreateExt(taskCU, (void *)0, (void *)&taskCUStk[1023], taskCU_PRIO, taskCU_PRIO, (void *)&taskCUStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+    assert(OSTaskCreateExt(taskCU, (void *)0, (void *)&taskCUStk[1023], taskCU_PRIO, taskCU_PRIO, (void *)&taskCUStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
     OSTaskNameSet( taskCU_PRIO, "taskCU", &return_code ) ;
     assert( return_code == OS_ERR_NONE ) ;
 
-	assert(OSTaskCreateExt(taskDeviceController, (void *)0, (void *)&taskDControllerStk[1023], tackDController_PRIO, tackDController_PRIO, (void *)&taskDControllerStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+    assert(OSTaskCreateExt(taskDeviceController, (void *)0, (void *)&taskDControllerStk[1023], tackDController_PRIO, tackDController_PRIO, (void *)&taskDControllerStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
     OSTaskNameSet( tackDController_PRIO, "taskDeviceController", &return_code ) ;
     assert( return_code == OS_ERR_NONE ) ;
-
+    
+#ifdef DEBUG_TERMINAL
+    assert(OSTaskCreateExt(task_terminal, (void *)0, (void *)&task_terminal_stack[127], TASKTERM_COMM_PRIO, TASKTERM_COMM_PRIO, (void *)&task_terminal_stack, 128, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+    OSTaskNameSet( TASKTERM_COMM_PRIO, "task_terminal", &return_code ) ;
+    assert( return_code == OS_ERR_NONE ) ;    
+#endif
+    
     OSTaskDel( OS_PRIO_SELF ) ;
 }

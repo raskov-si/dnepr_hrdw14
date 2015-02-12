@@ -102,9 +102,11 @@ struct tNonVolatileParams
 _Pragma("location=\"nonvolatile_sram\"")
 //! параметры, хранящиеся в ОЗУ, питаемой от батарейки на плате.
 __no_init static struct tNonVolatileParams __nv_params ;
+
 _Pragma("location=\"nonvolatile_sram\"")
 //! если не совпадает c crc(__nv_params), значит не было инициализации -- инициализируем
 __no_init static u32 nv_params_crc ;
+
 
 static _BOOL Dnepr_NVParams_Init()
 {

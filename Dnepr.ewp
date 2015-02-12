@@ -279,6 +279,8 @@
           <state>CONFIG_YAFFS_SHORT_NAMES_IN_RAM</state>
           <state>CONFIG_YAFFS_YAFFS2</state>
           <state>CONFIG_YAFFS_PROVIDE_DEFS</state>
+          <state>DEBUG_TERMINAL</state>
+          <state>DEBUG_I2C</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -1150,6 +1152,7 @@
           <state>CONFIG_YAFFS_SHORT_NAMES_IN_RAM</state>
           <state>CONFIG_YAFFS_YAFFS2</state>
           <state>CONFIG_YAFFS_PROVIDE_DEFS</state>
+          <state>DEBUG_I2C_LOG</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -1799,6 +1802,9 @@
           <name>$PROJ_DIR$\Sources\Threads\inc\threadMeasure.h</name>
         </file>
         <file>
+          <name>$PROJ_DIR$\Sources\Threads\inc\threadTerminal.h</name>
+        </file>
+        <file>
           <name>$PROJ_DIR$\Sources\Threads\inc\threadWatchdog.h</name>
         </file>
       </group>
@@ -1812,6 +1818,9 @@
         </file>
         <file>
           <name>$PROJ_DIR$\Sources\Threads\src\threadMeasure.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\Sources\Threads\src\threadTerminal.c</name>
         </file>
         <file>
           <name>$PROJ_DIR$\Sources\Threads\src\threadWatchdog.c</name>

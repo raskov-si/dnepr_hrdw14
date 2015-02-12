@@ -52,6 +52,34 @@ ReturnStatus CircBuffer_push_one_tender( T8_CircBuffer* const desc_,
 	return erase_data;
 }
 
+ReturnStatus CircBuffer_write
+( 
+    T8_CircBuffer*          const descriptor,
+    CircBuffer_datatype*    const data, 
+    const size_t            datalen
+)
+{
+	STORAGE_ATOMIC();
+        
+//	ReturnStatus	erase_data = OK;
+//	if( descriptor->szActual == descriptor->szTotal ){
+//		descriptor->szLostBytes+= datalen;
+//		return ERROR ;
+//	}
+//
+//	START_ATOMIC();
+//	desc_->data[desc_->iTail] = data_ ;
+//	desc_->szActual++;
+//	if(desc_->iTail+1 == desc_->szTotal)
+//		desc_->iTail = 0 ;
+//	else
+//		desc_->iTail++;
+//	STOP_ATOMIC();
+//        
+//	return erase_data;
+}
+
+
 
 ReturnStatus CircBuffer_read( T8_CircBuffer* const desc_,
 				CircBuffer_datatype* const  dest_, const size_t szDest_,

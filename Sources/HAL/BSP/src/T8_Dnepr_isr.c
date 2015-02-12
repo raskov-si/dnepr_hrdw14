@@ -210,8 +210,8 @@ void Trap15Handler(void)
     __isr_assert_messaging();
 }
 
-void UART0_Handler(void)
-{}
+//void UART0_Handler(void)
+//{}
 
 //void UART1_Handler(void)
 //{}

@@ -30,9 +30,13 @@
 #define tackDController_PRIO	30
 #define taskCU_PRIO     		40	//!< приоритет задачи работы с backplane-uart'ом
 
+
 #define taskMeasure_PRIO    	50	//!< приоритет задачи измерения динамических параметров
-#define SyncParam_prio    		51	//!< приоритет задачи измерения динамических параметров
+#define SyncParam_prio          51	//!< приоритет задачи измерения динамических параметров
 #define taskFPGA_COMM_PRIO  	52	//!< 
 #define taskFlash_COMM_PRIO 	53	//!< 
 #define taskFS_COMM_PRIO    	54	//!< 
+
+#define TASKTERM_COMM_PRIO     		(52)	//!< приоритет задачи работы с терминалом на backplane
+
 #define taskWDT_PRIO    		(OS_LOWEST_PRIO - 4)	//!< нужно чтобы любой другой НАШ подвисший поток не дал выполниться этому потоку

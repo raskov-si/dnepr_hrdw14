@@ -248,7 +248,9 @@ I2C_DNEPR_PresentDevicesTypedef* I2C_DNEPR_GetPresentDevices(void){
 //! \brief Включает или выключает лазер в обоих sfp
 _BOOL I2C_Dnepr_SFP_OnOff( const _BOOL sfp_1_on_, const _BOOL sfp_2_on_ )
 {
-	_BOOL ret ;
+	_BOOL   ret = FALSE;
+        u8      i;
+        
 	if(sfp_1_on_ == TRUE )
 		tSfpPinsConfig.nOutputP0 &= 0xFF ^ 0x20 ;
 	else 
@@ -258,9 +260,15 @@ _BOOL I2C_Dnepr_SFP_OnOff( const _BOOL sfp_1_on_, const _BOOL sfp_2_on_ )
 		tSfpPinsConfig.nOutputP0 &= 0xFF ^ 0x10 ;
 	else 
 		tSfpPinsConfig.nOutputP0 |= 0x10 ;
-
-    ret = TI_TCA9555_WriteConfig(I2C_DNEPR_IO_EXPANDER_ADDRESS, &tSfpPinsConfig); 
-	return ret ;
+        
+        for ( i = 0; i < 3; i++) {
+            ret = TI_TCA9555_WriteConfig(I2C_DNEPR_IO_EXPANDER_ADDRESS, &tSfpPinsConfig); 
+            if ( ret == TRUE ) {
+                break;
+            }
+        }
+        
+        return ret ;
 }
 
 void I2C_Dnepr_SFP_Renew( T8_SFP_OPTICAL_CHANNEL* sfp_params,

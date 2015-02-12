@@ -5,6 +5,10 @@
 \date aug 2013
 */
 
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "HAL/BSP/inc/T8_Dnepr_I2C.h"
 #include "HAL/BSP/inc/T8_Dnepr_GPIO.h"
 #include "HAL/BSP/inc/T8_Dnepr_FPGA.h"
@@ -18,7 +22,34 @@
 
 #include "Application/inc/T8_Dnepr_TaskSynchronization.h"
 
+#include "Threads/inc/threadTerminal.h"
+
+
 #include "uCOS_II.H"
+
+/*=============================================================================================================*/
+#ifdef DEBUG_I2C
+
+    #define BBOX_I2C_LEN        (1200)
+    #define ALLOW               (0)
+    #define DISALLOW            (1)
+
+    #define DEV_RESET           0xE0
+    #define BYTE_WRITE          0xE1
+    #define BYTE_READ           0xE2
+    #define WORD_WRITE          0xE3
+    #define WORD_READ           0xE4
+    #define SEND_CMD            0xE5
+    #define READ_CMD            0xE6
+    #define BYTE_ARRAY_READ     0xE7
+    #define BYTE_ARRAY_WRITE    0xE8
+    #define BYTE16_ARRAY_READ   0xE9
+    #define BYTE16_ARRAY_WRITE  0xEA
+    #define WORD_ARRAY_READ     0xEB
+    #define WORD_ARRAY_WRITE    0xEC
+
+#endif
+/*=============================================================================================================*/
 
 //! структура, указатель на которую кладётся в PMB_PeriphInterfaceTypedef::bus_info
 //! и I2C_PeriphInterfaceTypedef::bus_info
@@ -32,12 +63,309 @@ typedef struct __Dnepr_I2C_driver_internal_info {
 	u8 nSelect ;
 } Dnepr_I2C_driver_internal_info ;
 
+
+#ifdef DEBUG_I2C
+typedef struct I2C_LOG_STRUCT
+{
+//  char      operation_status[2+1];   /* "ОК", "NG" */
+  u16       index;                      /* 0-65535 */
+  _BOOL     operation_status;
+  u8        event_code;
+  u8        bus_id;
+  u8        i2c_addr;
+  u8        reg_addr;
+  u32       time;
+} t_i2c_lof;
+
+#endif
+
+/*=============================================================================================================*/
+
+#ifdef DEBUG_I2C
+    int  debug_i2c_term(const char* in, char* out, size_t out_len_max);
+    int  dnepr_i2c_debug_print_log_event (char *outlog_buf, size_t maxlen, u16 index);
+#endif
+
+/*=============================================================================================================*/
+#ifdef DEBUG_I2C
+
+REGISTER_COMMAND("i2clog", debug_i2c_term);
+u16     now_event_index = 0;
+_Pragma("location=\"nonvolatile_sram\"")
+/* ч0рный ящик, хранящиеся в ОЗУ, питаемой от батарейки на плате. */
+__no_init static t_i2c_lof  nv_bbox_i2c[BBOX_I2C_LEN];
+_Pragma("location=\"nonvolatile_sram\"")
+__no_init static   u8       allow_log;  
+_Pragma("location=\"nonvolatile_sram\"")
+__no_init static   u8       err_cnt;  
+#endif
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \return 
+     \retval 
+     \sa 
+*/
+/*=============================================================================================================*/
+#ifdef DEBUG_I2C
+int debug_i2c_term(const char* in, char* out, size_t out_len_max)
+{
+  char  *second_word;
+  char  pars_buf[4+1];
+  
+  if ( (second_word = strstr (in, "show")) != NULL )  {
+     
+     char *third_word = strstr (second_word, " i");
+     
+     if ( third_word != NULL ) {
+        u16 index;
+        strncpy(pars_buf, third_word+2, 4);
+        pars_buf[4] = 0;
+        index = atoi (pars_buf);
+        return dnepr_i2c_debug_print_log_event(out, out_len_max, index);         
+     } 
+     
+     third_word = strstr (second_word, "all");
+     if ( third_word != NULL ) {
+       ;
+        /* команда на распечатку буфера i2C */
+     }
+ 
+        /* разрешает логгировать шину снова */
+  }    
+  
+  
+  return 0;
+}
+#endif
+
+#ifdef DEBUG_I2C
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \return 
+     \retval 
+     \sa 
+*/
+/*=============================================================================================================*/
+void debug_i2c_send_log_to_term (void)
+{
+  
+}
+#endif
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \return 
+     \retval 
+     \sa 
+*/
+/*=============================================================================================================*/
+#ifdef DEBUG_I2C
+static _BOOL check_right_record (t_i2c_lof   *element)
+{
+  t_i2c_lof *temp;
+  if ( element->operation_status == TRUE ||  element->operation_status == FALSE )   {
+        if (element->event_code >= DEV_RESET && element->event_code <= WORD_ARRAY_WRITE) {
+            return TRUE;
+        }          
+  }
+  temp = element;
+  element = (t_i2c_lof*)debug_i2c_term_handler.cmd_name;
+  element = temp;
+  return FALSE;
+}
+#endif
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \return 
+     \retval 
+     \sa 
+*/
+/*=============================================================================================================*/
+#ifdef DEBUG_I2C
+static u16 dnepr_i2c_debug_search_last(void)
+{  
+  u16   rel_current_left;
+  u16   rel_current_right;
+  u16   rel_half_index;
+  u16   abs_current_left;
+  u16   abs_current_right;
+  u16   abs_half_index;
+  
+  /* берем середину интервала */
+  rel_current_left  = abs_current_left  =  0;
+  rel_current_right = abs_current_right = (BBOX_I2C_LEN - 1);
+  rel_half_index    = abs_half_index    = (BBOX_I2C_LEN - 1) / 2;
+  
+  
+  /* оперделяем текущий абсолютный индекс начала интервала */
+  if ( check_right_record (&nv_bbox_i2c[rel_current_left]) == TRUE ) {
+        abs_current_left = nv_bbox_i2c[rel_current_left].index;
+  } else {
+   /* нулевая запись не инициализирована - все в первый раз, текущий индекс - 0*/
+        now_event_index = 0;
+        err_cnt   = 0;
+        allow_log = 3;
+        return 0;
+  }
+  
+  
+  if ( abs_current_left != 0 )  {
+      /* предполагаем что на конце интервала индекс события на 1 меньше чем в нулевом элементе массива */
+      abs_current_right = abs_current_left -1;
+      
+      /* проверяем последний элемент массива */
+      if ( check_right_record (&nv_bbox_i2c[rel_current_right]) == TRUE )   {
+            /* достаем индекс события из конца массива */
+            abs_current_right = nv_bbox_i2c[rel_current_right].index;
+            
+            if ( abs_current_right > abs_current_left - 1 ) {
+                /* буфер закончился записываться как раз на последнем элементе */
+                now_event_index = abs_current_right + 1;
+                return now_event_index;
+            }
+      }
+  } /* if ( abs_current_left != 0 ) */
+  
+    do
+    {
+        rel_half_index = (rel_current_right + rel_current_left) / 2;
+
+        if ( check_right_record (&nv_bbox_i2c[rel_half_index]) == TRUE )  {
+            abs_half_index = nv_bbox_i2c[rel_half_index].index;
+        } else  {
+            rel_current_right =  rel_half_index;
+            abs_current_right =  nv_bbox_i2c[rel_current_right].index;
+            continue;
+        }
+
+        if ( abs_half_index > abs_current_left )  {
+            rel_current_left =  rel_half_index;
+            abs_current_left =  abs_half_index;
+        }
+        else if ( abs_half_index < abs_current_left ) {
+            rel_current_right =  rel_half_index;
+            abs_current_right =  abs_half_index;
+        }
+        else {
+            break;
+        }
+   } while ( rel_current_right - rel_current_left != 0 );
+
+   now_event_index = abs_half_index + 1;  
+   return now_event_index;
+}
+#endif
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \return 
+     \retval 
+     \sa 
+*/
+/*=============================================================================================================*/
+#ifdef DEBUG_I2C
+static void dnepr_i2c_debug_set_event 
+(
+    _BOOL                   ack_status,
+    u8                      event_code,
+    I2C_DNEPR_BusTypedef    bus,
+    u8                      addr,
+    u8                      cmnd
+)
+{
+    if ( allow_log >= err_cnt )  {
+        u8  circles_num = now_event_index / BBOX_I2C_LEN ;
+        u16 real_index  = now_event_index - circles_num*BBOX_I2C_LEN;
+        
+        nv_bbox_i2c[real_index].index               = now_event_index;
+        nv_bbox_i2c[real_index].operation_status    = ack_status;  
+        nv_bbox_i2c[real_index].event_code          = event_code;  
+        nv_bbox_i2c[real_index].bus_id              = bus;
+        nv_bbox_i2c[real_index].i2c_addr            = addr;
+        nv_bbox_i2c[real_index].reg_addr            = cmnd;
+        
+        now_event_index++;
+        err_cnt += (ack_status == FALSE);        
+    }
+}
+#endif
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \return 
+     \retval 
+     \sa 
+*/
+/*=============================================================================================================*/
+#ifdef DEBUG_I2C
+int dnepr_i2c_debug_print_log_event (char *outlog_buf, size_t maxlen, u16 index)
+{
+  register int buf_index = 0;
+  
+  if ( (index > 1200) || (check_right_record(&nv_bbox_i2c[index]) != TRUE) )  {
+      buf_index = snprintf (outlog_buf, maxlen, "wrong index\r\n");
+      return buf_index;
+  }
+  
+  switch (nv_bbox_i2c[index].operation_status)
+  {
+  case TRUE:    buf_index += sprintf(&outlog_buf[buf_index], "OK ");  break;
+  case FALSE:   buf_index += sprintf(&outlog_buf[buf_index], "NG ");  break;
+  }
+  
+  switch (nv_bbox_i2c[index].event_code)
+  {
+  case  DEV_RESET:          buf_index += sprintf(&outlog_buf[buf_index], "DEV_RES ");  break;
+  case  BYTE_WRITE:         buf_index += sprintf(&outlog_buf[buf_index], "WR_BYTE ");  break;
+  case  BYTE_READ:          buf_index += sprintf(&outlog_buf[buf_index], "RD_BYTE ");  break;
+  case  WORD_WRITE:         buf_index += sprintf(&outlog_buf[buf_index], "WR_WORD ");  break;
+  case  WORD_READ:          buf_index += sprintf(&outlog_buf[buf_index], "RD_WORD ");  break;
+  case  SEND_CMD:           buf_index += sprintf(&outlog_buf[buf_index], "SND_CMD ");  break;
+  case  READ_CMD:           buf_index += sprintf(&outlog_buf[buf_index], "RD__CMD ");  break;
+  case  BYTE_ARRAY_READ:    buf_index += sprintf(&outlog_buf[buf_index], "RDB_ARR ");  break;
+  case  BYTE_ARRAY_WRITE:   buf_index += sprintf(&outlog_buf[buf_index], "WRB_ARR ");  break;
+  case  BYTE16_ARRAY_READ:  buf_index += sprintf(&outlog_buf[buf_index], "RB16ARR ");  break;
+  case  BYTE16_ARRAY_WRITE: buf_index += sprintf(&outlog_buf[buf_index], "WB16ARR ");  break;
+  case  WORD_ARRAY_READ:    buf_index += sprintf(&outlog_buf[buf_index], "RDW_ARR ");  break;
+  case  WORD_ARRAY_WRITE:   buf_index += sprintf(&outlog_buf[buf_index], "WRW_ARR ");  break;
+  }
+  
+  buf_index += sprintf(&outlog_buf[buf_index], "bus 0x%02X ", nv_bbox_i2c[index].bus_id);
+  buf_index += sprintf(&outlog_buf[buf_index], "adr 0x%02X ", nv_bbox_i2c[index].i2c_addr);
+  buf_index += sprintf(&outlog_buf[buf_index], "reg 0x%02X ", nv_bbox_i2c[index].reg_addr);
+
+  //время    
+  
+  buf_index += sprintf(&outlog_buf[buf_index], "\r\n");
+  
+
+  return buf_index;
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Dnepr_I2C_init()
 {
-	I2C_InitPorts();
-	I2CInit_Timer( (I2CWaitTimer_t){ (u32 (*)())OSTimeGet, 10 } ); // 10 тиков таймера -- 10 мс ждём повисвший i2c
+    I2C_InitPorts();
+    I2CInit_Timer( (I2CWaitTimer_t){ (u32 (*)())OSTimeGet, 10 } ); // 10 тиков таймера -- 10 мс ждём повисвший i2c
+        
+#ifdef DEBUG_I2C
+    
+    /* находим последний элемент бинарным поиском, записываем событие RESET */
+    now_event_index = dnepr_i2c_debug_search_last();
+    dnepr_i2c_debug_set_event(TRUE, DEV_RESET, I2C_Dnepr_CurrentBus(), 0 ,0);
+    
+#endif        
 }
 
 
@@ -177,6 +505,9 @@ __PMB_ReadByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult )
 {
 	PMBUS_TRANSACTION_BEGIN();
 	ret = PMB_ReadByte( mAddr, mCmd, pbResult );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, BYTE_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                
 	PMBUS_TRANSACTION_END() ;
 }
 
@@ -185,6 +516,9 @@ __PMB_ReadWord(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 *pwResult )
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 	ret = PMB_ReadWord( mAddr, mCmd, pwResult );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, WORD_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                
 	PMBUS_TRANSACTION_END() ;
 }
 
@@ -193,6 +527,9 @@ __PMB_WriteByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 nData)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 	ret = PMB_WriteByte( mAddr, mCmd, nData );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, BYTE_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                        
 	PMBUS_TRANSACTION_END() ;
 }
 
@@ -201,6 +538,9 @@ __PMB_WriteWord(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 nData)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 	ret = PMB_WriteWord( mAddr, mCmd, nData );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, WORD_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                        
 	PMBUS_TRANSACTION_END() ;
 }
 
@@ -209,6 +549,9 @@ __PMB_SendCommand(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 	ret = PMB_SendCommand( mAddr, mCmd);
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, SEND_CMD, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                        
 	PMBUS_TRANSACTION_END() ;
 }
 
@@ -217,6 +560,9 @@ __PMB_ReadMultipleBytes(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* an
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 	ret = PMB_ReadMultipleBytes( mAddr, mCmd, anData, nBytesQuantity);
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, BYTE_ARRAY_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                                
 	PMBUS_TRANSACTION_END() ;
 }
 
@@ -225,6 +571,9 @@ __PMB_WriteMultipleBytes(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* a
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 	ret = PMB_WriteMultipleBytes( mAddr, mCmd, anData, nBytesQuantity );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, BYTE_ARRAY_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                        
 	PMBUS_TRANSACTION_END() ;
 }
 
@@ -233,6 +582,9 @@ __PMB_ReadMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* a
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 	ret = PMB_ReadMultipleWords( mAddr, mCmd, anData, nBytesQuantity );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, WORD_ARRAY_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                        
 	PMBUS_TRANSACTION_END() ;
 }
 
@@ -241,6 +593,9 @@ __PMB_WriteMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* 
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 	ret = PMB_WriteMultipleWords( mAddr, mCmd, anData, nBytesQuantity );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, WORD_ARRAY_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                        
 	PMBUS_TRANSACTION_END() ;
 }
 
@@ -281,6 +636,9 @@ __I2C_ReadByte( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult )
 {
 	I2C_TRANSACTION_BEGIN();
 	ret = I2C_ReadByte( mAddr, mCmd, pbResult ) ;
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, BYTE_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                        
 	I2C_TRANSACTION_END();
 }
 
@@ -289,6 +647,9 @@ __I2C_ReadWord( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 *pwResult 
 {
 	I2C_TRANSACTION_BEGIN();
 	ret =  I2C_ReadWord( mAddr, mCmd, pwResult );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, WORD_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                        
 	I2C_TRANSACTION_END();
 }
 
@@ -297,6 +658,9 @@ __I2C_WriteByte( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 nData)
 {
 	I2C_TRANSACTION_BEGIN();
 	ret =   I2C_WriteByte( mAddr, mCmd, nData);
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, BYTE_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                                
 	I2C_TRANSACTION_END();
 }
 
@@ -305,6 +669,9 @@ __I2C_WriteWord( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 nData)
 {
 	I2C_TRANSACTION_BEGIN();
 	ret =  I2C_WriteWord( mAddr, mCmd, nData );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, WORD_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                                
 	I2C_TRANSACTION_END();
 }
 
@@ -313,6 +680,9 @@ __I2C_SendCommand( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd)
 {
 	I2C_TRANSACTION_BEGIN();
 	ret =   I2C_SendCommand( mAddr, mCmd );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, SEND_CMD, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                                
 	I2C_TRANSACTION_END();
 }
 
@@ -321,6 +691,9 @@ __I2C_ReadCommand( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 *pbResult )
 {
 	I2C_TRANSACTION_BEGIN();
 	ret = I2C_ReadCommand( mAddr, pbResult );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, READ_CMD, I2C_Dnepr_CurrentBus(), mAddr, *pbResult);
+#endif                                
 	I2C_TRANSACTION_END();
 }
 
@@ -329,6 +702,9 @@ __I2C_ReadMultipleBytes( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* a
 {
 	I2C_TRANSACTION_BEGIN();
 	ret =  I2C_ReadMultipleBytes( mAddr, mCmd, anData, nBytesQuantity );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, BYTE_ARRAY_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                                        
 	I2C_TRANSACTION_END();
 }
 
@@ -337,6 +713,9 @@ __I2C_WriteMultipleBytes( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* 
 {
 	I2C_TRANSACTION_BEGIN();
 	ret =  I2C_WriteMultipleBytes( mAddr, mCmd, anData, nBytesQuantity );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, BYTE_ARRAY_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                                
 	I2C_TRANSACTION_END();
 }
 
@@ -345,6 +724,9 @@ __I2C_ReadMultipleBytes_16( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u16 mCmd, u
 {
 	I2C_TRANSACTION_BEGIN();
 	ret =  I2C_ReadMultipleBytes_16( mAddr, mCmd, anData, nBytesQuantity );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, WORD_ARRAY_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                                
 	I2C_TRANSACTION_END();
 }
 
@@ -353,6 +735,9 @@ __I2C_WriteMultipleBytes_16( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u16 mCmd, 
 {
 	I2C_TRANSACTION_BEGIN();
 	ret =  I2C_WriteMultipleBytes_16( mAddr, mCmd, anData, nBytesQuantity );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, BYTE16_ARRAY_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                                
 	I2C_TRANSACTION_END();
 }
 
@@ -361,6 +746,9 @@ __I2C_ReadMultipleWords( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* 
 {
 	I2C_TRANSACTION_BEGIN();
 	ret =  I2C_ReadMultipleWords( mAddr, mCmd, anData, nWordsQuantity );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, BYTE16_ARRAY_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                                
 	I2C_TRANSACTION_END();
 }
 
@@ -369,6 +757,9 @@ __I2C_WriteMultipleWords( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16*
 {
 	I2C_TRANSACTION_BEGIN();
 	ret =  I2C_WriteMultipleWords( mAddr, mCmd, anData, nWordsQuantity );
+#ifdef DEBUG_I2C
+        dnepr_i2c_debug_set_event(ret, WORD_ARRAY_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
+#endif                                
 	I2C_TRANSACTION_END();
 }
 

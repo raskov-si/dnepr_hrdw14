@@ -69,7 +69,7 @@
 //-------------------------------------------------------------------------
 
 -Z(CONST)rom_langpack=00040000-00048000
--Z(CONST)profile,power_sequencer_settings,const_values=0004A000-0007FFFF
+-Z(CONST)profile,power_sequencer_settings,const_values,console_commands=0004A000-0007FFFF
 
 -Z(CONST)RESETVEC=0:+8
 -Z(CONST)INTVEC=_VBR_ADDRESS:+400

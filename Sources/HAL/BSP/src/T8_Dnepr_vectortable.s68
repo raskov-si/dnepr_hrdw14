@@ -13,6 +13,7 @@
         EXTERN  OSCtxSw                 // OS_CPU_A.S
         EXTERN 	_OSTickISR
 	EXTERN  uart1_wrap
+	EXTERN  UART0_Handler_wrap           
 	EXTERN  isr_Watchdog_wrap
         EXTERN  isr_EdgePortISR1_wrap
         EXTERN  isr_EdgePortISR2_wrap
@@ -29,7 +30,7 @@
         EXTERN  ReservedHandler_wrap
         EXTERN  FormatErrorHandler_wrap
 	
-		EXTERN  UART1_Handler           // T8_5282_Dnepr_UART_Profile.c
+//		EXTERN  UART1_Handler           // T8_5282_Dnepr_UART_Profile.c
 
 
         COMMON  INTVEC:CODE(2)
@@ -109,7 +110,7 @@
         DC32    ReservedHandler_wrap              ;; 74  0x128 DMA Channel 1 transfer complete
         DC32    ReservedHandler_wrap              ;; 75  0x12C DMA Channel 2 transfer complete
         DC32    ReservedHandler_wrap              ;; 76  0x130 DMA Channel 3 transfer complete
-        DC32    ReservedHandler_wrap;UART0_Handler                ;; 77  0x134 UART0 interrupt
+        DC32    UART0_Handler_wrap;UART0_Handler                ;; 77  0x134 UART0 interrupt
         DC32    uart1_wrap;ReservedHandler_wrap;UART1_Handler                ;; 78  0x138 UART1 interrupt
         DC32    ReservedHandler_wrap;UART2_Handler                ;; 79  0x13C UART2 interrupt
         DC32    ReservedHandler_wrap              ;; 80  0x140 reserved
