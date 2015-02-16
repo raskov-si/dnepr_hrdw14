@@ -51,7 +51,7 @@ static OS_STK  taskMeasureStk[1024];
 #pragma data_alignment=4
 static OS_STK  taskDControllerStk[1024];
 #pragma data_alignment=4
-static OS_STK  task_terminal_stack[128];
+static OS_STK  task_terminal_stack[512];
 
 
 
@@ -148,7 +148,7 @@ static void taskInit(void *pdata)
     assert( return_code == OS_ERR_NONE ) ;
     
 #ifdef DEBUG_TERMINAL
-    assert(OSTaskCreateExt(task_terminal, (void *)0, (void *)&task_terminal_stack[127], TASKTERM_COMM_PRIO, TASKTERM_COMM_PRIO, (void *)&task_terminal_stack, 128, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+    assert(OSTaskCreateExt(task_terminal, (void *)0, (void *)&task_terminal_stack[511], TASKTERM_COMM_PRIO, TASKTERM_COMM_PRIO, (void *)&task_terminal_stack, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
     OSTaskNameSet( TASKTERM_COMM_PRIO, "task_terminal", &return_code ) ;
     assert( return_code == OS_ERR_NONE ) ;    
 #endif

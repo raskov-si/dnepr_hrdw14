@@ -82,15 +82,24 @@ typedef struct I2C_LOG_STRUCT
 /*=============================================================================================================*/
 
 #ifdef DEBUG_I2C
-    int  debug_i2c_term(const char* in, char* out, size_t out_len_max);
-    int  dnepr_i2c_debug_print_log_event (char *outlog_buf, size_t maxlen, u16 index);
+    int         debug_i2c_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog);
+    int         debug_i2c_term_get_message_num (void);
+    int         debug_i2c_term_get_message     (char *outlog_buf, size_t maxlen);
+    int         dnepr_i2c_debug_print_log_event (char *outlog_buf, size_t maxlen, u16 index);
+    static u16  dnepr_i2c_debug_search_last(void);    
 #endif
 
 /*=============================================================================================================*/
 #ifdef DEBUG_I2C
 
-REGISTER_COMMAND("i2clog", debug_i2c_term);
-u16     now_event_index = 0;
+static const char *char_num_set = "0123456789";
+
+REGISTER_COMMAND("i2clog", debug_i2c_term, debug_i2c_term_get_message_num, debug_i2c_term_get_message, NULL);
+
+static u16     now_event_index = 0;
+static u16     print_end_index = 0;
+static u16     print_beg_index = 0;
+
 _Pragma("location=\"nonvolatile_sram\"")
 /* ч0рный ящик, хранящиеся в ОЗУ, питаемой от батарейки на плате. */
 __no_init static t_i2c_lof  nv_bbox_i2c[BBOX_I2C_LEN];
@@ -100,6 +109,7 @@ _Pragma("location=\"nonvolatile_sram\"")
 __no_init static   u8       err_cnt;  
 #endif
 
+
 /*=============================================================================================================*/
 /*!  \brief 
 
@@ -109,38 +119,12 @@ __no_init static   u8       err_cnt;
 */
 /*=============================================================================================================*/
 #ifdef DEBUG_I2C
-int debug_i2c_term(const char* in, char* out, size_t out_len_max)
+int  debug_i2c_term_get_message_num (void)
 {
-  char  *second_word;
-  char  pars_buf[4+1];
-  
-  if ( (second_word = strstr (in, "show")) != NULL )  {
-     
-     char *third_word = strstr (second_word, " i");
-     
-     if ( third_word != NULL ) {
-        u16 index;
-        strncpy(pars_buf, third_word+2, 4);
-        pars_buf[4] = 0;
-        index = atoi (pars_buf);
-        return dnepr_i2c_debug_print_log_event(out, out_len_max, index);         
-     } 
-     
-     third_word = strstr (second_word, "all");
-     if ( third_word != NULL ) {
-       ;
-        /* команда на распечатку буфера i2C */
-     }
- 
-        /* разрешает логгировать шину снова */
-  }    
-  
-  
-  return 0;
+   return print_end_index - print_beg_index;
 }
 #endif
 
-#ifdef DEBUG_I2C
 /*=============================================================================================================*/
 /*!  \brief 
 
@@ -149,9 +133,133 @@ int debug_i2c_term(const char* in, char* out, size_t out_len_max)
      \sa 
 */
 /*=============================================================================================================*/
-void debug_i2c_send_log_to_term (void)
+#ifdef DEBUG_I2C
+int  debug_i2c_term_get_message     (char *outlog_buf, size_t maxlen)
 {
+   if (print_beg_index < print_end_index)  {
+      dnepr_i2c_debug_print_log_event(outlog_buf, maxlen, print_beg_index++);
+   }
   
+   return;
+}
+#endif
+
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \return 
+     \retval 
+     \sa 
+*/
+/*=============================================================================================================*/
+
+#ifdef DEBUG_I2C
+int debug_i2c_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog)
+{
+  char  *second_word;
+  char  pars_buf[4+1];
+  u8    idx_beg;
+  
+  if ( (second_word = strstr (in, "show")) != NULL )  {
+     
+//     char *third_word = strstr (second_word, " i");
+//     
+//     if ( third_word != NULL ) {
+//        u16 index;
+//        
+//        strncpy(pars_buf, third_word+2, 4);
+//        pars_buf[4] = 0;
+//        index = atoi (pars_buf);
+//        if ( index > BBOX_I2C_LEN ) {  
+//            u8  circles_num =  index / BBOX_I2C_LEN ;
+//            index  = index - circles_num*BBOX_I2C_LEN;
+//        }
+//        return dnepr_i2c_debug_print_log_event(out, out_len_max, index);         
+//     } 
+     
+     char  *third_word = strstr (second_word, "all");
+     
+     if ( third_word != NULL ) {
+        /* команда на распечатку буфера i2C */
+        /* опеределяем количество записей для распечатки */
+        print_beg_index = 0;
+        print_end_index = (now_event_index > BBOX_I2C_LEN) ? BBOX_I2C_LEN : now_event_index;
+       
+        /* возвращаем в основную терминалку флаг о том что должен возвращаться лог */
+        *sendlog = TERMINAL_SND_LOG_CMD;        
+        return 0;
+     }
+     
+     third_word = strstr (second_word, "state");
+     if ( third_word != NULL ) {
+        /* текущий индекс */       
+        return snprintf(out, out_len_max, "currindex=%u, max_err=%u, err_num=%u\r\n", now_event_index, allow_log, err_cnt);
+     }
+     
+     third_word = strstr (second_word, "ng");
+     if ( third_word != NULL ) {
+       /* только плохие события и ресет из всего ч.я. */
+       
+        return 0;       
+     }
+     
+      
+     if ( (idx_beg = strcspn( second_word, char_num_set ))  > 4  )  {
+        char    buf[5+1];        
+        u8  sym_num = strspn (&second_word[idx_beg], char_num_set);
+        u16 index;
+        
+        if (sym_num == 0) {
+            return 0;
+        }          
+        second_word[idx_beg + sym_num] = '\0';        
+        strncpy(buf, &second_word[idx_beg], 5);
+        
+        index = atoi (pars_buf);
+        if ( index > BBOX_I2C_LEN ) {  
+            u8  circles_num =  index / BBOX_I2C_LEN ;
+            index  = index - circles_num*BBOX_I2C_LEN;
+        }
+        return dnepr_i2c_debug_print_log_event(out, out_len_max, index);         
+    }     
+         
+  } else if ( (second_word = strstr (in, "seterr")) != NULL  ) {
+      char    buf[2+1];        
+      size_t  num_beg;
+        
+      if ( (num_beg = strcspn( second_word, char_num_set ))  > 8  )  {
+        return 0;
+      }
+        
+      strncpy(buf, &second_word[num_beg], 2);
+      buf[2] = '\0';
+      err_cnt = atoi(buf);
+                
+      return 0;    
+      
+  } else if ( (second_word = strstr (in, "start")) != NULL  ) {
+    /* разрешает логгировать шину снова */
+      err_cnt = 0;  
+    
+      return 0;    
+      
+  } else if ( (second_word = strstr (in, "stop")) != NULL  ) {
+     /* запрещает дальнейшую запись событий */
+     err_cnt = allow_log + 1;
+     
+     return 0;
+  } else if ( (second_word = strstr (in, "clear")) != NULL  ) {
+     /* запрещает дальнейшую запись событий */
+     err_cnt = allow_log + 1;    
+     memset (nv_bbox_i2c, 0xCC, BBOX_I2C_LEN * sizeof nv_bbox_i2c[0]);
+     dnepr_i2c_debug_search_last();
+     
+  }  
+  
+  
+  return 0;
 }
 #endif
 
@@ -312,9 +420,11 @@ int dnepr_i2c_debug_print_log_event (char *outlog_buf, size_t maxlen, u16 index)
   register int buf_index = 0;
   
   if ( (index > 1200) || (check_right_record(&nv_bbox_i2c[index]) != TRUE) )  {
-      buf_index = snprintf (outlog_buf, maxlen, "wrong index\r\n");
+      buf_index = snprintf (outlog_buf, maxlen, "bad entry\r\n");
       return buf_index;
   }
+
+  buf_index += sprintf(&outlog_buf[buf_index], "%05u ", nv_bbox_i2c[index].index);
   
   switch (nv_bbox_i2c[index].operation_status)
   {

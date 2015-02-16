@@ -194,12 +194,12 @@ void uart_isr(uart_desc_t * const uart_)
     }
 	/* UART transmitter */
 	if ((usr & MCF_UART_USR_TXRDY) && (uart_->snd_callback) && (uart_->uimr & MCF_UART_UIMR_TXRDY)) {						//FSL if transmitter holding register is empty (i.e. _TXRDY=1)
-        sndmax = (*uart_->snd_callback)( snd_buff, SND_BUFF_LEN ) ;
-        assert( sndmax <= SND_BUFF_LEN );
-        snd_buff_curr_ind = 0;
-        for( snd_buff_curr_ind = 0; snd_buff_curr_ind < sndmax; snd_buff_curr_ind++) {
+            sndmax = (*uart_->snd_callback)( snd_buff, SND_BUFF_LEN ) ;
+            assert( sndmax <= SND_BUFF_LEN );
+            snd_buff_curr_ind = 0;
+            for( snd_buff_curr_ind = 0; snd_buff_curr_ind < sndmax; snd_buff_curr_ind++) {
 			MCF_UART_UTB(dev) = snd_buff[snd_buff_curr_ind];           //FSL output character
-        }
+            }
 	}
 }
 
