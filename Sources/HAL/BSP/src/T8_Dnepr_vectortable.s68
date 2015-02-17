@@ -153,6 +153,7 @@
         DC32    ReservedHandler_wrap              ;; 117 0x1D4 USB Interrupt
         DC32    ReservedHandler_wrap              ;; 118 0x1D8 reserved
         DC32    _OSTickISR;PIT0_IntrHandler             ;; 119 0x1DC PIT0 interrupt flag
+//        DC32    time_isr              ;; 120 0x1E0 PIT1 interrupt flag
         DC32    ReservedHandler_wrap              ;; 120 0x1E0 PIT1 interrupt flag
         DC32    ReservedHandler_wrap              ;; 121 0x1E4 reserved
         DC32    ReservedHandler_wrap              ;; 122 0x1E8 reserved

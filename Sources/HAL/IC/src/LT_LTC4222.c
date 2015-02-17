@@ -6,6 +6,8 @@
 */
 
 #include "HAL\IC\inc\LT_LTC4222.h"
+#include "uCOS_II.H"
+
 
 /* Для упрощения написания соотв. драйверов */
 #define __PMB_WriteByte          (*tPmbusPeriphInterface->PMB_WriteByte)
@@ -54,41 +56,57 @@ _BOOL LT_LTC4222_GetAdcVoltages( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterfa
 	*/
 	
 	/*Halting ADC before reading registers*/
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, &nAdcControl );
+      	OSTimeDly(1);
 	ret &= __PMB_WriteByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, LT_LTC4222_ADC_SET_HALT(nAdcControl));
 	
 	/*SOURCE1*/
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SOURCE1_MSB, &nAdcCodeMsb );
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SOURCE1_LSB, &nAdcCodeLsb );
 	tAdcVoltagesStructure->fSource1 = (f32)PMB_ADC_RAW_SOURCE_TO_VOLTS( _WORD(nAdcCodeMsb, nAdcCodeLsb) );
 	
 	/*SOURCE2*/
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SOURCE2_MSB, &nAdcCodeMsb );
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SOURCE2_LSB, &nAdcCodeLsb );
 	tAdcVoltagesStructure->fSource2 = (f32)PMB_ADC_RAW_SOURCE_TO_VOLTS( _WORD(nAdcCodeMsb, nAdcCodeLsb) );
 	
 	/*ADIN1*/
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADIN1_MSB, &nAdcCodeMsb );
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADIN1_LSB, &nAdcCodeLsb );
 	tAdcVoltagesStructure->fAdin1 = (f32)PMB_ADC_RAW_ADIN_TO_VOLTS( _WORD(nAdcCodeMsb, nAdcCodeLsb) );
 	
 	/*ADIN2*/
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADIN2_MSB, &nAdcCodeMsb );
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADIN2_LSB, &nAdcCodeLsb );
 	tAdcVoltagesStructure->fAdin2 = (f32)PMB_ADC_RAW_ADIN_TO_VOLTS( _WORD(nAdcCodeMsb, nAdcCodeLsb) );
 		
 	/*SENSE1*/
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SENSE1_MSB, &nAdcCodeMsb );
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SENSE1_LSB, &nAdcCodeLsb );
 	tAdcVoltagesStructure->fSense1 = (f32)PMB_ADC_RAW_SENSE_TO_VOLTS( _WORD(nAdcCodeMsb, nAdcCodeLsb) );
 	
 	/*SENSE2*/
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SENSE2_MSB, &nAdcCodeMsb );
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SENSE2_LSB, &nAdcCodeLsb );
 	tAdcVoltagesStructure->fSense2 = (f32)PMB_ADC_RAW_SENSE_TO_VOLTS( _WORD(nAdcCodeMsb, nAdcCodeLsb) );
 	
 	/*Restarting ADC*/
+      	OSTimeDly(1);
 	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, &nAdcControl );
+      	OSTimeDly(1);
 	ret &= __PMB_WriteByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, LT_LTC4222_ADC_RESET_HALT(nAdcControl));
 	
 	return ret;
@@ -282,6 +300,7 @@ _BOOL LT_LTC4222_GetStates( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u
 	
 	if(tStatusRegisterStructure!=NULL){
 		/* Reading status register. */
+          	OSTimeDly(1);   
 		ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, nStatusAddress, &nStatus );
 		
 		tStatusRegisterStructure->bFetOn          = LT_LTC4222_GET_FET_ON(nStatus);
@@ -296,6 +315,7 @@ _BOOL LT_LTC4222_GetStates( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u
 	
 	if(tFaultRegisterStructure!=NULL){
 		/* Reading status register. */
+          	OSTimeDly(1);   
 		ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, nFaultAddress, &nFault );
 		
 		tFaultRegisterStructure->bFetShort      = LT_LTC4222_GET_FET_SHORT_FAULT(nFault);

@@ -27,9 +27,21 @@ void PIT_Init(	const u8 PIT, const u8 PCSR, const u16 PMR,
 }
 
 
+u16 pit_get_value (const u8 PIT)
+{
+  if (PIT>3) {
+        return 0;
+  }
+  
+  
+  return 0;
+}
+
+
+
 //! \brief Просто цикл для ожидания usec микросекунд 
 void HWait(const u32 usec)
 {
-	s32 i = (s32)((SYSTEM_CLOCK_KHZ/1000) * usec) ;
+	volatile s32 i = (s32)((SYSTEM_CLOCK_KHZ/1000) * usec) ;
 	for(; i > 0; i--){}
 }

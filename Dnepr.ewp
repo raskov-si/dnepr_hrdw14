@@ -1776,6 +1776,9 @@
       <file>
         <name>$PROJ_DIR$\Sources\Application\inc\T8_Dnepr_TaskSynchronization.h</name>
       </file>
+      <file>
+        <name>$PROJ_DIR$\Sources\Application\inc\t8_dnepr_time_date.h</name>
+      </file>
     </group>
     <group>
       <name>src</name>
@@ -1787,6 +1790,9 @@
       </file>
       <file>
         <name>$PROJ_DIR$\Sources\Application\src\T8_Dnepr_TaskSynchronization.c</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\Sources\Application\src\t8_dnepr_time_date.c</name>
       </file>
     </group>
     <group>

@@ -261,15 +261,13 @@ static void terminal_send_log
                     break;
                 }
               
-                if ( cur_cmd->get_log_message_num() )  {
+                if ( cur_cmd->get_log_message_num() > 0 )  {
                    int i;
-//                    while ( uart_terminal_is_transmitte(&uart0_desc) )
-//                    { continue; }
                    int  answ_len = cur_cmd->get_log_message(send_buff, 64);
                    while ( circbuffer_get_space_size (p_answ_buff) <  answ_len)  { 
                         continue;
                    }
-                   if ( answ_len ) {                     
+                   if ( answ_len > 0 ) {                     
         
                         for( i = 0; i < answ_len; ++i ){
                             CircBuffer_push_one_erasingdata( p_answ_buff, (u8)send_buff[i] );
