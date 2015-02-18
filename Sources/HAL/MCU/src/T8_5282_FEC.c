@@ -6,7 +6,47 @@
  */
 
 #include "support_common.h"
+#include "common_lib/crc.h"
+#include "common_lib\memory.h"
+
+
 #include "HAL\MCU\inc\T8_5282_FEC.h"
+
+
+/*=============================================================================================================*/
+
+static fec_mib_t *p_mib = (fec_mib_t*)&MCF_FEC_RMON_T_DROP ;
+
+
+/*=============================================================================================================*/
+/*! \brief   
+    \return 
+    \retval 
+    \sa  
+*/
+/*=============================================================================================================*/
+static u32 fec_multicast_address_set
+(
+    u16 mac_upper2, 
+    u32 mac_lower4
+)
+{
+    u8 mac[8];
+    u8 hash_pos;
+    mac[0] = (u8)(mac_upper2>>8);
+    mac[1] = (u8)(mac_upper2);
+    mac[2] = (u8)(mac_lower4>>24);
+    mac[3] = (u8)(mac_lower4>>16);
+    mac[4] = (u8)(mac_lower4>>8);
+    mac[5] = (u8)(mac_lower4>>0);
+    hash_pos = (~Crc32(mac, 6) >> 26);
+    if (hash_pos & 0x20)  {      
+        MCF_FEC_GAUR |= 1 << (0x1F & hash_pos);
+    }  else  {
+        MCF_FEC_GALR |= 1 << (0x1F & hash_pos);
+    }
+    return OK;
+}
 
 
 /*=============================================================================================================*/
@@ -88,21 +128,29 @@ void t8_m5282_fec_init
     MCF_FEC_ERDSR = (u32)input->rxbd_ring;
     MCF_FEC_EMRBR = input->rxbd_ring_len;
     
-    
-//  MCF_FEC_ETDSR = (uint32_t)txbd_ring;
-  
-//  MCF_FEC_EMRBR = LWIP_MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE);
-//  MCF_FEC_ECR |= ECR_ETHER_EN;
-    
-    MCF_FEC_ECR = MCF_FEC_ECR_ETHER_EN ;                                            /* включаем приемник с передатчиком */
 
+    for( i = 0; i <  input->txbd_ring_len; i++ ){
+        input->txbd_ring[ i ].addr = 0 ;
+        input->txbd_ring[ i ].cstatus = 0 ;
+        input->txbd_ring[ i ].length = 0 ;
+    }
+    input->txbd_ring[ i-1 ].cstatus |= MCF_FEC_TxBD_W ;
+    
+    MCF_FEC_ETSDR = (uint32_t)input->txbd_ring;
+      
+    MCF_FEC_ECR |= MCF_FEC_ECR_ETHER_EN ;                                            /* включаем приемник с передатчиком */
+
+    fec_multicast_address_set(0x0180, 0xC2000000);
+    
+    // disable MIB
+    MCF_FEC_MIBC |= MCF_FEC_MIBC_MIB_DISABLE ;
+    // чистим память для MIB
+    t8_memzero( (u8*)p_mib, sizeof(fec_mib_t) ) ;
+    // включаем MIB
+    MCF_FEC_MIBC &= ~MCF_FEC_MIBC_MIB_DISABLE ;
 }
 
 
-//void fec_init(const u32 sys_clk_MHz_, FEC_Config_t * conf_ )
-//{
-//    s32 i ;
-//
 ////    // Семафор массива дескрипторов на посылку. В 2 раза меньше количества дескрипторов,
 ////    // потому что на каждый пакет приходиться по 2 дескриптора -- заголовок и тело отдельно.
 ////    __eth_tx_sem = OSSemCreate( (u8)(FEC_TX_BD_NUMBER / 2) );
@@ -113,45 +161,6 @@ void t8_m5282_fec_init
 //
 //
 //
-//    //Program receive buffer size
-//    MCF_FEC_EMRBR = FEC_MAX_RCV_BUFF_SIZE ;
-//    
-// Configure Rx BD ring
-//    MCF_FEC_ERDSR = (u32)&__rx_bd[0];
-//    for( i = 0; i < FEC_RX_BD_NUMBER; i++ ){
-//        __rx_bd[ i ].bd_addr = 0 ;
-//        __rx_bd[ i ].bd_cstatus = 0 ;
-//        __rx_bd[ i ].bd_length = 0 ;
-//    }
-//    __rx_bd[ i-1 ].bd_cstatus |= MCF_FEC_RxBD_W ;
-
-
-//
-//    // Configure Tx BD ring
-//    MCF_FEC_ETSDR =  (u32)&__tx_bd[0];
-//    for( i = 0; i < FEC_TX_BD_NUMBER; i++ ){
-//        __tx_bd[ i ].bd_addr = 0 ;
-//        __tx_bd[ i ].bd_cstatus = 0 ;
-//        __tx_bd[ i ].bd_length = 0 ;
-//    }
-//    __tx_bd[ i-1 ].bd_cstatus |= MCF_FEC_TxBD_W ;
-//
-//    FECMulticastAddressSet(0x0180, 0xC2000000);
-
-
-//
-//    MCF_FEC_ECR = MCF_FEC_ECR_ETHER_EN ;
-//
-//    // disable MIB
-//    MCF_FEC_MIBC |= MCF_FEC_MIBC_MIB_DISABLE ;
-//    // чистим память для MIB
-//    t8_memzero( (u8*)pMIB, sizeof(FEC_MIB_t) ) ;
-//    // включаем MIB
-//    MCF_FEC_MIBC &= ~MCF_FEC_MIBC_MIB_DISABLE ;
-//}
-//
-
-
 
 
 

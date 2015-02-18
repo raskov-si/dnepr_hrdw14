@@ -121,16 +121,30 @@ int dnepr_ethernet_fec_init
     const u8 *mac_adress
 )
 {
-  t_fec_config      mii_config;
+    t_fec_config      mii_config;
   
-  mii_config.fec_mii_speed = FEC_MII_CLOCK_DEV_CALC(2500);
-  memcpy(mii_config.mac_addr, mac_adress, 6);
-  mii_config.fec_max_eth_pocket = MAX_ETH_PKT;
+    mii_config.fec_mii_speed = FEC_MII_CLOCK_DEV_CALC(2500);
+    memcpy(mii_config.mac_addr, mac_adress, 6);
+    mii_config.fec_max_eth_pocket = MAX_ETH_PKT;
   
+  //mii_config
+    
+    t8_m5282_fec_init(&mii_config);
   
-  t8_m5282_fec_init(&mii_config);
+// инициализация прерывания о конце передаче фрейма
+    MCU_ConfigureIntr(INTR_ID_FEC_X_INTF, 6, 1 );
+    MCU_EnableIntr(INTR_ID_FEC_X_INTF,1);
+    
+// инициализация прерывания о конце передачи одного буфера
+    MCU_ConfigureIntr(INTR_ID_FEC_X_INTB, 6, 2 );
+    MCU_EnableIntr(INTR_ID_FEC_X_INTB,1);
+    
+// инициализация прерывания о приёме фрейма
+    MCU_ConfigureIntr(INTR_ID_FEC_R_INTF, 6, 3 );
+    MCU_EnableIntr(INTR_ID_FEC_R_INTF,1);
+
   
-  return 0;
+    return 0;
 }
 
   
@@ -142,6 +156,8 @@ int dnepr_ethernet_fec_init
 /*=============================================================================================================*/
 int dnepr_ethernet_phy_init(void)
 {
+  
+  
     return 0;
 }
 

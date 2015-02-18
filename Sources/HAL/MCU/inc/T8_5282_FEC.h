@@ -222,6 +222,70 @@ u32  t8_m5282_fec_mdio_read(u32, u32, u16*);
 
 /********************************************************************/
 
+
+//! \brief Структура памяти MIB FEC'а
+typedef struct 
+{
+    volatile u32   rmon_t_drop;            //!< Count of frames not counted correctly 
+    volatile u32   rmon_t_packets;         //!< RMON Tx packet count 
+    volatile u32   rmon_t_bc_pkt;          //!< RMON Tx Broadcast Packets 
+    volatile u32   rmon_t_mc_pkt;          //!< RMON Tx Multicast Packets 
+    volatile u32   rmon_t_crc_align;       //!< RMON Tx Packets w CRC/Align error 
+    volatile u32   rmon_t_undersize;       //!< RMON Tx Packets < 64 bytes, good crc 
+    volatile u32   rmon_t_oversize;        //!< RMON Tx Packets > MAX_FL bytes, good crc 
+    volatile u32   rmon_t_frag;            //!< RMON Tx Packets < 64 bytes, bad crc 
+    volatile u32   rmon_t_jab;             //!< RMON Tx Packets > MAX_FL bytes, bad crc 
+    volatile u32   rmon_t_col;             //!< RMON Tx collision  count 
+    volatile u32   rmon_t_p64;             //!< RMON Tx 64 byte packets 
+    volatile u32   rmon_t_p65to127;        //!< RMON Tx 65 to 127 byte packets 
+    volatile u32   rmon_t_p128to255;       //!< RMON Tx 128 to 255 byte packets 
+    volatile u32   rmon_t_p256to511;       //!< RMON Tx 256 to 511 byte packets 
+    volatile u32   rmon_t_p512to1023;      //!< RMON Tx 512 to 1023 byte packets 
+    volatile u32   rmon_t_p1024to2047;     //!< RMON Tx 1024 to 2047 byte packets 
+    volatile u32   rmon_t_p_gte2048;       //!< RMON Tx packets w >= 2048 bytes 
+    volatile u32   rmon_t_octets;          //!< RMON Tx Octets 
+    volatile u32   ieee_t_drop;            //!< Count of Frames not counted correctly 
+    volatile u32   ieee_t_frame_ok;        //!< Frames Transmitted OK */
+    volatile u32   ieee_t_1col;            //!< Frames Transmitted with Single Collision 
+    volatile u32   ieee_t_mcol;            //!< Frames Transmitted with Multiple Collision 
+    volatile u32   ieee_t_def;             //!< Frames Transmitted after Deferral Delay 
+    volatile u32   ieee_t_lcol;            //!< Frames Transmitted with Late Collision 
+    volatile u32   ieee_t_excol;           //!< Frames Transmitted with Excessive Collisions 
+    volatile u32   ieee_t_macerr;          //!< Frames Transmitted with Tx FIFO Underrun 
+    volatile u32   ieee_t_cseerr;          //!< Frames Transmitted with Carrier Sense Error 
+    volatile u32   ieee_t_sqe;             //!< Frames Transmitted with SQE Error 
+    volatile u32   ieee_t_fdxfc;           //!< Flow Control Pause frames transmitted 
+    volatile u32   ieee_t_octets_ok;       //!< Octet count for Frames Transmitted w/o Error 
+    volatile u32   RESERVED_0278;
+    volatile u32   RESERVED_027c;
+    volatile u32   RESERVED_0280;
+    volatile u32   rmon_r_packets;         //!< RMON Rx packet count 
+    volatile u32   rmon_r_bc_pkt;          //!< RMON Rx Broadcast Packets 
+    volatile u32   rmon_r_mc_pkt;          //!< RMON Rx Multicast Packets 
+    volatile u32   rmon_r_crc_align;       //!< RMON Rx Packets w CRC/Align error 
+    volatile u32   rmon_r_undersize;       //!< RMON Rx Packets < 64 bytes, good crc 
+    volatile u32   rmon_r_oversize;        //!< RMON Rx Packets > MAX_FL bytes, good crc 
+    volatile u32   rmon_r_frag;            //!< RMON Rx Packets < 64 bytes, bad crc 
+    volatile u32   rmon_r_jab;             //!< RMON Rx Packets > MAX_FL bytes, bad crc 
+    volatile u32   rmon_r_resvd_0;         //!< Reserved 
+    volatile u32   rmon_r_p64;             //!< RMON Rx 64 byte packets */
+    volatile u32   rmon_r_p65to127;        //!< RMON Rx 65 to 127 byte packets */
+    volatile u32   rmon_r_p128to255;       //!< RMON Rx 128 to 255 byte packets */
+    volatile u32   rmon_r_p256to511;       //!< RMON Rx 256 to 511 byte packets */
+    volatile u32   rmon_r_p512to1023;      //!< RMON Rx 512 to 1023 byte packets */
+    volatile u32   rmon_r_p1024to2047;     //!< RMON Rx 1024 to 2047 byte packets */
+    volatile u32   rmon_r_p_gte2048;       //!< RMON Rx packets w >= 2048 bytes */
+    volatile u32   rmon_r_octets;          //!< RMON Rx Octets */
+    volatile u32   ieee_r_drop;            //!< Count of Frames not counted correctly */
+    volatile u32   ieee_r_frame_ok;        //!< Frames Received OK */  
+    volatile u32   ieee_r_crc;             //!< Frames Received with CRC Error */
+    volatile u32   ieee_r_align;           //!< Frames Received with Alignment Error */
+    volatile u32   ieee_r_macerr;          //!< Receive FIFO Overflow count */
+    volatile u32   ieee_r_fdxfc;           //!< Flow Control Pause frames received */
+    volatile u32   ieee_r_octets_ok;       //!< Octet count for Frames Rcvd w/o Error */
+} fec_mib_t;
+
+
 #ifdef	__cplusplus
     }
 #endif
