@@ -10,6 +10,17 @@
 #include "support_common.h"	// типы данных
 #include "HAL/MCU/inc/T8_5282_timers.h"
 
+
+extern volatile long long overload_pit_value;
+
+void PIT1_IntrHandler (void)
+{
+    MCF_PIT1_PCSR |= MCF_PIT_PCSR_PIF;
+    overload_pit_value++;       /* отсчет тиков */  
+}
+
+
+
 //! \brief инициализирует регистры таймера номер PIT, разрешает соотв. прерывание
 void PIT_Init(	const u8 PIT, const u8 PCSR, const u16 PMR,
 				const u16 irq_level, const u16 irq_priority )
@@ -29,12 +40,11 @@ void PIT_Init(	const u8 PIT, const u8 PCSR, const u16 PMR,
 
 u16 pit_get_value (const u8 PIT)
 {
-  if (PIT>3) {
+    if ( PIT > 3 ) {
         return 0;
-  }
+    }
   
-  
-  return 0;
+    return MCF_PIT_PCNTR(PIT);
 }
 
 
@@ -42,6 +52,8 @@ u16 pit_get_value (const u8 PIT)
 //! \brief Просто цикл для ожидания usec микросекунд 
 void HWait(const u32 usec)
 {
-	volatile s32 i = (s32)((SYSTEM_CLOCK_KHZ/1000) * usec) ;
-	for(; i > 0; i--){}
+    volatile s32 i = (s32)((SYSTEM_CLOCK_KHZ/1000) * usec) ;
+    for(; i > 0; i--)  {
+        continue;
+    }
 }

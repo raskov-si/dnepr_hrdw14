@@ -24,8 +24,10 @@
 
 #include "Application/inc/T8_Dnepr_TaskSynchronization.h"
 
-#include "Threads/inc/threadTerminal.h"
-
+#ifdef DEBUG_I2C
+    #include "Threads/inc/threadTerminal.h"
+    #include "Application/inc/t8_dnepr_time_date.h"
+#endif
 
 #include "uCOS_II.H"
 
@@ -98,10 +100,12 @@ static const char *char_num_set = "0123456789";
 
 REGISTER_COMMAND("i2clog", debug_i2c_term, debug_i2c_term_get_message_num, debug_i2c_term_get_message, NULL);
 
-static u16     now_event_index = 0;
-static u16     print_end_index = 0;
-static u16     print_beg_index = 0;
-static _BOOL   only_ng_flag    = 0;
+static u16      now_event_index = 0;
+static u16      print_end_index = 0;
+static u16      print_beg_index = 0;
+static _BOOL    only_ng_flag    = 0;
+static clock_t  i2c_timer_begin_trans;
+static clock_t  i2c_timer_end_trans;
 
 _Pragma("location=\"nonvolatile_sram\"")
 /* ч0рный ящик, хранящиеся в ОЗУ, питаемой от батарейки на плате. */
@@ -451,10 +455,15 @@ static u16 dnepr_i2c_debug_search_last(void)
      \sa 
 */
 /*=============================================================================================================*/
-clock_t     dnepr_i2c_get_timer_and_reset(void)
+uint32_t     dnepr_i2c_get_timer_and_reset(clock_t  *timer_begin, clock_t  *timer_prev_end)
 {
-  
-    return 0;  
+    uint32_t    interval_from_begin  =  (uint32_t)timer_get_value(timer_begin); 
+    uint32_t    interval_from_prvend =  (uint32_t)timer_get_value(timer_prev_end);
+    
+    timer_reset(timer_prev_end);
+     
+    
+    return interval_from_prvend - interval_from_begin;  
 }
 
 /*=============================================================================================================*/
@@ -485,7 +494,7 @@ static void dnepr_i2c_debug_set_event
         nv_bbox_i2c[real_index].bus_id              = bus;
         nv_bbox_i2c[real_index].i2c_addr            = addr;
         nv_bbox_i2c[real_index].reg_addr            = cmnd;        
-        nv_bbox_i2c[real_index].time                = dnepr_i2c_get_timer_and_reset();
+        nv_bbox_i2c[real_index].time                = dnepr_i2c_get_timer_and_reset(&i2c_timer_begin_trans, &i2c_timer_end_trans);
         
         now_event_index++;
         err_cnt += (ack_status == FALSE);        
@@ -540,7 +549,8 @@ int dnepr_i2c_debug_print_log_event (char *outlog_buf, size_t maxlen, u16 index)
   buf_index += sprintf(&outlog_buf[buf_index], "adr 0x%02X ", nv_bbox_i2c[index].i2c_addr);
   buf_index += sprintf(&outlog_buf[buf_index], "reg 0x%02X ", nv_bbox_i2c[index].reg_addr);
 
-  //время    
+  //время
+  buf_index += sprintf(&outlog_buf[buf_index], "intrvl %u uSec ", nv_bbox_i2c[index].time);
   
   buf_index += sprintf(&outlog_buf[buf_index], "\r\n");
   
@@ -560,6 +570,9 @@ void Dnepr_I2C_init()
     
     /* находим последний элемент бинарным поиском, записываем событие RESET */
     now_event_index = dnepr_i2c_debug_search_last();
+    timer_reset(&i2c_timer_begin_trans);
+    timer_reset(&i2c_timer_end_trans);
+    
     dnepr_i2c_debug_set_event(TRUE, DEV_RESET, I2C_Dnepr_CurrentBus(), 0 ,0);
     
 #endif        
@@ -702,7 +715,10 @@ __PMB_ReadByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult )
 {
 	PMBUS_TRANSACTION_BEGIN();
         i = 0;
-        do {        
+        do {
+#ifdef DEBUG_I2C
+            timer_reset(&i2c_timer_begin_trans);
+#endif      
 	    ret = PMB_ReadByte( mAddr, mCmd, pbResult );
 #ifdef DEBUG_I2C
             dnepr_i2c_debug_set_event(ret, BYTE_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -716,6 +732,9 @@ static _BOOL
 __PMB_ReadWord(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 *pwResult )
 {
 	PMBUS_TRANSACTION_BEGIN() ;
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret = PMB_ReadWord( mAddr, mCmd, pwResult );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, WORD_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -729,6 +748,9 @@ __PMB_WriteByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 nData)
 	PMBUS_TRANSACTION_BEGIN() ;
         i = 0;
         do {        
+#ifdef DEBUG_I2C
+                timer_reset(&i2c_timer_begin_trans);
+#endif      
         	ret = PMB_WriteByte( mAddr, mCmd, nData );
 #ifdef DEBUG_I2C
                 dnepr_i2c_debug_set_event(ret, BYTE_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -742,6 +764,9 @@ static _BOOL
 __PMB_WriteWord(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 nData)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret = PMB_WriteWord( mAddr, mCmd, nData );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, WORD_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -753,6 +778,9 @@ static _BOOL
 __PMB_SendCommand(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret = PMB_SendCommand( mAddr, mCmd);
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, SEND_CMD, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -764,6 +792,9 @@ static _BOOL
 __PMB_ReadMultipleBytes(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret = PMB_ReadMultipleBytes( mAddr, mCmd, anData, nBytesQuantity);
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, BYTE_ARRAY_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -775,6 +806,9 @@ static _BOOL
 __PMB_WriteMultipleBytes(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret = PMB_WriteMultipleBytes( mAddr, mCmd, anData, nBytesQuantity );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, BYTE_ARRAY_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -786,6 +820,9 @@ static _BOOL
 __PMB_ReadMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* anData, u8 nBytesQuantity)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret = PMB_ReadMultipleWords( mAddr, mCmd, anData, nBytesQuantity );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, WORD_ARRAY_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -797,6 +834,9 @@ static _BOOL
 __PMB_WriteMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* anData, u8 nBytesQuantity)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret = PMB_WriteMultipleWords( mAddr, mCmd, anData, nBytesQuantity );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, WORD_ARRAY_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -840,6 +880,9 @@ static _BOOL
 __I2C_ReadByte( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult )
 {
 	I2C_TRANSACTION_BEGIN();
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret = I2C_ReadByte( mAddr, mCmd, pbResult ) ;
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, BYTE_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -851,6 +894,9 @@ static _BOOL
 __I2C_ReadWord( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 *pwResult )
 {
 	I2C_TRANSACTION_BEGIN();
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret =  I2C_ReadWord( mAddr, mCmd, pwResult );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, WORD_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -862,6 +908,9 @@ static _BOOL
 __I2C_WriteByte( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 nData)
 {
 	I2C_TRANSACTION_BEGIN();
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret =   I2C_WriteByte( mAddr, mCmd, nData);
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, BYTE_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -873,6 +922,9 @@ static _BOOL
 __I2C_WriteWord( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 nData)
 {
 	I2C_TRANSACTION_BEGIN();
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret =  I2C_WriteWord( mAddr, mCmd, nData );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, WORD_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -884,6 +936,9 @@ static _BOOL
 __I2C_SendCommand( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd)
 {
 	I2C_TRANSACTION_BEGIN();
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret =   I2C_SendCommand( mAddr, mCmd );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, SEND_CMD, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -895,6 +950,9 @@ static _BOOL
 __I2C_ReadCommand( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 *pbResult )
 {
 	I2C_TRANSACTION_BEGIN();
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret = I2C_ReadCommand( mAddr, pbResult );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, READ_CMD, I2C_Dnepr_CurrentBus(), mAddr, *pbResult);
@@ -906,6 +964,9 @@ static _BOOL
 __I2C_ReadMultipleBytes( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity)
 {
 	I2C_TRANSACTION_BEGIN();
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret =  I2C_ReadMultipleBytes( mAddr, mCmd, anData, nBytesQuantity );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, BYTE_ARRAY_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -917,6 +978,9 @@ static _BOOL
 __I2C_WriteMultipleBytes( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity)
 {
 	I2C_TRANSACTION_BEGIN();
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret =  I2C_WriteMultipleBytes( mAddr, mCmd, anData, nBytesQuantity );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, BYTE_ARRAY_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -928,6 +992,9 @@ static _BOOL
 __I2C_ReadMultipleBytes_16( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u16 mCmd, u8* anData, u8 nBytesQuantity)
 {
 	I2C_TRANSACTION_BEGIN();
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret =  I2C_ReadMultipleBytes_16( mAddr, mCmd, anData, nBytesQuantity );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, WORD_ARRAY_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -939,6 +1006,9 @@ static _BOOL
 __I2C_WriteMultipleBytes_16( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u16 mCmd, u8* anData, u8 nBytesQuantity)
 {
 	I2C_TRANSACTION_BEGIN();
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret =  I2C_WriteMultipleBytes_16( mAddr, mCmd, anData, nBytesQuantity );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, BYTE16_ARRAY_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -950,6 +1020,9 @@ static _BOOL
 __I2C_ReadMultipleWords( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* anData, u8 nWordsQuantity)
 {
 	I2C_TRANSACTION_BEGIN();
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret =  I2C_ReadMultipleWords( mAddr, mCmd, anData, nWordsQuantity );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, BYTE16_ARRAY_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
@@ -961,6 +1034,9 @@ static _BOOL
 __I2C_WriteMultipleWords( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* anData, u8 nWordsQuantity)
 {
 	I2C_TRANSACTION_BEGIN();
+#ifdef DEBUG_I2C
+        timer_reset(&i2c_timer_begin_trans);
+#endif      
 	ret =  I2C_WriteMultipleWords( mAddr, mCmd, anData, nWordsQuantity );
 #ifdef DEBUG_I2C
         dnepr_i2c_debug_set_event(ret, WORD_ARRAY_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
