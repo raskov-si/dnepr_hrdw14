@@ -105,12 +105,17 @@ static void taskInit(void *pdata)
 	// As mentioned in the book's text, you MUST initialize the ticker only
 	// once multitasking
 	// ¬ключаем ticker -- таймер ќ— 
+//	PIT_Init(0, // номер таймера
+//			1, // делитель PCSR
+//			18750, // модуль таймера, 75 ћ√ц -> 1 к√ц 
+//			3, 0 // IPL, prio
+//	);
+	
 	PIT_Init(0, // номер таймера
 			1, // делитель PCSR
-			18750, // модуль таймера, 75 ћ√ц -> 1 к√ц 
+			28035, // модуль таймера, 75 ћ√ц -> 1 к√ц 
 			3, 0 // IPL, prio
 	);
-	
 	OSStatInit();
         
 #ifdef DEBUG_I2C        
@@ -133,8 +138,8 @@ static void taskInit(void *pdata)
 	// задерживаем включение не работающих слотовых устройств
 	DeviceController_Init() ;
         
-        /* пытаемс€ обнаружить backplane eeprom с данными профил€ в течении 15 секунд, после этого все равно включаемс€ */
-        dnepr_wait_eeprom_contact(5*OS_TICKS_PER_SEC);
+        /* пытаемс€ обнаружить backplane eeprom с данными профил€ в течении 4 секунд, после этого все равно включаемс€ */
+        dnepr_wait_eeprom_contact(4*OS_TICKS_PER_SEC);
         
 	// »нициализуруем параметры профил€.
 	Dnepr_ProfileStorage_Init() ;

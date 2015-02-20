@@ -7,6 +7,7 @@ clock_t clock(void)
 {
     uint32_t    timer_value = ( (uint32_t)overload_pit_value << 16) | (0xFFFF - pit_get_value(1));
     clock_t     clock_value = (clock_t)timer_value * PITTIME_MICROSECONDS_PER_TICK;
+    clock_value *= 2;           ////WTF иначе интервалы времени считаются в 2 раза меньше, выяснить что это
     
     return clock_value;
 }

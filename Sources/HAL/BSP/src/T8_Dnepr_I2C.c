@@ -714,8 +714,6 @@ static _BOOL
 __PMB_ReadByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult )
 {
 	PMBUS_TRANSACTION_BEGIN();
-        i = 0;
-        do {
 #ifdef DEBUG_I2C
             timer_reset(&i2c_timer_begin_trans);
 #endif      
@@ -723,8 +721,6 @@ __PMB_ReadByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult )
 #ifdef DEBUG_I2C
             dnepr_i2c_debug_set_event(ret, BYTE_READ, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
 #endif      
-            i++;          
-        } while ( (!ret) && (i < 3) );
 	PMBUS_TRANSACTION_END() ;
 }
 
@@ -746,8 +742,6 @@ static _BOOL
 __PMB_WriteByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 nData)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
-        i = 0;
-        do {        
 #ifdef DEBUG_I2C
                 timer_reset(&i2c_timer_begin_trans);
 #endif      
@@ -755,8 +749,6 @@ __PMB_WriteByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 nData)
 #ifdef DEBUG_I2C
                 dnepr_i2c_debug_set_event(ret, BYTE_WRITE, I2C_Dnepr_CurrentBus(), mAddr, mCmd);
 #endif          
-            i++;          
-        } while ( (!ret) && (i < 3) );        
 	PMBUS_TRANSACTION_END() ;
 }
 
