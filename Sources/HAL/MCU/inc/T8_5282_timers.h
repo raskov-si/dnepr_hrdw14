@@ -9,8 +9,9 @@
 
 #include "support_common.h"
 
-#define PITTIME_MICROSECONDS_PER_TICK       256 / 75
-#define PITTIME_OVL_SECONDS                 PITTIME_MICROSECONDS_PER_TICK * 65535 / 1000000
+#define PITTIME_MICROSECONDS_PER_TICK(a)    ((a * 128 * 2) / 75)  /*!< количество микросекунд в одном такте таймера  */
+#define PITTIME_TICK_PER_MICROSECONDS(a)    ((a * 75) / (128 * 2) )      /*!< количество тактов таймера в одной микросекунде */
+#define PITTIME_OVL_SECONDS                 PITTIME_MICROSECONDS_PER_TICK(65535) / 1000000
 
 
 void PIT_Init(	const u8 PIT, const u8 PCSR, const u16 PMR,

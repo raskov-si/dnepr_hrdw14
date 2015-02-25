@@ -7,6 +7,8 @@
 
 #include "HAL/IC/inc/TI_TMP112.h"
 
+#define TI_TMP112_I2C_TIMEOUT_MS   (30)
+
 static u8 __nAddress = 0 ;
 
 /* Pointer to peripherial access stricture and a \c define assigned to it */
@@ -38,7 +40,7 @@ _BOOL TI_TMP112_GetConfig( TI_TMP112_ConfigurationRegister* tConfig ){
     
     assert(tConfig != NULL);
 	
-	ret = I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_ReadWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_CONFIGURATION_REGISTER, &nConfigTmp);
+	ret = I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_ReadWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_CONFIGURATION_REGISTER, &nConfigTmp, TI_TMP112_I2C_TIMEOUT_MS, 2);
 	
 	tConfig->bOneShotConversionReady = TI_TMP112_GET_OS(nConfigTmp);
     tConfig->mConverterReslution = (TI_TMP112_ConverterReslution)TI_TMP112_GET_R1_R0(nConfigTmp);
@@ -72,7 +74,7 @@ _BOOL TI_TMP112_SetConfig( TI_TMP112_ConfigurationRegister* tConfig ){
     nConfigTmp |= TI_TMP112_SET_AL(tConfig->bAlert);
     nConfigTmp |= TI_TMP112_SET_EM(tConfig->bExtendedMode);
 	
-	return I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_CONFIGURATION_REGISTER, nConfigTmp );
+	return I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_CONFIGURATION_REGISTER, nConfigTmp, TI_TMP112_I2C_TIMEOUT_MS, 2 );
 }
 
 
@@ -100,8 +102,8 @@ _BOOL TI_TMP112_SetThresholds( TI_TMP112_AlarmThresholds* tThresholds ){
         nAlarmLCode = TI_TMP112_CONVERT_C_TO_12_BIT_CODE(tThresholds->fTLow);
     }
 	
-    ret = I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_THIGH_REGISTER, nAlarmHCode);
-    ret &= I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_TLOW_REGISTER, nAlarmLCode);
+    ret = I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_THIGH_REGISTER, nAlarmHCode, TI_TMP112_I2C_TIMEOUT_MS, 2);
+    ret &= I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_TLOW_REGISTER, nAlarmLCode, TI_TMP112_I2C_TIMEOUT_MS, 2);
 	
 	return ret ;
 	
@@ -123,8 +125,8 @@ _BOOL TI_TMP112_GetThresholds( TI_TMP112_AlarmThresholds* tThresholds ){
 	TI_TMP112_GetConfig( &tConfig );
     
     /* Reading integer-represented thresholds */
-    ret = I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_ReadWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_THIGH_REGISTER, &nAlarmHCode );
-    ret &= I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_ReadWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_TLOW_REGISTER, &nAlarmLCode );
+    ret = I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_ReadWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_THIGH_REGISTER, &nAlarmHCode, TI_TMP112_I2C_TIMEOUT_MS, 2 );
+    ret &= I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_ReadWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_TLOW_REGISTER, &nAlarmLCode, TI_TMP112_I2C_TIMEOUT_MS, 2 );
     
     if(tConfig.bExtendedMode){
 		tThresholds->fTHigh = TI_TMP112_CONVERT_13_BIT_CODE_TO_C(nAlarmHCode);
@@ -147,7 +149,7 @@ f32 TI_TMP112_ReadTemperature(){
     u16 nRawTempCode;
 	f32 fTemperature;
 
-	I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_ReadWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_TEMPERATURE_REGISTER, &nRawTempCode );
+	I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_ReadWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, __nAddress, TI_TMP112_TEMPERATURE_REGISTER, &nRawTempCode, TI_TMP112_I2C_TIMEOUT_MS, 2);
 	
 	/* LSB of temperature register is mode bit, so we use it to determine temperature resolution 
        instead of reading configuration register. */

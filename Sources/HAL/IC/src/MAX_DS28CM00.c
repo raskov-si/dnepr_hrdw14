@@ -7,6 +7,8 @@
 
 #include "HAL\IC\inc\MAX_DS28CM00.h"
 
+#define DS28CM00_I2C_TIMEOUT_MS    (50)
+
 /*!
 \addtogroup MAX_DS28CM00_Driver
 \{
@@ -65,6 +67,8 @@ void MAX_DS28CM00_InitContentsStructure( MAX_DS28CM00_ContentsTypedef* tContents
 }
 
 
+/* серийный номер шасси */
+
 _BOOL MAX_DS28CM00_ReadContents(I2C_PeriphInterfaceTypedef* tI2cPeriphInterface,
 										MAX_DS28CM00_ContentsTypedef* tContents){
 	/*!
@@ -79,13 +83,13 @@ _BOOL MAX_DS28CM00_ReadContents(I2C_PeriphInterfaceTypedef* tI2cPeriphInterface,
 	assert( tI2cPeriphInterface != NULL );
 	
 	//Family code
-	ret &= tI2cPeriphInterface->I2C_ReadByte(tI2cPeriphInterface, MAX_DS28CM00_ADDRESS, MAX_DS28CM00_DEVICE_FAMILY_BASE, &(tContents->nFamilyCode));
+	ret &= tI2cPeriphInterface->I2C_ReadByte(tI2cPeriphInterface, MAX_DS28CM00_ADDRESS, MAX_DS28CM00_DEVICE_FAMILY_BASE, &(tContents->nFamilyCode), DS28CM00_I2C_TIMEOUT_MS, 2);
 	
 	//48-bit serial number
 	for(i=MAX_DS28CM00_SERIAL_NUMBER_BASE, j=0; (i<MAX_DS28CM00_CRC_BASE)&&(j<=MAX_DS28CM00_LENGTH); i++, j++){
-		ret &= tI2cPeriphInterface->I2C_ReadByte(tI2cPeriphInterface, MAX_DS28CM00_ADDRESS, i, &(tContents->nSerialNumber[j]));
+		ret &= tI2cPeriphInterface->I2C_ReadByte(tI2cPeriphInterface, MAX_DS28CM00_ADDRESS, i, &(tContents->nSerialNumber[j]), DS28CM00_I2C_TIMEOUT_MS, 2);
 	}	
-	ret &= tI2cPeriphInterface->I2C_ReadByte(tI2cPeriphInterface, MAX_DS28CM00_ADDRESS, MAX_DS28CM00_CRC_BASE, &(tContents->nCRC));
+	ret &= tI2cPeriphInterface->I2C_ReadByte(tI2cPeriphInterface, MAX_DS28CM00_ADDRESS, MAX_DS28CM00_CRC_BASE, &(tContents->nCRC), DS28CM00_I2C_TIMEOUT_MS, 2);
 	return ret ;
 }
 
@@ -125,7 +129,7 @@ _BOOL MAX_DS28CM00_SetMode(		I2C_PeriphInterfaceTypedef* tI2cPeriphInterface,
 	assert( tI2cPeriphInterface != NULL );
 	
 	nMode = ( mMode == MAX_DS28CM00_I2C ) ? MAX_DS28CM00_CM_I2C : MAX_DS28CM00_CM_SMB ;	
-	return tI2cPeriphInterface->I2C_WriteByte(tI2cPeriphInterface, MAX_DS28CM00_ADDRESS, MAX_DS28CM00_CONTROL_REGISTER_BASE, nMode);
+	return tI2cPeriphInterface->I2C_WriteByte(tI2cPeriphInterface, MAX_DS28CM00_ADDRESS, MAX_DS28CM00_CONTROL_REGISTER_BASE, nMode, DS28CM00_I2C_TIMEOUT_MS, 2);
 }
 
 MAX_DS28CM00_ModeTypedef MAX_DS28CM00_GetMode( I2C_PeriphInterfaceTypedef* tI2cPeriphInterface ){
@@ -137,7 +141,7 @@ MAX_DS28CM00_ModeTypedef MAX_DS28CM00_GetMode( I2C_PeriphInterfaceTypedef* tI2cP
 
 	assert( tI2cPeriphInterface != NULL );
 	
-	tI2cPeriphInterface->I2C_ReadByte(tI2cPeriphInterface, MAX_DS28CM00_ADDRESS, MAX_DS28CM00_CONTROL_REGISTER_BASE, &nMode );
+	tI2cPeriphInterface->I2C_ReadByte(tI2cPeriphInterface, MAX_DS28CM00_ADDRESS, MAX_DS28CM00_CONTROL_REGISTER_BASE, &nMode, DS28CM00_I2C_TIMEOUT_MS, 2 );
 	return ( nMode==MAX_DS28CM00_CM_I2C ) ? MAX_DS28CM00_I2C : MAX_DS28CM00_SMB ;
 }
 

@@ -6,8 +6,7 @@ volatile   long long   overload_pit_value = 0;       /* отсчет тиков */
 clock_t clock(void)
 {
     uint32_t    timer_value = ( (uint32_t)overload_pit_value << 16) | (0xFFFF - pit_get_value(1));
-    clock_t     clock_value = (clock_t)timer_value * PITTIME_MICROSECONDS_PER_TICK;
-    clock_value *= 2;           ////WTF иначе интервалы времени считаются в 2 раза меньше, выяснить что это
+    clock_t     clock_value = (clock_t)PITTIME_MICROSECONDS_PER_TICK(timer_value);
     
     return clock_value;
 }
@@ -58,6 +57,7 @@ clock_t timer_get_value
 }
 
 
+  
 /*
 ===================================================================================================
 Description: проверка истечения таймера, сохраненного функцией timer_set
@@ -67,12 +67,14 @@ Notes      :
 */
 int timer_is_expired
 (
-  const clock_t *timer_saved_value, 
+  clock_t       *timer_saved_value, 
   clock_t       interval
 )
 {
-  clock_t nowTicks = clock();
-  clock_t nowInterval;
+  volatile uint32_t  nowTicks;
+  uint32_t  nowInterval;
+  
+  nowTicks = (uint32_t)clock();
   
   if (*timer_saved_value > nowTicks) {
     /* преполнение, значение clock на втором цикле */

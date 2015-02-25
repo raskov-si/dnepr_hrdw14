@@ -289,7 +289,6 @@ _BOOL PSU_Setup
   /* на шине PMBus ищем адреса контроллеров pmbus в зависимости от слота */
   for( j = 0; j < 3 ; j++ )  {
      u32 times = 5;
-     u8  tmp;
      
      do {
 //        ret = ipmi_get_adress_acknowledge( PMB_PERIPH_INTERFACE_STRUCT_PTR, psu_adresses[j][nUnitNumber-1].maincontroller_adress );
@@ -586,7 +585,7 @@ _BOOL PSU_PMB_Enable(u8 nUnitNumber){
 	
 	//nOperation=__PMB_ReadByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, nPsuAddress[nUnitNumber-1], PMB_OPERATION);
 	//return __PMB_WriteByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, nPsuAddress[nUnitNumber-1], PMB_OPERATION, PSU_OPERATION_NEW_STATE(nOperation, PSU_OPERATION_ON));
-	return __PMB_WriteByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_OPERATION, 0x80);
+	return __PMB_WriteByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_OPERATION, 0x80, POWERUNIT_PMBUS_TIMEOUTMS, 3);
 }
 _BOOL PSU_PMB_Disable(u8 nUnitNumber){
 	/*!
@@ -597,7 +596,7 @@ _BOOL PSU_PMB_Disable(u8 nUnitNumber){
 	
 	//nOperation=__PMB_ReadByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, nPsuAddress[nUnitNumber-1], PMB_OPERATION);
 	//return __PMB_WriteByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, nPsuAddress[nUnitNumber-1], PMB_OPERATION, PSU_OPERATION_NEW_STATE(nOperation, PSU_OPERATION_SOFT_OFF));
-	return __PMB_WriteByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_OPERATION, 0x40);
+	return __PMB_WriteByte(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_OPERATION, 0x40, POWERUNIT_PMBUS_TIMEOUTMS, 3);
 }
 
 f32 PSU_PSMI_ReadTemp(u8 nUnitNumber, u8 nSensor){	
@@ -612,7 +611,7 @@ f32 PSU_PSMI_ReadTemp(u8 nUnitNumber, u8 nSensor){
 	assert(PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL);
 	
 	if( nSensor>PSMI_TEMP_SENSOR_NUMBER ) return PSU_CHANNEL_ERROR;
-	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_TEMP_SENSOR(nSensor), &nTmp );
+	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_TEMP_SENSOR(nSensor), &nTmp, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return (f32)nTmp*PSMI_TEMP_SENSOR_COEFFICIENT;
 }
 f32 PSU_PSMI_ReadVout(u8 nUnitNumber, u8 nSensor){	
@@ -627,7 +626,7 @@ f32 PSU_PSMI_ReadVout(u8 nUnitNumber, u8 nSensor){
 	assert(PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL);
 	
 	if( nSensor>PSMI_VOUT_SENSOR_NUMBER ) return PSU_CHANNEL_ERROR;
-	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_VOUT_SENSOR(nSensor), &nTmp );
+	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_VOUT_SENSOR(nSensor), &nTmp, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return (f32)nTmp*PSMI_VOUT_SENSOR_COEFFICIENT;
 }
 f32 PSU_PSMI_ReadVin(u8 nUnitNumber, u8 nSensor){	
@@ -643,7 +642,7 @@ f32 PSU_PSMI_ReadVin(u8 nUnitNumber, u8 nSensor){
 	assert(PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL);
 	
 	if( nSensor>PSMI_VIN_SENSOR_NUMBER ) return PSU_CHANNEL_ERROR;
-	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_VIN_SENSOR(nSensor), &nTmp );
+	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_VIN_SENSOR(nSensor), &nTmp, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return (f32)nTmp*PSMI_VIN_SENSOR_COEFFICIENT;
 }
 f32 PSU_PSMI_ReadIout(u8 nUnitNumber, u8 nSensor){	
@@ -658,7 +657,7 @@ f32 PSU_PSMI_ReadIout(u8 nUnitNumber, u8 nSensor){
 	assert(PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL);
 	
 	if( nSensor>PSMI_IOUT_SENSOR_NUMBER ) return PSU_CHANNEL_ERROR;
-	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_IOUT_SENSOR(nSensor), &nTmp );
+	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_IOUT_SENSOR(nSensor), &nTmp, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return (f32)nTmp*PSMI_IOUT_SENSOR_COEFFICIENT;
 }
 f32 PSU_PSMI_ReadIin(u8 nUnitNumber, u8 nSensor){	
@@ -674,7 +673,7 @@ f32 PSU_PSMI_ReadIin(u8 nUnitNumber, u8 nSensor){
 	assert(PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL);
 	
 	if( nSensor>PSMI_IIN_SENSOR_NUMBER ) return PSU_CHANNEL_ERROR;
-	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_IIN_SENSOR(nSensor), &nTmp );
+	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_IIN_SENSOR(nSensor), &nTmp, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return (f32)nTmp*PSMI_IIN_SENSOR_COEFFICIENT;
 }
 f32 PSU_PSMI_ReadPeakIout(u8 nUnitNumber, u8 nSensor){	
@@ -689,7 +688,7 @@ f32 PSU_PSMI_ReadPeakIout(u8 nUnitNumber, u8 nSensor){
 	assert(PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL);
 	
 	if( nSensor>PSMI_IOUT_PEAK_SENSOR_NUMBER ) return PSU_CHANNEL_ERROR;
-	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_IOUT_PEAK_SENSOR(nSensor), &nTmp );
+	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_IOUT_PEAK_SENSOR(nSensor), &nTmp, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return (f32)nTmp*PSMI_IOUT_PEAK_SENSOR_COEFFICIENT;
 }
 f32 PSU_PSMI_ReadPeakIin(u8 nUnitNumber, u8 nSensor){	
@@ -705,7 +704,7 @@ f32 PSU_PSMI_ReadPeakIin(u8 nUnitNumber, u8 nSensor){
 	assert(PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL);
 	
 	if( nSensor>PSMI_IIN_PEAK_SENSOR_NUMBER ) return PSU_CHANNEL_ERROR;
-	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_IIN_PEAK_SENSOR(nSensor), &nTmp );
+	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_IIN_PEAK_SENSOR(nSensor), &nTmp, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return (f32)nTmp*PSMI_IIN_PEAK_SENSOR_COEFFICIENT;
 }
 unsigned long PSU_PSMI_ReadFanSpeed(u8 nUnitNumber, u8 nSensor){	
@@ -721,7 +720,7 @@ unsigned long PSU_PSMI_ReadFanSpeed(u8 nUnitNumber, u8 nSensor){
 	assert(PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL);
 	
 	if( nSensor>PSMI_FAN_SPEED_SENSOR_NUMBER ) return PSU_CHANNEL_ERROR;
-	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_FAN_SPEED_SENSOR(nSensor), &nTmp );
+	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_FAN_SPEED_SENSOR(nSensor), &nTmp, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 
 	return (u32)((float)nTmp*PSMI_FAN_SPEED_SENSOR_COEFFICIENT);
 }
@@ -735,7 +734,7 @@ unsigned short PSU_PSMI_GetStatusRegister(u8 nUnitNumber){
 
 	assert(PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL);
 	
-	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_STATUS_REGISTER, &nTmp );
+	__PMB_ReadWord(PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSMI_STATUS_REGISTER, &nTmp, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return nTmp;
 }
 _BOOL PSU_PSMI_GetUnitStatus(u8 nUnitNumber, PSMI_UnitStatusTypedef* tUnitStatusStructure){
@@ -844,7 +843,7 @@ _BOOL PSU_PMBus_ReadCoefficients( const u8 nUnitNumber )
 
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	if(! __PMB_ReadMultipleBytes( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_COEFFICIENTS,
-		nBuff, 6 ) )
+		nBuff, 6, POWERUNIT_PMBUS_TIMEOUTMS, 3) )
 		return FALSE ;
 
 	__pmbus_unit_coefficients[nUnitNumber-1].m = (nBuff[1] << 8) | nBuff[0] ;
@@ -883,11 +882,11 @@ f32 PSU_PMBus_ReadTemp(u8 nUnitNumber )
         
         OSTimeDly( 100 );
 	
-        __PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_TEMPERATURE_2, &val );
+        __PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_TEMPERATURE_2, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
         
 //	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VOUT, &val );
 //	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IOUT, &val );
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VIN, &val );
+//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VIN, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 //	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IIN, &val );
 //	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_FAN_SPEED_1, &val );
 //	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSU_PMBUS_STATUS_REG, &val );
@@ -902,7 +901,7 @@ f32 PSU_PMBus_ReadVout(u8 nUnitNumber )
 {	
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 val;
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VOUT, &val );
+	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VOUT, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 
 	return __PSU_PMBus_ConverDirectVal( nUnitNumber, (s32)val ) ;
 }
@@ -911,7 +910,7 @@ f32 PSU_PMBus_ReadIout(u8 nUnitNumber )
 {
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 val;
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IOUT, &val );
+	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IOUT, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 
 	return __PSU_PMBus_ConverDirectVal( nUnitNumber, (s32)val ) ;
 }
@@ -920,7 +919,7 @@ f32 PSU_PMBus_ReadVin (u8 nUnitNumber )
 {
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 val ;
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VIN, &val );
+	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VIN, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return __PSU_PMBus_ConvertLinearVal( val );
 }
 
@@ -928,7 +927,7 @@ f32 PSU_PMBus_ReadIin (u8 nUnitNumber )
 {
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 val ;
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IIN, &val );
+	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IIN, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return __PSU_PMBus_ConvertLinearVal( val );
 }
 
@@ -936,7 +935,7 @@ float PSU_PMBus_ReadFanSpeed(u8 nUnitNumber )
 {
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 val ;
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_FAN_SPEED_1, &val );
+	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_FAN_SPEED_1, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return __PSU_PMBus_ConvertLinearVal( val );
 }
 
@@ -944,7 +943,7 @@ unsigned short PSU_PMBus_GetStatus(u8 nUnitNumber)
 {
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 res ;
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSU_PMBUS_STATUS_REG, &res );
+	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSU_PMBUS_STATUS_REG, &res, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return res ;
 }
 

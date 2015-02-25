@@ -14,6 +14,7 @@
 #include "uCOS_II.H"
 #include "Binary.h"
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef enum {
@@ -476,7 +477,7 @@ static _BOOL __read_sz_n_str(PMB_PeriphInterfaceTypedef *pmb_bus, u8 mAddr, size
 	IPMI_StrType_t type ;
 
 	OSTimeDly( 100 );
-	ret = pmb_bus->PMB_ReadByte( pmb_bus, mAddr, offset, len );
+	ret = pmb_bus->PMB_ReadByte( pmb_bus, mAddr, offset, len, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	*len = __ipmi_len_type_2_len( *len, &type );
         *len = (*len > maxlen) ? maxlen : *len;
 	// если тип строки не 3 (см раздел 13 документа Platform Management FRU Information Storage Definition)
@@ -513,7 +514,7 @@ static _BOOL __PMB_WriteMultipleBytes(PMB_PeriphInterfaceTypedef* p, u8 mAddr, u
 		// сколько пишем в текущей транзакции
 		cur_len = MIN( ((cur_offset + 8) & 0xF8) - cur_offset, len - cur_len );
 
-		ret = ret && p->PMB_WriteMultipleBytes( p, mAddr, cur_offset, &anData[ i ], cur_len );
+		ret = ret && p->PMB_WriteMultipleBytes( p, mAddr, cur_offset, &anData[ i ], cur_len, POWERUNIT_PMBUS_TIMEOUTMS, 3);
 		OSTimeDly( 5 );
 		if( !ret ){
 			++i ;
@@ -544,7 +545,7 @@ static _BOOL __PMB_ReadMultipleBytes
   u8                            len         /*!< [in] количество читаемых данных                      */
 )
 {
-	return p->PMB_ReadMultipleBytes( p, mAddr, mCmd, anData, len );
+	return p->PMB_ReadMultipleBytes( p, mAddr, mCmd, anData, len, POWERUNIT_PMBUS_TIMEOUTMS, 3);
 }
 
 
@@ -564,7 +565,7 @@ static _BOOL __PMB_ReadWord
     u16                         *pwResult   /*!< [out] слово в которое происходит чтение              */
 )
 {
-    return p->PMB_ReadWord( p, mAddr, mCmd, pwResult);
+    return p->PMB_ReadWord( p, mAddr, mCmd, pwResult, POWERUNIT_PMBUS_TIMEOUTMS, 3);
 }
 
 
@@ -584,7 +585,7 @@ static _BOOL __PMB_ReadByte
     u8                          *pwResult   /*!< [out] байт в которой происходит чтение              */
 )
 {
-    return p->PMB_ReadByte( p, mAddr, mCmd, pwResult);
+    return p->PMB_ReadByte( p, mAddr, mCmd, pwResult, POWERUNIT_PMBUS_TIMEOUTMS, 3);
 }
 
 
@@ -602,5 +603,5 @@ static _BOOL __PMB_GetAcknowledge
     u8                          mAddr       /*!< [in] i2c адрес с которого читаются данные            */
 )
 {
-    return p->PMB_GetAcknowledge( p, mAddr);  
+    return p->PMB_GetAcknowledge( p, mAddr, POWERUNIT_PMBUS_TIMEOUTMS, 0);  
 }

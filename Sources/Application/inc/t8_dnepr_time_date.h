@@ -19,7 +19,7 @@ clock_t timer_get_value
 
 int timer_is_expired
 (
-  const clock_t *timer_saved_value, 
+  clock_t       *timer_saved_value, 
   clock_t       interval
 );
       

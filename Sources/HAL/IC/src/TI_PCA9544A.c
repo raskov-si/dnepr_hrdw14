@@ -7,9 +7,11 @@
 
 #include "HAL\IC\inc\TI_PCA9544A.h"
 
+#define  TI_PCA9544A_I2C_TIMEOUTMS  (50)
+
 /* Pointer to peripherial access stricture and a \c define assigned to it */
-static I2C_PeriphInterfaceTypedef* tSwitchPeriphInterface = NULL;
-#define I2C_PERIPH_INTERFACE_STRUCT_PTR tSwitchPeriphInterface
+//static I2C_PeriphInterfaceTypedef* tSwitchPeriphInterface = NULL;
+//#define I2C_PERIPH_INTERFACE_STRUCT_PTR tSwitchPeriphInterface
 
 /*!
 \addtogroup TI_PCA9544A_Driver
@@ -57,7 +59,7 @@ _BOOL TI_PCA9544A_GetInterruptStates( I2C_PeriphInterfaceTypedef* tI2cPeriphInte
 
 	assert(tI2cPeriphInterface!=NULL);
 	
-	ret = tI2cPeriphInterface->I2C_ReadCommand( tI2cPeriphInterface, nAddress, &nTmp );
+	ret = tI2cPeriphInterface->I2C_ReadCommand( tI2cPeriphInterface, nAddress, &nTmp, TI_PCA9544A_I2C_TIMEOUTMS, 0 );
 	
 	if( TI_PCA9544A_CR_IS_INT0(nTmp) ) tChannelInterrupts->bInt0State=1;
 	if( TI_PCA9544A_CR_IS_INT1(nTmp) ) tChannelInterrupts->bInt1State=1;
@@ -82,7 +84,7 @@ _BOOL TI_PCA9544A_EnableChannel( I2C_PeriphInterfaceTypedef* tI2cPeriphInterface
 	assert(tI2cPeriphInterface!=NULL);
 
 	nTmp = mChannel | TI_PCA9544A_CR_EN ;
-	return tI2cPeriphInterface->I2C_SendCommand( tI2cPeriphInterface, nAddress, nTmp);
+	return tI2cPeriphInterface->I2C_SendCommand( tI2cPeriphInterface, nAddress, nTmp, TI_PCA9544A_I2C_TIMEOUTMS, 1);
 }
 
 /*!

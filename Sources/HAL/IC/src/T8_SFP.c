@@ -15,6 +15,9 @@
 
 #include "HAL\MCU\inc\I2C_GenericDriver.h" //Remove!
 
+
+#define   SFP_I2C_TIMEOUT_MS   (50)
+
 /* Private functions */
 static ReturnStatus T8_SFP_ReadString(I2C_PeriphInterfaceTypedef* tI2cPeriphInterface, T8_SFP_STR16* pTxt, u32 addr);
 static ReturnStatus T8_SFP_ReadRxCoefficients( I2C_PeriphInterfaceTypedef* tI2cPeriphInterface, f32* rx_pwr0, f32* rx_pwr1, f32* rx_pwr2, f32* rx_pwr3, f32* rx_pwr4, u8 sfp_id);
@@ -66,7 +69,7 @@ ReturnStatus T8_SFP_Init( I2C_PeriphInterfaceTypedef* tI2cPeriphInterface, T8_SF
 	//--------- read port 92	
 	OSTimeDly(1);
 	tI2cPeriphInterface->I2C_ReadByte(tI2cPeriphInterface,T8_SFP_SFPID_I2CADDR, T8_SFP_SFPID_DDM_TYPE_REG,
-				&(och->sfp_info.flags));	
+				&(och->sfp_info.flags), SFP_I2C_TIMEOUT_MS, 2);	
 	OSTimeDly(1);
 
 	//--------- read from A0 pages PN SN VENDOR
@@ -89,13 +92,13 @@ ReturnStatus T8_SFP_Init( I2C_PeriphInterfaceTypedef* tI2cPeriphInterface, T8_SF
 		//----------- read wave len -----------------
 		
 		tI2cPeriphInterface->I2C_ReadWord(tI2cPeriphInterface,T8_SFP_SFPID_I2CADDR, T8_SFP_SFPID_WL,
-				(u16*)&(och->sfp_wl));
+				(u16*)&(och->sfp_wl), SFP_I2C_TIMEOUT_MS, 2);
 		OSTimeDly(500);
 		
 		//---------- Switch to Page A2 -------------
 		if (och->sfp_info.flags & T8_SFP_DDM_ADDR_CHANGE){
 
-			if( tI2cPeriphInterface->I2C_WriteByte( tI2cPeriphInterface, 0x00, 0x04, 0x82) ){
+			if( tI2cPeriphInterface->I2C_WriteByte( tI2cPeriphInterface, 0x00, 0x04, 0x82, SFP_I2C_TIMEOUT_MS, 2) ){
 				och->sfp_info.sfp_id = (0x50<<1);
 			}
 			OSTimeDly(500);
@@ -141,9 +144,9 @@ ReturnStatus T8_SFP_GetAlarmWarningFlags( I2C_PeriphInterfaceTypedef* tI2cPeriph
 	ReturnStatus flag = OK;
 	
 	tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_info.sfp_id, T8_SFP_SFPDDM_StatusWarning_REG,
-											&(och->StatusWarning));
+											&(och->StatusWarning), SFP_I2C_TIMEOUT_MS, 2);
 	tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_info.sfp_id, T8_SFP_SFPDDM_StatusAlarm_REG,
-											&(och->StatusAlarm));		
+											&(och->StatusAlarm), SFP_I2C_TIMEOUT_MS, 2);		
 	return flag;
 }
 
@@ -195,20 +198,20 @@ static ReturnStatus T8_SFP_ReadRxCoefficients( I2C_PeriphInterfaceTypedef* tI2cP
 	\retval See \ref ReturnStatus.
 	*/
 
-	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR0_REG,   (u8*)rx_pwr0,   2);
-	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR0_REG+2, (u8*)rx_pwr0+2, 2);	
+	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR0_REG,   (u8*)rx_pwr0,   2, SFP_I2C_TIMEOUT_MS, 2);
+	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR0_REG+2, (u8*)rx_pwr0+2, 2, SFP_I2C_TIMEOUT_MS, 2);	
 
-	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR1_REG,   (u8*)rx_pwr1,   2);	
-	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR1_REG+2, (u8*)rx_pwr1+2, 2);
+	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR1_REG,   (u8*)rx_pwr1,   2, SFP_I2C_TIMEOUT_MS, 2);	
+	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR1_REG+2, (u8*)rx_pwr1+2, 2, SFP_I2C_TIMEOUT_MS, 2);
 
-	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR2_REG,   (u8*)rx_pwr2,   2);
-	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR2_REG+2, (u8*)rx_pwr2+2, 2);
+	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR2_REG,   (u8*)rx_pwr2,   2, SFP_I2C_TIMEOUT_MS, 2);
+	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR2_REG+2, (u8*)rx_pwr2+2, 2, SFP_I2C_TIMEOUT_MS, 2);
 
-	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR3_REG,   (u8*)rx_pwr3,   2);
-	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR3_REG+2, (u8*)rx_pwr3+2, 2);
+	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR3_REG,   (u8*)rx_pwr3,   2, SFP_I2C_TIMEOUT_MS, 2);
+	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR3_REG+2, (u8*)rx_pwr3+2, 2, SFP_I2C_TIMEOUT_MS, 2);
 
-	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR4_REG,   (u8*)rx_pwr4,   2);
-	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR4_REG+2, (u8*)rx_pwr4+2, 2);
+	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR4_REG,   (u8*)rx_pwr4,   2, SFP_I2C_TIMEOUT_MS, 2);
+	tI2cPeriphInterface->I2C_ReadMultipleBytes( tI2cPeriphInterface, sfp_id, T8_SFP_SFPDDM_RX_PWR4_REG+2, (u8*)rx_pwr4+2, 2, SFP_I2C_TIMEOUT_MS, 2);
 	
 	return OK;
 }
@@ -230,7 +233,7 @@ ReturnStatus T8_SFP_TxBiasCurrent(I2C_PeriphInterfaceTypedef* tI2cPeriphInterfac
 	u8 data = och->flags;
 	if ((data & T8_SFP_DDM_IMPLEMENTED) && !(data & T8_SFP_DDM_SFF8472_COMPLIANCE)) {
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_BIAS_REG,
-															&(tx_bias_reg));
+															&(tx_bias_reg), SFP_I2C_TIMEOUT_MS, 2);
 		if (data & T8_SFP_DDM_INTERNALLY) {//Internally calibrated
 			 *tx_bias = (u32)2*(tx_bias_reg)/1000; 
 		}
@@ -264,7 +267,7 @@ ReturnStatus T8_SFP_TxPower(I2C_PeriphInterfaceTypedef* tI2cPeriphInterface,f32*
 	if ((data & T8_SFP_DDM_IMPLEMENTED) && !(data & T8_SFP_DDM_SFF8472_COMPLIANCE)) {
 
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_POWER_REG,
-													&(tx_power_reg));	
+													&(tx_power_reg), SFP_I2C_TIMEOUT_MS, 2);	
 		if (data & T8_SFP_DDM_INTERNALLY) {//Internally calibrated
 			if (tx_power_reg <= 1){
 				*tx_power = -40.0;
@@ -306,7 +309,7 @@ ReturnStatus T8_SFP_RxPower(I2C_PeriphInterfaceTypedef* tI2cPeriphInterface, f32
 	
 	if ((data & T8_SFP_DDM_IMPLEMENTED) && !(data & T8_SFP_DDM_SFF8472_COMPLIANCE)) {
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_RX_POWER_REG,
-													&(rx_power_reg));
+													&(rx_power_reg), SFP_I2C_TIMEOUT_MS, 2);
 		
 		if (data & T8_SFP_DDM_INTERNALLY) { //Internally calibrated
 			if(rx_power_reg <= 1){
@@ -355,8 +358,7 @@ ReturnStatus T8_SFP_Temperature(I2C_PeriphInterfaceTypedef* tI2cPeriphInterface,
 	
 	if ((data & T8_SFP_DDM_IMPLEMENTED) && !(data & T8_SFP_DDM_SFF8472_COMPLIANCE)) {
 		
-		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TEMP_REG,
-															(u16*)&(temp_reg));
+		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TEMP_REG, (u16*)&(temp_reg), SFP_I2C_TIMEOUT_MS, 2);
 		
 		if (data & T8_SFP_DDM_INTERNALLY) {//Internally calibrated
 			*temp = (f32)((f32)temp_reg/256.0);
@@ -390,7 +392,7 @@ ReturnStatus T8_SFP_Vcc(I2C_PeriphInterfaceTypedef* tI2cPeriphInterface, f32* te
 	
 	if ((data & T8_SFP_DDM_IMPLEMENTED) && !(data & T8_SFP_DDM_SFF8472_COMPLIANCE)) {
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_VCC_REG,
-															(u16*)&(temp_reg));
+															(u16*)&(temp_reg), SFP_I2C_TIMEOUT_MS, 2);
 		if (data & T8_SFP_DDM_INTERNALLY) {//Internally calibrated
 			*temp =	(f32)0.0001*temp_reg;
 		}
@@ -425,13 +427,13 @@ ReturnStatus T8_SFP_VccThresholds(I2C_PeriphInterfaceTypedef* tI2cPeriphInterfac
 	
 	if ((data & T8_SFP_DDM_IMPLEMENTED) && !(data & T8_SFP_DDM_SFF8472_COMPLIANCE)) {
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_Vcc_LAlarm_REG,
-													&(u16vccthresholds[0]));
+													&(u16vccthresholds[0]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_Vcc_LWarning_REG,
-													&(u16vccthresholds[1]));
+													&(u16vccthresholds[1]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_Vcc_HWarning_REG,
-													&(u16vccthresholds[2]));
+													&(u16vccthresholds[2]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_Vcc_HAlarm_REG,
-													&(u16vccthresholds[3]));
+													&(u16vccthresholds[3]), SFP_I2C_TIMEOUT_MS, 2);
 			
 		if (data & T8_SFP_DDM_INTERNALLY) { //Internally calibrated
 			sfp_thresholds->la_threshold = (f32)0.0001*(f32)u16vccthresholds[0];
@@ -493,13 +495,13 @@ ReturnStatus T8_SFP_TxPowerThresholds(I2C_PeriphInterfaceTypedef* tI2cPeriphInte
 	if ((data & T8_SFP_DDM_IMPLEMENTED) && !(data & T8_SFP_DDM_SFF8472_COMPLIANCE)) {
 
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_PWR_LAlarm_REG,
-													&(u16txpwrthresholds[0]));
+													&(u16txpwrthresholds[0]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_PWR_LWarning_REG,
-													&(u16txpwrthresholds[1]));
+													&(u16txpwrthresholds[1]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_PWR_HWarning_REG,
-													&(u16txpwrthresholds[2]));
+													&(u16txpwrthresholds[2]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_PWR_HAlarm_REG,
-													&(u16txpwrthresholds[3]));
+													&(u16txpwrthresholds[3]), SFP_I2C_TIMEOUT_MS, 2);
 
 		if (data & T8_SFP_DDM_INTERNALLY) { //Internally calibrated
 			sfp_thresholds->la_threshold = T8_SFP_uW2dBm((f32)u16txpwrthresholds[0]);
@@ -540,13 +542,13 @@ ReturnStatus T8_SFP_RxPowerThresholds(I2C_PeriphInterfaceTypedef* tI2cPeriphInte
 	if ((data & T8_SFP_DDM_IMPLEMENTED) && !(data & T8_SFP_DDM_SFF8472_COMPLIANCE)) {
 		
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_RX_PWR_LAlarm_REG,
-												&(u16rxpwrthresholds[0]));
+												&(u16rxpwrthresholds[0]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_RX_PWR_LWarning_REG,
-												&(u16rxpwrthresholds[1]));
+												&(u16rxpwrthresholds[1]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_RX_PWR_HWarning_REG,
-												&(u16rxpwrthresholds[2]));
+												&(u16rxpwrthresholds[2]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_RX_PWR_HAlarm_REG,
-												&(u16rxpwrthresholds[3]));
+												&(u16rxpwrthresholds[3]), SFP_I2C_TIMEOUT_MS, 2);
 		
 		if (data & T8_SFP_DDM_INTERNALLY) { //Internally calibrated
 			sfp_thresholds->la_threshold = T8_SFP_uW2dBm((f32)u16rxpwrthresholds[0]); 
@@ -614,13 +616,13 @@ ReturnStatus T8_SFP_TxBiasCurrentThresholds(I2C_PeriphInterfaceTypedef* tI2cPeri
 	if ((data & T8_SFP_DDM_IMPLEMENTED) && !(data & T8_SFP_DDM_SFF8472_COMPLIANCE)) {
 		
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_BIAS_LAlarm_REG,
-												&(u16txbiasthresholds[0]));
+												&(u16txbiasthresholds[0]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_BIAS_LWarning_REG,
-												&(u16txbiasthresholds[1]));
+												&(u16txbiasthresholds[1]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_BIAS_HWarning_REG,
-												&(u16txbiasthresholds[2]));
+												&(u16txbiasthresholds[2]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_BIAS_HAlarm_REG,
-												&(u16txbiasthresholds[3]));
+												&(u16txbiasthresholds[3]), SFP_I2C_TIMEOUT_MS, 2);
 		
 
 		if (data & T8_SFP_DDM_INTERNALLY) { //Internally calibrated
@@ -662,13 +664,13 @@ ReturnStatus T8_SFP_TemperatureThresholds(I2C_PeriphInterfaceTypedef* tI2cPeriph
 	if ((data & T8_SFP_DDM_IMPLEMENTED) && !(data & T8_SFP_DDM_SFF8472_COMPLIANCE)) {
 		
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_Temp_LAlarm_REG,
-												(u16*)&(s16temperaturethresholds[0]));
+												(u16*)&(s16temperaturethresholds[0]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_Temp_LWarning_REG,
-												(u16*)&(s16temperaturethresholds[1]));
+												(u16*)&(s16temperaturethresholds[1]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_Temp_HWarning_REG,
-												(u16*)&(s16temperaturethresholds[2]));
+												(u16*)&(s16temperaturethresholds[2]), SFP_I2C_TIMEOUT_MS, 2);
 		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_Temp_HAlarm_REG,
-												(u16*)&(s16temperaturethresholds[3]));
+												(u16*)&(s16temperaturethresholds[3]), SFP_I2C_TIMEOUT_MS, 2);
 		
 		if (data & T8_SFP_DDM_INTERNALLY) { //Internally calibrated
 			sfp_thresholds->la_threshold = s16temperaturethresholds[0]/256;
@@ -704,7 +706,7 @@ static ReturnStatus T8_SFP_ReadString(I2C_PeriphInterfaceTypedef* tI2cPeriphInte
 	*/
 	ReturnStatus flag;
 	
-	if( tI2cPeriphInterface->I2C_ReadMultipleBytes(tI2cPeriphInterface,T8_SFP_SFPID_I2CADDR, (u8)addr, (u8*)pTxt->value, 16) ){
+	if( tI2cPeriphInterface->I2C_ReadMultipleBytes(tI2cPeriphInterface,T8_SFP_SFPID_I2CADDR, (u8)addr, (u8*)pTxt->value, 16, SFP_I2C_TIMEOUT_MS, 2) ){
 		flag = OK;
 		pTxt->value[16] = 0;
 	}
@@ -728,17 +730,17 @@ ReturnStatus T8_SFP_LoadCoefficients(I2C_PeriphInterfaceTypedef* tI2cPeriphInter
 	//Externally calibrated
 		flag = T8_SFP_ReadRxCoefficients( tI2cPeriphInterface, &och->rx_pwr0, &och->rx_pwr1, &och->rx_pwr2, &och->rx_pwr3, &och->rx_pwr4, och->sfp_id);
 		
-		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_I_SLOPE_REG, &och->tx_i_slope );
-		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_I_OFFSET_REG,(u16*)&och->tx_i_offset);
+		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_I_SLOPE_REG, &och->tx_i_slope, SFP_I2C_TIMEOUT_MS, 2 );
+		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_I_OFFSET_REG,(u16*)&och->tx_i_offset, SFP_I2C_TIMEOUT_MS, 2);
 
-		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TEMP_SLOPE_REG,&och->t_slope );
-		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TEMP_OFFSET_REG,(u16*)&och->t_offset);
+		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TEMP_SLOPE_REG,&och->t_slope, SFP_I2C_TIMEOUT_MS, 2 );
+		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TEMP_OFFSET_REG,(u16*)&och->t_offset, SFP_I2C_TIMEOUT_MS, 2);
 		
-		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_PWR_SLOPE_REG,&och->tx_pwr_slope );
-		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_PWR_OFFSET_REG,(u16*)&och->tx_pwr_offset);
+		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_PWR_SLOPE_REG,&och->tx_pwr_slope, SFP_I2C_TIMEOUT_MS, 2 );
+		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_TX_PWR_OFFSET_REG,(u16*)&och->tx_pwr_offset, SFP_I2C_TIMEOUT_MS, 2);
 
-		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_VCC_SLOPE_REG,&och->v_slope );
-		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_VCC_OFFSET_REG,(u16*)&och->v_offset);
+		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_VCC_SLOPE_REG,&och->v_slope, SFP_I2C_TIMEOUT_MS, 2 );
+		tI2cPeriphInterface->I2C_ReadWord( tI2cPeriphInterface, och->sfp_id, T8_SFP_SFPDDM_VCC_OFFSET_REG,(u16*)&och->v_offset, SFP_I2C_TIMEOUT_MS, 2);
 	}
 	
 	return flag;

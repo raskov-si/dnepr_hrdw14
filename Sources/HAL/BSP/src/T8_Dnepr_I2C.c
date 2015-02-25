@@ -5,10 +5,6 @@
 \date aug 2013
 */
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 
 
 #include "HAL/BSP/inc/T8_Dnepr_I2C.h"
@@ -17,6 +13,9 @@
 #include "HAL/BSP/inc/T8_Dnepr_API.h"
 #include "HAL/BSP/inc/T8_Dnepr_Select.h"
 #include "HAL/IC/inc/TI_PCA9544A.h"
+#include "HAL/MCU/inc/T8_5282_timers.h"
+#include "Application/inc/t8_dnepr_time_date.h"
+
 
 #include "HAL/MCU/inc/PMBus_GenericDriver.h"
 #include "HAL/MCU/inc/T8_5282_i2c.h"
@@ -25,8 +24,10 @@
 #include "Application/inc/T8_Dnepr_TaskSynchronization.h"
 
 #ifdef DEBUG_I2C
+    #include <string.h>
+    #include <stdio.h>
+    #include <stdlib.h>
     #include "Threads/inc/threadTerminal.h"
-    #include "Application/inc/t8_dnepr_time_date.h"
 #endif
 
 #include "uCOS_II.H"
@@ -94,6 +95,9 @@ typedef struct I2C_LOG_STRUCT
 #endif
 
 /*=============================================================================================================*/
+static  clock_t     pause_pmbus_timer;
+static  clock_t     pause_i2c_timer;
+
 #ifdef DEBUG_I2C
 
 static const char *char_num_set = "0123456789";
@@ -550,7 +554,7 @@ int dnepr_i2c_debug_print_log_event (char *outlog_buf, size_t maxlen, u16 index)
   buf_index += sprintf(&outlog_buf[buf_index], "reg 0x%02X ", nv_bbox_i2c[index].reg_addr);
 
   //время
-  buf_index += sprintf(&outlog_buf[buf_index], "intrvl %u uSec ", nv_bbox_i2c[index].time);
+  buf_index += sprintf(&outlog_buf[buf_index], "intrvl %u uSec ", nv_bbox_i2c[index].time );
   
   buf_index += sprintf(&outlog_buf[buf_index], "\r\n");
   
@@ -565,6 +569,8 @@ void Dnepr_I2C_init()
 {
     I2C_InitPorts();
     I2CInit_Timer( (I2CWaitTimer_t){ (u32 (*)())OSTimeGet, 10 } ); // 10 тиков таймера -- 10 мс ждём повисвший i2c
+    timer_reset(&pause_i2c_timer);
+    timer_reset(&pause_pmbus_timer);
         
 #ifdef DEBUG_I2C
     
@@ -675,6 +681,7 @@ u8 Dnepr_I2C_Read_ARA()
 									u8		i ;																					\
 									const u8 slot_num = ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->nSelect ;				\
 									assert( p );																				\
+                                                                        if (times == 0)  times = 1;\
 									if( !((Dnepr_I2C_driver_internal_info*)(p->bus_info))->dont_block ){						\
 										T8_Dnepr_TS_I2C_Lock() ;																\
 									} 																							\
@@ -690,11 +697,16 @@ u8 Dnepr_I2C_Read_ARA()
 											OSTimeDly( 1 );																		\
 										}																						\
 									}																						\
-									if( I2C_Dnepr_CurrentBus() != ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->bus_channel )\
-										I2C_DNEPR_SelectBus( ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->bus_channel ); 
+                                                                        if( I2C_Dnepr_CurrentBus() != ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->bus_channel ) { \
+										I2C_DNEPR_SelectBus( ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->bus_channel ); \
+                                                                        }\
+                                                                        do {  \
+                                                                            while ( !timer_is_expired(&pause_pmbus_timer, pause_interval) );\
 
 
-#define PMBUS_TRANSACTION_END()																									\
+#define PMBUS_TRANSACTION_END()						    timer_reset(&pause_i2c_timer);\
+                                                                            timer_reset(&pause_pmbus_timer);\
+                                                                        } while ( (ret == FALSE) && (--times > 0) );	\
 									if( !((Dnepr_I2C_driver_internal_info*)(p->bus_info))->dont_block ){						\
 										T8_Dnepr_TS_I2C_Unlock() ;																\
 									}																							\
@@ -703,17 +715,18 @@ u8 Dnepr_I2C_Read_ARA()
 
 
 static _BOOL
-__PMB_GetAcknowledge(PMB_PeriphInterfaceTypedef *p, u8 mAddr )
-{
+__PMB_GetAcknowledge(PMB_PeriphInterfaceTypedef *p, u8 mAddr, clock_t pause_interval, u8 times )
+{        
 	PMBUS_TRANSACTION_BEGIN();
 	ret = PMB_GetAcknowledge( mAddr );
 	PMBUS_TRANSACTION_END() ;
 }
 
 static _BOOL
-__PMB_ReadByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult )
+__PMB_ReadByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult, clock_t pause_interval, u8 times )
 {
 	PMBUS_TRANSACTION_BEGIN();
+  
 #ifdef DEBUG_I2C
             timer_reset(&i2c_timer_begin_trans);
 #endif      
@@ -725,7 +738,7 @@ __PMB_ReadByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult )
 }
 
 static _BOOL
-__PMB_ReadWord(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 *pwResult )
+__PMB_ReadWord(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 *pwResult, clock_t pause_interval, u8 times )
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 #ifdef DEBUG_I2C
@@ -739,7 +752,7 @@ __PMB_ReadWord(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 *pwResult )
 }
 
 static _BOOL
-__PMB_WriteByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 nData)
+__PMB_WriteByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 nData, clock_t pause_interval, u8 times)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 #ifdef DEBUG_I2C
@@ -753,7 +766,7 @@ __PMB_WriteByte(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 nData)
 }
 
 static _BOOL
-__PMB_WriteWord(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 nData)
+__PMB_WriteWord(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 nData, clock_t pause_interval, u8 times)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 #ifdef DEBUG_I2C
@@ -767,7 +780,7 @@ __PMB_WriteWord(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 nData)
 }
 
 static _BOOL
-__PMB_SendCommand(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd)
+__PMB_SendCommand(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, clock_t pause_interval, u8 times)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 #ifdef DEBUG_I2C
@@ -781,7 +794,7 @@ __PMB_SendCommand(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd)
 }
 
 static _BOOL
-__PMB_ReadMultipleBytes(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity)
+__PMB_ReadMultipleBytes(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity, clock_t pause_interval, u8 times)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 #ifdef DEBUG_I2C
@@ -795,7 +808,7 @@ __PMB_ReadMultipleBytes(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* an
 }
 
 static _BOOL
-__PMB_WriteMultipleBytes(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity)
+__PMB_WriteMultipleBytes(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity, clock_t pause_interval, u8 times)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 #ifdef DEBUG_I2C
@@ -809,7 +822,7 @@ __PMB_WriteMultipleBytes(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* a
 }
 
 static _BOOL
-__PMB_ReadMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* anData, u8 nBytesQuantity)
+__PMB_ReadMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* anData, u8 nBytesQuantity, clock_t pause_interval, u8 times)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 #ifdef DEBUG_I2C
@@ -823,7 +836,7 @@ __PMB_ReadMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* a
 }
 
 static _BOOL
-__PMB_WriteMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* anData, u8 nBytesQuantity)
+__PMB_WriteMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* anData, u8 nBytesQuantity, clock_t pause_interval, u8 times)
 {
 	PMBUS_TRANSACTION_BEGIN() ;
 #ifdef DEBUG_I2C
@@ -845,7 +858,8 @@ __PMB_WriteMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* 
 	I2C_DNEPR_BusTypedef channel_switch_to	=	((Dnepr_I2C_driver_internal_info*)(p->bus_info))->bus_channel ;			\
 	u8 slot_num = ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->nSelect ;											\
 	assert( p );																										\
-	if( !((Dnepr_I2C_driver_internal_info*)(p->bus_info))->dont_block ){												\
+        if (times == 0) times = 1; \
+        if( !((Dnepr_I2C_driver_internal_info*)(p->bus_info))->dont_block ){												\
 		T8_Dnepr_TS_I2C_Lock() ;																						\
 	}																													\
 	if( slot_num != DNEPR_I2C_NOSLOT ){																					\
@@ -859,17 +873,23 @@ __PMB_WriteMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* 
 			OSTimeDly( 1 );																		\
 		}																						\
 	}																													\
-	if( (channel_switch_to != 0) && (I2C_Dnepr_CurrentBus() != channel_switch_to) )										\
-		I2C_DNEPR_SelectBus( ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->bus_channel );
+        if( (channel_switch_to != 0) && (I2C_Dnepr_CurrentBus() != channel_switch_to) )		{								\
+		I2C_DNEPR_SelectBus( ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->bus_channel ); \
+        }\
+        do { \
+            while ( !timer_is_expired(&pause_i2c_timer, pause_interval) );\
+
 								
-#define I2C_TRANSACTION_END()																							\
-	if( !((Dnepr_I2C_driver_internal_info*)(p->bus_info))->dont_block ){												\
-		T8_Dnepr_TS_I2C_Unlock() ;																						\
-	}																													\
-	return ret ;
+#define I2C_TRANSACTION_END()           timer_reset(&pause_i2c_timer);\
+                                        timer_reset(&pause_pmbus_timer);\
+                                     } while ( (ret == FALSE) && (--times > 0) );	\
+                                     if( !((Dnepr_I2C_driver_internal_info*)(p->bus_info))->dont_block ){	\
+                            		T8_Dnepr_TS_I2C_Unlock() ;				\
+	                             }							\
+	                            return ret ;
 
 static _BOOL
-__I2C_ReadByte( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult )
+__I2C_ReadByte( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult, clock_t pause_interval, u8 times)
 {
 	I2C_TRANSACTION_BEGIN();
 #ifdef DEBUG_I2C
@@ -883,7 +903,7 @@ __I2C_ReadByte( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 *pbResult )
 }
 
 static _BOOL
-__I2C_ReadWord( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 *pwResult )
+__I2C_ReadWord( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 *pwResult, clock_t pause_interval, u8 times )
 {
 	I2C_TRANSACTION_BEGIN();
 #ifdef DEBUG_I2C
@@ -897,7 +917,7 @@ __I2C_ReadWord( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 *pwResult 
 }
 
 static _BOOL
-__I2C_WriteByte( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 nData)
+__I2C_WriteByte( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 nData, clock_t pause_interval, u8 times)
 {
 	I2C_TRANSACTION_BEGIN();
 #ifdef DEBUG_I2C
@@ -911,7 +931,7 @@ __I2C_WriteByte( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8 nData)
 }
 
 static _BOOL
-__I2C_WriteWord( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 nData)
+__I2C_WriteWord( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 nData, clock_t pause_interval, u8 times)
 {
 	I2C_TRANSACTION_BEGIN();
 #ifdef DEBUG_I2C
@@ -925,7 +945,7 @@ __I2C_WriteWord( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16 nData)
 }
 
 static _BOOL
-__I2C_SendCommand( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd)
+__I2C_SendCommand( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, clock_t pause_interval, u8 times)
 {
 	I2C_TRANSACTION_BEGIN();
 #ifdef DEBUG_I2C
@@ -939,7 +959,7 @@ __I2C_SendCommand( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd)
 }
 
 static _BOOL
-__I2C_ReadCommand( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 *pbResult )
+__I2C_ReadCommand( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 *pbResult, clock_t pause_interval, u8 times )
 {
 	I2C_TRANSACTION_BEGIN();
 #ifdef DEBUG_I2C
@@ -953,7 +973,7 @@ __I2C_ReadCommand( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 *pbResult )
 }
 
 static _BOOL
-__I2C_ReadMultipleBytes( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity)
+__I2C_ReadMultipleBytes( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity, clock_t pause_interval, u8 times)
 {
 	I2C_TRANSACTION_BEGIN();
 #ifdef DEBUG_I2C
@@ -967,7 +987,7 @@ __I2C_ReadMultipleBytes( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* a
 }
 
 static _BOOL
-__I2C_WriteMultipleBytes( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity)
+__I2C_WriteMultipleBytes( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* anData, u8 nBytesQuantity, clock_t pause_interval, u8 times)
 {
 	I2C_TRANSACTION_BEGIN();
 #ifdef DEBUG_I2C
@@ -981,7 +1001,7 @@ __I2C_WriteMultipleBytes( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u8* 
 }
 
 static _BOOL
-__I2C_ReadMultipleBytes_16( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u16 mCmd, u8* anData, u8 nBytesQuantity)
+__I2C_ReadMultipleBytes_16( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u16 mCmd, u8* anData, u8 nBytesQuantity, clock_t pause_interval, u8 times)
 {
 	I2C_TRANSACTION_BEGIN();
 #ifdef DEBUG_I2C
@@ -995,7 +1015,7 @@ __I2C_ReadMultipleBytes_16( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u16 mCmd, u
 }
 
 static _BOOL
-__I2C_WriteMultipleBytes_16( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u16 mCmd, u8* anData, u8 nBytesQuantity)
+__I2C_WriteMultipleBytes_16( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u16 mCmd, u8* anData, u8 nBytesQuantity, clock_t pause_interval, u8 times)
 {
 	I2C_TRANSACTION_BEGIN();
 #ifdef DEBUG_I2C
@@ -1009,7 +1029,7 @@ __I2C_WriteMultipleBytes_16( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u16 mCmd, 
 }
 
 static _BOOL
-__I2C_ReadMultipleWords( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* anData, u8 nWordsQuantity)
+__I2C_ReadMultipleWords( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* anData, u8 nWordsQuantity, clock_t pause_interval, u8 times)
 {
 	I2C_TRANSACTION_BEGIN();
 #ifdef DEBUG_I2C
@@ -1023,7 +1043,7 @@ __I2C_ReadMultipleWords( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* 
 }
 
 static _BOOL
-__I2C_WriteMultipleWords( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* anData, u8 nWordsQuantity)
+__I2C_WriteMultipleWords( I2C_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* anData, u8 nWordsQuantity, clock_t pause_interval, u8 times)
 {
 	I2C_TRANSACTION_BEGIN();
 #ifdef DEBUG_I2C

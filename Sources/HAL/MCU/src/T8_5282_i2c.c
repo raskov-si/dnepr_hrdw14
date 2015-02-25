@@ -55,6 +55,9 @@ void I2CRestore() {
 u32 i2c_reinit_cnt = 0;
 void I2Cinit() {
 	int	cnt;
+
+
+	MCF_I2C_I2CR &= ~MCF_I2C_I2CR_MSTA;      //Stop.
 	
 	i2c_reinit_cnt++;
 	MCF_I2C_I2CR = 0;

@@ -7,17 +7,19 @@
 
 #include "HAL/IC/inc/AT_AT24C512.h"
 
+#define AT_AT24C512_I2C_TIMOUTMS     (30)
+
 #define PAGESIZE	32 // размер страницы в EEPROM, 32 чтобы быть совместимыми с microchip 24xx64
 #define PAGEMASK	0xFFFFFFE0 // биты адреса, кратного PAGESIZE
 
-#define __read_i2c(p, devAddr,addr,data,len) (p->I2C_ReadMultipleBytes_16( p, devAddr,addr,data,len))
-#define __write_i2c(p, devAddr,addr,data,len) (p->I2C_WriteMultipleBytes_16( p, devAddr,addr,data,len))
+#define __read_i2c(p, devAddr,addr,data,len, timeout, times) (p->I2C_ReadMultipleBytes_16( p, devAddr,addr,data,len, timeout, times))
+#define __write_i2c(p, devAddr,addr,data, len, timeout, times) (p->I2C_WriteMultipleBytes_16( p, devAddr,addr,data, len, timeout, times))
 
 _BOOL AT_AT24C512_ReadArray( I2C_PeriphInterfaceTypedef *tI2CPeriphInterface, const u8 devAddr, size_t addr, u8* pData, size_t len )
 {
 	assert( tI2CPeriphInterface );
 
-	return __read_i2c( tI2CPeriphInterface, devAddr, addr , pData , len ) ;
+	return __read_i2c( tI2CPeriphInterface, devAddr, addr , pData , len, AT_AT24C512_I2C_TIMOUTMS, 2) ;
 }
 
 _BOOL AT_AT24C512_WriteArray( I2C_PeriphInterfaceTypedef *tI2CPeriphInterface, const u8 devAddr, size_t addr, u8* pData, size_t len )
@@ -34,7 +36,7 @@ _BOOL AT_AT24C512_WriteArray( I2C_PeriphInterfaceTypedef *tI2CPeriphInterface, c
 		if( len_ > len ){
 			len_ = len ;
 		}
-		result = __write_i2c( tI2CPeriphInterface, devAddr, addr_ , pData + btcnt, len_ ) && result ;
+		result = __write_i2c( tI2CPeriphInterface, devAddr, addr_ , pData + btcnt, len_, AT_AT24C512_I2C_TIMOUTMS, 2 ) && result ;
 		for( i = 0; i < 3000000; i++ ){
 			i = i ;
 		}
