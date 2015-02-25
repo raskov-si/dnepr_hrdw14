@@ -90,6 +90,22 @@ void MCU_irq_blind_enable(void);
 #define INTR_ID_DTIM1     20+64
 #define INTR_ID_DTIM2     21+64
 #define INTR_ID_DTIM3     22+64
+
+#define INTR_ID_FEC_X_INTF     		23+64
+#define INTR_ID_FEC_X_INTB     		24+64
+#define INTR_ID_FEC_UN     		25+64
+#define INTR_ID_FEC_RL     		26+64
+#define INTR_ID_FEC_R_INTF     		27+64
+#define INTR_ID_FEC_R_INTB     		28+64
+#define INTR_ID_FEC_MII     		29+64
+#define INTR_ID_FEC_LC     		30+64
+#define INTR_ID_FEC_HBERR     		31+64
+#define INTR_ID_FEC_GRA     		32+64
+#define INTR_ID_FEC_EBERR     		33+64
+#define INTR_ID_FEC_BABT     		34+64
+#define INTR_ID_FEC_BABR     		35+64
+
+
 #define INTR_ID_GPT_OVF   41+64
 #define INTR_ID_GPT_PAI   42+64
 #define INTR_ID_GPT_PAOVF 43+64

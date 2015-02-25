@@ -54,8 +54,9 @@ static OS_STK  taskMeasureStk[1024];
 static OS_STK  taskDControllerStk[1024];
 #pragma data_alignment=4
 static OS_STK  task_terminal_stack[512];
-
 #pragma data_alignment=4
+static OS_STK  task_snmp_stk[512];
+
 static void taskInit(void *pdata);
 void taskMeasure(void *pdata);
 void taskWatchdog(void *pdata);
@@ -111,9 +112,9 @@ static void taskInit(void *pdata)
 			18750, // модуль таймера, 75 ћ√ц -> 1 к√ц 
 			3, 0 // IPL, prio
 	);
-    PIT_Init(	1, 
-                7, //tick = 128/75 мкс
-                65535,  
+        PIT_Init(	1, 
+                        7, //tick = 128/75 мкс
+                        65535,  
 			3, 1 );
 	
 	OSStatInit() ;
@@ -158,9 +159,9 @@ static void taskInit(void *pdata)
     {
         /* сетевые функции CU */
       
-        assert(OSTaskCreateExt(task_snmp, (void *)0, (void *)&task_snmp_stk[511], TASK_SNMP_PRIORITY, TASK_SNMP_PRIORITY, (void *)&task_snmp_stk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
-        OSTaskNameSet( TASK_SNMP_PRIORITY, "task_snmp", &return_code ) ;
-        assert( return_code == OS_ERR_NONE ) ;
+//        assert(OSTaskCreateExt(task_snmp, (void *)0, (void *)&task_snmp_stk[511], TASK_SNMP_PRIORITY, TASK_SNMP_PRIORITY, (void *)&task_snmp_stk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+//        OSTaskNameSet( TASK_SNMP_PRIORITY, "task_snmp", &return_code ) ;
+//        assert( return_code == OS_ERR_NONE ) ;
       
 //        assert(OSTaskCreateExt(task_vlan_rstp, (void *)0, (void *)&taskNetStk[511], taskNet_PRIO, taskNet_PRIO, (void *)&taskNetStk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
 //        OSTaskNameSet( taskNet_PRIO, "task_vlan_rstp", &return_code ) ;
@@ -172,5 +173,6 @@ static void taskInit(void *pdata)
     OSTaskNameSet( TASKTERM_COMM_PRIO, "task_terminal", &return_code ) ;
     assert( return_code == OS_ERR_NONE ) ;    
 #endif
+    
     OSTaskDel( OS_PRIO_SELF ) ;
 }

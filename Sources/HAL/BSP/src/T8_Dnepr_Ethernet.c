@@ -14,6 +14,7 @@
 #include "HAL/BSP/inc/T8_Dnepr_Ethernet.h"
 #include "HAL/IC/inc/MV_88E6095.h"
 #include "HAL/MCU/inc/T8_5282_FEC.h"
+#include "HAL/MCU/inc/T8_5282_interrupts.h"
 
 
 /*=============================================================================================================*/
