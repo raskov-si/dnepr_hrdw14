@@ -601,6 +601,7 @@ static void _Do_Measurements()
 	// послать команду на перечитывание порогов SFP? Ставится в TRUE, если только что вставили
 	// какой-либо SFP
 	_BOOL renew_sfp_params = FALSE ;
+        
     //Hot Swap Controller -- i2c switches into driver     	
 	LT_LTC4222_GetStates(Dnepr_I2C_Get_PMBUS_INT_Driver(), I2C_DNEPR_HSW_ADDRESS, LT_LTC4222_CHANNEL1, &tStateRegisterStructure1, &tFaultRegisterStructure1);
 	OSTimeDly(1);   
@@ -609,6 +610,10 @@ static void _Do_Measurements()
 	LT_LTC4222_GetAdcVoltages(Dnepr_I2C_Get_PMBUS_INT_Driver(), I2C_DNEPR_HSW_ADDRESS, &tAdcVoltagesStructure);
 	OSTimeDly(1);   
 	
+///debug        
+        return;
+///debug        
+        
 	Dnepr_DControl_sfp_process_present() ;
 
 	// SFP & Fans

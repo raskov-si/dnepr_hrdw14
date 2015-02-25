@@ -53,6 +53,8 @@ ReturnStatus CircBuffer_push_one_tender( T8_CircBuffer* const desc_,
 }
 
 
+
+
 ReturnStatus CircBuffer_read( T8_CircBuffer* const desc_,
 				CircBuffer_datatype* const  dest_, const size_t szDest_,
 				 size_t* const szActual_read_ )
@@ -133,9 +135,142 @@ size_t	CircBuffer_total_size( const T8_CircBuffer* const desc_ )
 }
 size_t	CircBuffer_actual_size( const T8_CircBuffer* const desc_ )
 {
-	return desc_->szActual ;
+	return desc_->szActual ;        
 }
+
+
+
 size_t	CircBuffer_lost_size( const T8_CircBuffer* const desc_ )
 {
 	return desc_->szLostBytes ;
+}
+
+
+
+
+
+
+
+ReturnStatus circbuffer_read_block
+( 
+    T8_CircBuffer                   *circbuf_desc,
+    CircBuffer_datatype             *dest, 
+    size_t                          read_size,
+    size_t                          *actual_read_size 
+)
+{  
+    STORAGE_ATOMIC();
+    size_t          head_store, tail_store;
+    size_t          readed_from_buf_data = read_size; 	/* для  чтения в выходной буфер если пересекаются границы */
+    size_t          readed_data_size;                   /* для подсчета считанного количества данных */
+
+   
+//    assert ( circbuf_desc != NULL );
+    
+    if( (circbuf_desc->szActual == 0) || (read_size == 0) )  {
+        if( actual_read_size != NULL )  {
+	    *actual_read_size = 0 ;
+        }
+	return OK ;
+    }
+        
+    head_store = circbuf_desc->iHead;
+    tail_store = circbuf_desc->iTail;
+    
+    /* определяем сколько можем вычитать из буфера */
+    readed_from_buf_data = ( tail_store > head_store ) ?  (tail_store - head_store) : (circbuf_desc->szTotal - head_store);
+    
+    
+    /* если количество запрашиваемых данных меньше, читаем только то что запросили */
+    if (readed_from_buf_data > read_size)
+    {	readed_from_buf_data = 	read_size; }
+    
+    
+    t8_memcopy(dest, &(circbuf_desc->data[head_store]), readed_from_buf_data);    
+    head_store += readed_from_buf_data;    
+    readed_data_size = readed_from_buf_data;
+    
+    /* если количество запрашиваемых данных больше чем мы можем вычитать за раз но данные еще есть  */
+    if ( readed_from_buf_data < read_size )  {
+        if ( head_store >= circbuf_desc->szTotal ) { 
+            head_store = 0; 
+        }
+
+	if ( head_store != tail_store )  {
+            if ( ( read_size - readed_data_size  ) >  tail_store )   {	
+                readed_from_buf_data = 	tail_store; 
+            }  else  {	
+                readed_from_buf_data = 	( read_size - readed_data_size );   
+            }
+
+	    t8_memcopy(&dest[readed_data_size], circbuf_desc->data, readed_from_buf_data);
+	    readed_data_size += readed_from_buf_data;
+	    head_store += readed_from_buf_data;
+	}
+    }
+
+    *actual_read_size = readed_data_size;
+    
+    START_ATOMIC();
+    
+    circbuf_desc->iHead = head_store;
+    circbuf_desc->szActual -= readed_data_size;
+    
+    STOP_ATOMIC(); 
+    
+    return OK;
+}
+
+
+
+
+
+size_t	circbuffer_get_storage_data_size ( const T8_CircBuffer* const circbuf_desc )
+{
+    register size_t  head_store = circbuf_desc->iHead;
+    register size_t  tail_store = circbuf_desc->iTail;
+
+    return (head_store >= tail_store ) ?  (head_store - tail_store) : ((circbuf_desc->szTotal - tail_store) + head_store);
+}
+
+
+
+size_t	circbuffer_get_space_size( const T8_CircBuffer* const circbuf_desc )
+{
+    return circbuf_desc->szTotal - circbuffer_get_storage_data_size(circbuf_desc);
+}
+
+
+
+ReturnStatus circbuffer_read_byte
+( 
+    T8_CircBuffer           *const circbuf_desc,
+    CircBuffer_datatype     *dest
+)
+{  
+    STORAGE_ATOMIC() ;
+    size_t	iHead_store;
+
+
+    if( (circbuf_desc->szActual == 0) || (dest == NULL) ){
+	return OK ;
+    }
+    
+//    START_ATOMIC();
+    iHead_store = circbuf_desc->iHead ;    
+//    STOP_ATOMIC();
+      
+    
+    *dest = circbuf_desc->data[iHead_store];            
+    iHead_store++;
+    if(iHead_store == circbuf_desc->szTotal) {
+        iHead_store = 0;
+    }    
+    
+    START_ATOMIC(); 
+    circbuf_desc->iHead =  iHead_store;
+    circbuf_desc->szActual--;    
+    STOP_ATOMIC();
+    
+    return OK;
 }

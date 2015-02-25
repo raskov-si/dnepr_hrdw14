@@ -80,13 +80,7 @@ void  dnepr_wait_eeprom_contact
     // читаем все EEPROM и HotSwap Controller'ы и задерживаем включение тех, которые
     // ещё не включились
     __slot_power_onoff_init() ;
-    
-    /* ждем пару секунд в случае если контакт был с самого начала */
-    /* для того чтобы прошли переходные процессы при втыкании */
-    do {
-        time_counter = OSTimeGet();
-    }  while ( (time_begin + 2000) > time_counter );
-    
+        
 }
 
 

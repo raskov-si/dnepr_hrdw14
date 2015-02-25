@@ -7,6 +7,8 @@
 
 #include "HAL/IC/inc/TI_TCA9539.h"
 
+#define  TCA9539_PMBUS_TIMEOUTMS        (100)
+
 typedef enum {
 	INPUT0 		= 0,
 	INPUT1 		= 1,
@@ -25,8 +27,8 @@ _BOOL TCA9539_ReadGPIO( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u8 nA
 	assert( tPmbusPeriphInterface );
 	assert( value );
 
-	ret = tPmbusPeriphInterface->PMB_ReadByte( tPmbusPeriphInterface, nAddress, INPUT0, &in0 );
-	ret = ret && tPmbusPeriphInterface->PMB_ReadByte( tPmbusPeriphInterface, nAddress, INPUT1, &in1 );
+	ret = tPmbusPeriphInterface->PMB_ReadByte( tPmbusPeriphInterface, nAddress, INPUT0, &in0, TCA9539_PMBUS_TIMEOUTMS, 0 );
+	ret = ret && tPmbusPeriphInterface->PMB_ReadByte( tPmbusPeriphInterface, nAddress, INPUT1, &in1, TCA9539_PMBUS_TIMEOUTMS, 0 );
 
 	*value = in0 | (in1 << 8) ;
 	return ret ;
@@ -37,8 +39,8 @@ _BOOL TCA9539_WriteGPIO( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u8 n
 	_BOOL ret ;
 	assert( tPmbusPeriphInterface );
 
-	ret = tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, OUTPUT0, value & 0xFF );
-	ret = ret && tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, OUTPUT1, (value >> 8) & 0xFF );
+	ret = tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, OUTPUT0, value & 0xFF, TCA9539_PMBUS_TIMEOUTMS, 0 );
+	ret = ret && tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, OUTPUT1, (value >> 8) & 0xFF, TCA9539_PMBUS_TIMEOUTMS, 0 );
 
 	return ret ;	
 }
@@ -48,8 +50,8 @@ _BOOL TCA9539_SetInversion( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u
 	_BOOL ret ;
 	assert( tPmbusPeriphInterface );
 
-	ret = tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, INVERSION0, value & 0xFF );
-	ret = ret && tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, INVERSION1, (value >> 8) & 0xFF );
+	ret = tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, INVERSION0, value & 0xFF, TCA9539_PMBUS_TIMEOUTMS, 0 );
+	ret = ret && tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, INVERSION1, (value >> 8) & 0xFF, TCA9539_PMBUS_TIMEOUTMS, 0 );
 
 	return ret ;	
 }
@@ -59,8 +61,8 @@ _BOOL TCA9539_SetDirectionRead( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterfac
 	_BOOL ret ;
 	assert( tPmbusPeriphInterface );
 
-	ret = tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, CONFIG0, value & 0xFF );
-	ret = ret && tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, CONFIG1, (value >> 8) & 0xFF );
+	ret = tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, CONFIG0, value & 0xFF, TCA9539_PMBUS_TIMEOUTMS, 0 );
+	ret = ret && tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, CONFIG1, (value >> 8) & 0xFF, TCA9539_PMBUS_TIMEOUTMS, 0 );
 
 	return ret ;	
 }

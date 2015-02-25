@@ -8,6 +8,8 @@
 #ifndef __DNEPR_I2C_H_
 #define __DNEPR_I2C_H_
 
+#include <time.h>
+
 #include "HAL/IC/inc/PMB_interface.h"
 #include "HAL/IC/inc/I2C_interface.h"
 

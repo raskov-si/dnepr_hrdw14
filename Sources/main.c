@@ -29,6 +29,7 @@
 #include "Application/inc/T8_Dnepr_ProfileStorage.h"
 
 #include "Threads/inc/threadCU.h"
+#include "Threads/inc/threadTerminal.h"
 #include "Threads/inc/threadMeasure.h"
 #include "Threads/inc/threadWatchdog.h"
 #include "Threads/inc/threadDeviceController.h"
@@ -52,9 +53,9 @@ static OS_STK  taskMeasureStk[1024];
 #pragma data_alignment=4
 static OS_STK  taskDControllerStk[1024];
 #pragma data_alignment=4
-static OS_STK  task_snmp_stk[512];             /*!< Стек для задачи работы с snmp (lwip)  */
+static OS_STK  task_terminal_stack[512];
 
-
+#pragma data_alignment=4
 static void taskInit(void *pdata);
 void taskMeasure(void *pdata);
 void taskWatchdog(void *pdata);
@@ -105,11 +106,15 @@ static void taskInit(void *pdata)
 	// As mentioned in the book's text, you MUST initialize the ticker only
 	// once multitasking
 	// Включаем ticker -- таймер ОС 
-	PIT_Init(0, // номер таймера
+	PIT_Init(       0, // номер таймера
 			1, // делитель PCSR
 			18750, // модуль таймера, 75 МГц -> 1 кГц 
 			3, 0 // IPL, prio
 	);
+    PIT_Init(	1, 
+                7, //tick = 128/75 мкс
+                65535,  
+			3, 1 );
 	
 	OSStatInit() ;
 
@@ -125,9 +130,8 @@ static void taskInit(void *pdata)
 	// задерживаем включение не работающих слотовых устройств
 	DeviceController_Init() ;
         
-        /* пытаемся обнаружить backplane eeprom с данными профиля в течении 15 секунд, после этого все равно включаемся */
-        //15*OS_TMR_CFG_TICKS_PER_SEC;
-        dnepr_wait_eeprom_contact(5*1000);
+        /* пытаемся обнаружить backplane eeprom с данными профиля в течении 4 секунд, после этого все равно включаемся */
+        dnepr_wait_eeprom_contact(4*OS_TICKS_PER_SEC);
         
 	// Инициализуруем параметры профиля.
 	Dnepr_ProfileStorage_Init() ;
@@ -143,11 +147,11 @@ static void taskInit(void *pdata)
     OSTaskNameSet( taskMeasure_PRIO, "taskMeasure", &return_code ) ;
     assert( return_code == OS_ERR_NONE ) ;
 
-	assert(OSTaskCreateExt(taskCU, (void *)0, (void *)&taskCUStk[1023], taskCU_PRIO, taskCU_PRIO, (void *)&taskCUStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+    assert(OSTaskCreateExt(taskCU, (void *)0, (void *)&taskCUStk[1023], taskCU_PRIO, taskCU_PRIO, (void *)&taskCUStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
     OSTaskNameSet( taskCU_PRIO, "taskCU", &return_code ) ;
     assert( return_code == OS_ERR_NONE ) ;
 
-	assert(OSTaskCreateExt(taskDeviceController, (void *)0, (void *)&taskDControllerStk[1023], tackDController_PRIO, tackDController_PRIO, (void *)&taskDControllerStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+    assert(OSTaskCreateExt(taskDeviceController, (void *)0, (void *)&taskDControllerStk[1023], tackDController_PRIO, tackDController_PRIO, (void *)&taskDControllerStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
     OSTaskNameSet( tackDController_PRIO, "taskDeviceController", &return_code ) ;
     assert( return_code == OS_ERR_NONE ) ;
     
@@ -163,5 +167,10 @@ static void taskInit(void *pdata)
 //        assert( return_code == OS_ERR_NONE ) ;
     }
 
+#ifdef DEBUG_TERMINAL
+    assert(OSTaskCreateExt(task_terminal, (void *)0, (void *)&task_terminal_stack[511], TASKTERM_COMM_PRIO, TASKTERM_COMM_PRIO, (void *)&task_terminal_stack, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+    OSTaskNameSet( TASKTERM_COMM_PRIO, "task_terminal", &return_code ) ;
+    assert( return_code == OS_ERR_NONE ) ;    
+#endif
     OSTaskDel( OS_PRIO_SELF ) ;
 }

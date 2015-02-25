@@ -7,6 +7,7 @@
 				EXTERN  OSTCBCur
 				
 				EXTERN 	ReservedHandler
+                EXTERN  PIT1_IntrHandler
                 EXTERN	UART1_Handler		
                 EXTERN  AccessErrorHandler
                 EXTERN  AddressErrorHandler
@@ -56,6 +57,7 @@
 				EXTERN s_ptr ; T8_Dnepr_isr.c: указатель на стэк исключения
 		
 				PUBLIC 	ReservedHandler_wrap
+                PUBLIC  time_isr_wrap
                 PUBLIC  uart1_wrap
                 PUBLIC  AccessErrorHandler_wrap
                 PUBLIC  AccessErrorHandler_wrap
@@ -138,10 +140,10 @@ _SkipSave:
 
 		NAME 	INT_ISR_WRAPS
 		RSEG	CODE
-
+time_isr_wrap:
+                UCOS_ISR_WRAP_MACRO(PIT1_IntrHandler)
 uart1_wrap:
-		UCOS_ISR_WRAP_MACRO(UART1_Handler)
-	
+		UCOS_ISR_WRAP_MACRO(UART1_Handler)	
 ReservedHandler_wrap:
                 UCOS_ISR_WRAP_MACRO(ReservedHandler)
 AccessErrorHandler_wrap:

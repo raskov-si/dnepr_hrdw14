@@ -7,6 +7,8 @@
 
 #include "HAL/IC/inc/NXP_PCA9551.h"
 
+#define  PCA9551_PMBUS_TIMEOUTMS  (100)
+
 typedef enum {
 	INPUT = 0,
 	PSC0 = 1,
@@ -58,5 +60,5 @@ _BOOL PCA9551_SetFreq2( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u8 nA
 
 static _BOOL __write_register( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u8 nAddress, PCA9551_REG_SELECTOR reg, u8 value )
 {
-	return tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, (u8)reg, value );
+	return tPmbusPeriphInterface->PMB_WriteByte( tPmbusPeriphInterface, nAddress, (u8)reg, value, PCA9551_PMBUS_TIMEOUTMS, 3 );
 }

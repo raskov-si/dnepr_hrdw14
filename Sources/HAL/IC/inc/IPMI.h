@@ -10,6 +10,9 @@
 
 #include "HAL/IC/inc/I2C_interface.h"
 
+#define POWERUNIT_PMBUS_TIMEOUTMS   (100)
+
+
 //! максимальная длина строк, если на самом деле строка больше -- не читаем и ограничиваемся означенной длиной
 #define IPMI_STRINGS_LEN	32
 

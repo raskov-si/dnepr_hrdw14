@@ -8,6 +8,8 @@
 #include "HAL\IC\inc\TI_TCA9555.h"
 #include "support_common.h"
 
+#define TI_TCA9555_I2C_TIMOUTMS  (50)
+
 /* Pointer to peripherial access stricture and a \c define assigned to it */
 static I2C_PeriphInterfaceTypedef* tIoPeriphInterface = NULL;
 #define I2C_PERIPH_INTERFACE_STRUCT_PTR tIoPeriphInterface
@@ -68,12 +70,12 @@ _BOOL TI_TCA9555_WriteConfig(u8 nAddress, TI_TCA9555_PortsTypedef* tPorts){
 //	ret = I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_INVERT_P1, tPorts->nInvertP1);
 //	ret = I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_OUTPUT_P1, tPorts->nOutputP1);
         
-	ret = ret && I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_CONFIG_P0, tPorts->nConfigP0);
-	ret = ret && I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_INVERT_P0, tPorts->nInvertP0);
-	ret = ret && I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_OUTPUT_P0, tPorts->nOutputP0);
-	ret = ret && I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_CONFIG_P1, tPorts->nConfigP1);
-	ret = ret && I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_INVERT_P1, tPorts->nInvertP1);
-	ret = ret && I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_OUTPUT_P1, tPorts->nOutputP1);
+	ret = ret && I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_CONFIG_P0, tPorts->nConfigP0, TI_TCA9555_I2C_TIMOUTMS, 2);
+	ret = ret && I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_INVERT_P0, tPorts->nInvertP0, TI_TCA9555_I2C_TIMOUTMS, 2);
+	ret = ret && I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_OUTPUT_P0, tPorts->nOutputP0, TI_TCA9555_I2C_TIMOUTMS, 2);
+	ret = ret && I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_CONFIG_P1, tPorts->nConfigP1, TI_TCA9555_I2C_TIMOUTMS, 2);
+	ret = ret && I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_INVERT_P1, tPorts->nInvertP1, TI_TCA9555_I2C_TIMOUTMS, 2);
+	ret = ret && I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_WriteByte( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_OUTPUT_P1, tPorts->nOutputP1, TI_TCA9555_I2C_TIMOUTMS, 2);
 	
 	return ret;
 }
@@ -94,7 +96,7 @@ _BOOL TI_TCA9555_ReadInputs(u8 nAddress, TI_TCA9555_PortsTypedef* tPorts){
 	
 	//Data registers could be (and are) read in couples. See datasheet. This saves up some bus performance.
 	ret = I2C_PERIPH_INTERFACE_STRUCT_PTR->I2C_ReadWord( I2C_PERIPH_INTERFACE_STRUCT_PTR, nAddress, TI_TCA9555_INPUT_P0,
-																&nTmp );
+																&nTmp, TI_TCA9555_I2C_TIMOUTMS, 2);
 	tPorts->nInputP0=_MSB(nTmp);
 	tPorts->nInputP1=_LSB(nTmp);
 	return ret;
