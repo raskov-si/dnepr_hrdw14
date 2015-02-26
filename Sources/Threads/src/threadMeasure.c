@@ -611,7 +611,7 @@ static void _Do_Measurements()
 	OSTimeDly(1);   
 	
 ///debug        
-        return;
+//        return;
 ///debug        
         
 	Dnepr_DControl_sfp_process_present() ;
