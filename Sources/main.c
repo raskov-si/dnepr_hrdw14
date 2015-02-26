@@ -159,9 +159,9 @@ static void taskInit(void *pdata)
     {
         /* сетевые функции CU */
       
-//        assert(OSTaskCreateExt(task_snmp, (void *)0, (void *)&task_snmp_stk[511], TASK_SNMP_PRIORITY, TASK_SNMP_PRIORITY, (void *)&task_snmp_stk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
-//        OSTaskNameSet( TASK_SNMP_PRIORITY, "task_snmp", &return_code ) ;
-//        assert( return_code == OS_ERR_NONE ) ;
+        assert(OSTaskCreateExt(task_snmp, (void *)0, (void *)&task_snmp_stk[511], TASK_SNMP_PRIORITY, TASK_SNMP_PRIORITY, (void *)&task_snmp_stk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+        OSTaskNameSet( TASK_SNMP_PRIORITY, "task_snmp", &return_code ) ;
+        assert( return_code == OS_ERR_NONE ) ;
       
 //        assert(OSTaskCreateExt(task_vlan_rstp, (void *)0, (void *)&taskNetStk[511], taskNet_PRIO, taskNet_PRIO, (void *)&taskNetStk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
 //        OSTaskNameSet( taskNet_PRIO, "task_vlan_rstp", &return_code ) ;

@@ -281,6 +281,7 @@
           <state>CONFIG_YAFFS_PROVIDE_DEFS</state>
           <state>DEBUG_TERMINAL</state>
           <state>DEBUG_I2C</state>
+          <state>DEBUG_NET</state>
         </option>
         <option>
           <name>CCPreprocFile</name>

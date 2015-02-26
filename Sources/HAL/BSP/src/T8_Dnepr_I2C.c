@@ -100,9 +100,9 @@ static  clock_t     pause_i2c_timer;
 
 #ifdef DEBUG_I2C
 
-static const char *char_num_set = "0123456789";
-
 REGISTER_COMMAND("i2clog", debug_i2c_term, debug_i2c_term_get_message_num, debug_i2c_term_get_message, NULL);
+
+static const char *char_num_set = "0123456789";
 
 static u16      now_event_index = 0;
 static u16      print_end_index = 0;

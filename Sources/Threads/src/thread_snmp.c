@@ -28,6 +28,14 @@
 #include "lwip/sockets.h"
 #include "lwip/inet.h"
 
+#ifdef DEBUG_I2C
+    #include <string.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include "Threads/inc/threadTerminal.h"
+#endif
+
+
 /** ping receive timeout - in milliseconds */
 #define PING_RCV_TIMEO 1000
 /** ping delay - in milliseconds */
@@ -42,14 +50,27 @@
 #define PING_THREAD_PRIO        (36)
 
 
-#define PING_TARGET   (netif_default?netif_default->gw:ip_addr_any) 
+#define PING_TARGET   (netif_default?netif_default->gw:ip_addr_any)
+
+
+#ifdef DEBUG_NET
+    int         debug_netcmd_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog);
+    int         debug_netlog_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog);
+#endif
+
 
 /*=============================================================================================================*/
 /* ping variables */
 static u16 ping_seq_num;
 static u32 ping_time; 
 
+#ifdef DEBUG_NET
 
+REGISTER_COMMAND("netcmd", debug_netcmd_term, NULL, NULL, NULL);
+//REGISTER_COMMAND("netlog", debug_netlog_term, debug_netlog_term_get_message_num, debug_netlog_term_get_message, NULL);
+REGISTER_COMMAND("netlog", debug_netlog_term, NULL, NULL, NULL);
+
+#endif
 
 
 
@@ -64,6 +85,58 @@ static u32 ping_time;
 //} snmp_stack_config;
 
 static struct netif net;
+
+/*=============================================================================================================*/
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+#ifdef DEBUG_NET
+int         debug_netcmd_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog)
+{
+    
+  
+    return 0;
+}
+#endif
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+#ifdef DEBUG_NET
+int         debug_netlog_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog)
+{
+  char  *second_word;
+  char  pars_buf[5+1];
+//  u8    idx_beg;
+  
+  if ( (second_word = strstr (in, "show")) != NULL )  {
+     
+     char  *third_word = strstr (second_word, "mac");
+     
+     if ( third_word != NULL ) {
+        /* текущее состояние */       
+        return snprintf(out, out_len_max, "0x%X, \r\n", 12345);
+     }
+     
+     third_word = strstr (second_word, "ip");
+     if ( third_word != NULL ) {
+        /* текущее состояние */       
+        return snprintf(out, out_len_max, "1.3.6.7\r\n");
+     }
+
+  }    
+  
+    return 0;
+}
+#endif
 
 /*=============================================================================================================*/
 /** Prepare a echo ICMP request */
@@ -155,6 +228,7 @@ ping_recv(int s)
   PING_RESULT(0);
 } 
 
+
 static void ping_thread
 (
     void *arg
@@ -193,6 +267,33 @@ static void ping_thread
 /*=============================================================================================================*/
 
 
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+static void task_snmp_init (void)
+{
+#ifdef DEBUG_NET
+
+    volatile  char*  temp;
+    volatile  char*  temp2;
+
+    temp =  (volatile  char*)debug_netlog_term_handler.cmd_name;
+    temp2 = temp;
+    temp =  (volatile  char*)debug_netcmd_term_handler.cmd_name;
+    temp = temp2;   
+    
+#endif    
+/* Стартуем LwIP */
+//    netif_add( &net, ip_addr_t *ipaddr, ip_addr_t *netmask,
+//              ip_addr_t *gw, void *state, cb_dnepr_eth0_if_init(), netif_input_fn input);
+        
+}
+
+
 /*=============================================================================================================*/
 /*!  \brief 
 
@@ -201,11 +302,8 @@ static void ping_thread
 /*=============================================================================================================*/
 void task_snmp( void *pdata )
 {
-
-/* Стартуем LwIP */
-//    netif_add( &net, ip_addr_t *ipaddr, ip_addr_t *netmask,
-//              ip_addr_t *gw, void *state, cb_dnepr_eth0_if_init(), netif_input_fn input);
-  
+    task_snmp_init();
+    
     
 
 	// tcpip_init( __tcpip_init_done, NULL );
@@ -213,7 +311,8 @@ void task_snmp( void *pdata )
   
     /* ping */
 //    sys_thread_new("ping_thread", ping_thread, NULL, PING_THREAD_STACKSIZE, PING_THREAD_PRIO);
-    
-    
-    return;
+        
+    while ( TRUE )    {
+        OSTimeDly(1 * OS_TICKS_PER_SEC);
+    }      
 }

@@ -130,6 +130,8 @@ int dnepr_ethernet_fec_init
   
   //mii_config
     
+    
+    
     t8_m5282_fec_init(&mii_config);
   
 // инициализация прерывания о конце передаче фрейма
@@ -157,9 +159,32 @@ int dnepr_ethernet_fec_init
 /*=============================================================================================================*/
 int dnepr_ethernet_phy_init(void)
 {
+  u32_t i;
+
+//  /* Configure EMDC clock, frequency = 2.50 MHz */
+//  FEC_MSCR = MSCR_MII_SPEED;
+//  PHY_EPHYCTL0 &= ~(EPHYCTL0_DIS10 | EPHYCTL0_DIS100);
+//  PHY_EPHYCTL0 |= EPHYCTL0_LEDEN;
+//  /* Enable EPHY */
+//  PHY_EPHYCTL0 |= EPHYCTL0_EPHYEN;
+//  /* Delay for startup time */
+//  for (i = PHY_DELAY; i != 0; i--) 
+//  {    
+//    /*
+//    * Put something here to make sure
+//    * the compiler doesn't optimize the loop away
+//    */
+//  }
+//  /* Link speed = 100 Mbps, full-duplex */
+//  FEC_MMFR = MMFR_ST | MMFR_OP_WR | MMFR_TA | MMFR_RA_CONTROL |
+//                      EPHY_DATARATE | EPHY_DPLX;
+//  
+//  /* Poll for MII Write Frame completion */
+//  while ((FEC_EIR & EIR_MII) == 0) { }  
+//  /* Request status register read (link status polling) */
+//  FEC_MMFR = MMFR_ST | MMFR_OP_RD | MMFR_TA | MMFR_RA_STATUS;   
   
-  
-    return 0;
+  return 0;
 }
 
 /*=============================================================================================================*/

@@ -156,6 +156,11 @@ err_t dnepr_eth0_if_output(struct netif *netif, struct pbuf *p, ip_addr_t *ipadd
 
 /*-----------------------------------------Прием-------------------------------------------------------*/
 
+err_t dnepr_eth0_if_input(struct pbuf *p, struct netif *inp)
+{
+  
+  
+}
 
 
 

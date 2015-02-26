@@ -165,7 +165,7 @@ unsigned int terminal_uart_send_callback( unsigned int * p, const unsigned int l
 
 
 
-static task_terminal_init (void)
+static void task_terminal_init (void)
 {
     // очередь сообщений в этот таск
     termRcvQueue = OSQCreate( messages_array, taskTerm_messages_len ) ;    
