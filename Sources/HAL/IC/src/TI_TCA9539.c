@@ -27,8 +27,8 @@ _BOOL TCA9539_ReadGPIO( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u8 nA
 	assert( tPmbusPeriphInterface );
 	assert( value );
 
-	ret = tPmbusPeriphInterface->PMB_ReadByte( tPmbusPeriphInterface, nAddress, INPUT0, &in0, TCA9539_PMBUS_TIMEOUTMS, 0 );
-	ret = ret && tPmbusPeriphInterface->PMB_ReadByte( tPmbusPeriphInterface, nAddress, INPUT1, &in1, TCA9539_PMBUS_TIMEOUTMS, 0 );
+	ret = tPmbusPeriphInterface->PMB_ReadByte( tPmbusPeriphInterface, nAddress, INPUT0, &in0, TCA9539_PMBUS_TIMEOUTMS, 3 );
+	ret = ret && tPmbusPeriphInterface->PMB_ReadByte( tPmbusPeriphInterface, nAddress, INPUT1, &in1, TCA9539_PMBUS_TIMEOUTMS, 3 );
 
 	*value = in0 | (in1 << 8) ;
 	return ret ;

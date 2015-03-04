@@ -242,7 +242,7 @@ void  taskCU (void *pdata)
             uart_backplane_start_tx() ;
         } 
         Dnepr_Measure_DynBuff_Unlock();
-	}  
+    }  
 }
 
 

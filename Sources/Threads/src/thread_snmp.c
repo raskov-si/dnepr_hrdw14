@@ -27,6 +27,7 @@
 #include "lwip/inet_chksum.h"
 #include "lwip/sockets.h"
 #include "lwip/inet.h"
+#include "lwip/tcpip.h"
 
 #ifdef DEBUG_I2C
     #include <string.h>
@@ -52,15 +53,19 @@
 
 #define PING_TARGET   (netif_default?netif_default->gw:ip_addr_any)
 
+/*=============================================================================================================*/
 
 #ifdef DEBUG_NET
     int         debug_netcmd_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog);
     int         debug_netlog_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog);
 #endif
+    extern  err_t cb_dnepr_eth0_if_init(struct netif *netif);
 
 
 /*=============================================================================================================*/
 /* ping variables */
+static t_eth    *eth0;
+
 static u16 ping_seq_num;
 static u32 ping_time; 
 
@@ -73,18 +78,6 @@ REGISTER_COMMAND("netlog", debug_netlog_term, NULL, NULL, NULL);
 #endif
 
 
-
-//static struct
-//{
-//    u8          mac_address[6];   /*!< адрес ethernet */
-//    
-//    ip_addr_t   ip_adress;
-//    ip_addr_t   netmask;
-//    ip_addr_t   gw;
-//    
-//} snmp_stack_config;
-
-static struct netif net;
 
 /*=============================================================================================================*/
 
@@ -268,14 +261,20 @@ static void ping_thread
 
 
 
+
+
+
 /*=============================================================================================================*/
 /*!  \brief 
 
      \sa 
 */
 /*=============================================================================================================*/
-static void task_snmp_init (void)
+static void task_eth_init (void)
 {
+ /* Network interface variables */
+    ip_addr_t       ipaddr, netmask, gw;
+    
 #ifdef DEBUG_NET
 
     volatile  char*  temp;
@@ -285,11 +284,28 @@ static void task_snmp_init (void)
     temp2 = temp;
     temp =  (volatile  char*)debug_netcmd_term_handler.cmd_name;
     temp = temp2;   
-    
+        
 #endif    
+    
+    (void)dnepr_ethernet_open(eth0);
+    
+    
 /* Стартуем LwIP */
-//    netif_add( &net, ip_addr_t *ipaddr, ip_addr_t *netmask,
-//              ip_addr_t *gw, void *state, cb_dnepr_eth0_if_init(), netif_input_fn input);
+  
+ /* Set network address variables */
+    IP4_ADDR(&gw,          192,168,1,100);
+    IP4_ADDR(&ipaddr,      192,168,1,7);
+    IP4_ADDR(&netmask,     255,255,255,0);
+ 
+ // Start the TCP/IP thread & init stuff  
+    tcpip_init(NULL, NULL);      
+    
+// WARNING: This must only be run after the OS has been started.  
+    // Typically this is the case, however, if not, you must place this  
+    // in a post-OS initialization  
+    netifapi_netif_add(&eth0->netif, &ipaddr, &netmask, &gw, NULL, cb_dnepr_eth0_if_init, tcpip_input);      
+  
+//  netif_set_up(&net);
         
 }
 
@@ -300,17 +316,47 @@ static void task_snmp_init (void)
      \sa 
 */
 /*=============================================================================================================*/
+void task_eth( void *pdata )
+{
+      task_eth_init();
+                  
+      
+#if LWIP_TCPIP_CORE_LOCKING_INPUT
+      while ( TRUE )    {
+//          watch_dog_thread_is_alive()          
+        
+//        dnepr_ethernet_rx_check(eth0.data_descr)t_eth_data_descr
+        
+            {
+             
+            /* принимаем сообщения */
+            //      eth0.netif->input(eth0.data_descr->pockets_array[eth0 msg][0]);         
+              ;
+            }
+            
+//        dnepr_ethernet_tx_check(eth0.data_descr)
+            {
+              
+            }
+      };
+#else
+         OSTaskDel( OS_PRIO_SELF ) ;           
+#endif        
+}
+
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
 void task_snmp( void *pdata )
 {
-    task_snmp_init();
-    
-    
 
-	// tcpip_init( __tcpip_init_done, NULL );
-	// 
   
     /* ping */
-//    sys_thread_new("ping_thread", ping_thread, NULL, PING_THREAD_STACKSIZE, PING_THREAD_PRIO);
         
     while ( TRUE )    {
         OSTimeDly(1 * OS_TICKS_PER_SEC);

@@ -16,17 +16,110 @@
 #include "HAL/MCU/inc/T8_5282_FEC.h"
 #include "HAL/MCU/inc/T8_5282_interrupts.h"
 
+////    // Семафор массива дескрипторов на посылку. В 2 раза меньше количества дескрипторов,
+////    // потому что на каждый пакет приходиться по 2 дескриптора -- заголовок и тело отдельно.
+////    __eth_tx_sem = OSSemCreate( (u8)(FEC_TX_BD_NUMBER / 2) );
+//
+//
+//
+//
+//
+//
+//
 
 /*=============================================================================================================*/
 
+#define RX_PACKET_POOL_LEN	ETHERNET_RX_BD_NUMBER        
+#define TX_PACKET_POOL_LEN	ETHERNET_TX_BD_NUMBER
+
+#define RX_QUEUE_LEN	        ETHERNET_RX_BD_NUMBER        
+#define TX_QUEUE_LEN	        ETHERNET_TX_BD_NUMBER
+
+
 #pragma data_alignment=16
-_Pragma("location=\"packets_sram\"")
-__no_init static t_txrx_desc rx_bd[ ETHERNET_RX_BD_NUMBER ] ;
+//_Pragma("location=\"packets_sram\"")
+_Pragma("location=\"sdram\"")
+__no_init static t_txrx_desc rx_bd[ ETHERNET_RX_BD_NUMBER ] ;  /*! дескрипторы на прием пакетов для DMA */
+
 #pragma data_alignment=16
-_Pragma("location=\"packets_sram\"")
-__no_init static t_txrx_desc tx_bd[ ETHERNET_TX_BD_NUMBER ] ;
+//_Pragma("location=\"packets_sram\"")
+_Pragma("location=\"sdram\"")
+__no_init static t_txrx_desc tx_bd[ ETHERNET_TX_BD_NUMBER ] ;  /*! дескрипторы на передачу пакетов для DMA */
+
+#pragma data_alignment=16
+//_Pragma("location=\"packets_sram\"")
+_Pragma("location=\"sdram\"")
+__no_init static u8     rx_arrays [ RX_PACKET_POOL_LEN ][ MAX_ETH_BUFF_SIZE ]; /*! массивы для приема пакетов для DMA */
+_Pragma("location=\"sdram\"")
+__no_init static _BOOL  rx_busy   [ RX_PACKET_POOL_LEN ];
+
+
+#pragma data_alignment=16
+//_Pragma("location=\"packets_sram\"")
+_Pragma("location=\"sdram\"")
+__no_init static u8     tx_arrays [ TX_PACKET_POOL_LEN ][ MAX_ETH_BUFF_SIZE ]; /*! массивы для передачи пакетов для DMA */
+_Pragma("location=\"sdram\"")
+__no_init static _BOOL  tx_busy   [ TX_PACKET_POOL_LEN ];
+
+
+static  t_eth                   default_eth;
+static  u8                      last_rx_buf_descr = 0;
+
+#if LWIP_TCPIP_CORE_LOCKING_INPUT
+    static OS_EVENT             *eth0_rcv_queue = NULL;                     /*!   */    
+    static void                 *rx_messages_array[RX_QUEUE_LEN] ;          /*! указатели для очереди сообщений  */
+    
+    static OS_EVENT             *eth0_tcm_queue = NULL;                     /*!   */    
+    static void                 *tx_messages_array[TX_QUEUE_LEN] ;          /*! указатели для очереди сообщений  */
+#endif
+
+
+
 
 /*=============================================================================================================*/
+
+_BOOL  dnepr_ethernet_open 
+(
+    t_eth    *out_descr
+)
+{
+    u8      i;
+    
+    out_descr = out_descr;
+    
+    default_eth.data_descr.rx_pool.pocket_len      = MAX_ETH_BUFF_SIZE;
+    default_eth.data_descr.rx_pool.pockets_number  = RX_PACKET_POOL_LEN;
+    default_eth.data_descr.rx_pool.pockets_busy    = rx_busy;
+    default_eth.data_descr.rx_pool.pockets_array   = (u8**)rx_arrays;
+    
+    default_eth.data_descr.tx_pool.pocket_len      = MAX_ETH_BUFF_SIZE;
+    default_eth.data_descr.tx_pool.pockets_number  = TX_PACKET_POOL_LEN;
+    default_eth.data_descr.tx_pool.pockets_busy    = tx_busy;
+    default_eth.data_descr.tx_pool.pockets_array   = (u8**)tx_arrays;
+
+    
+    
+    for ( i = 0; i < RX_PACKET_POOL_LEN; ++i )  {
+        rx_bd[i].contr_status_inf = 0 ;
+        rx_bd[i].data_length = 0 ;      
+        rx_bd[i].starting_adress = &rx_arrays[i][0];    
+    }
+    
+    for ( i = 0; i < TX_PACKET_POOL_LEN; ++i )  {
+      
+        tx_bd[i].contr_status_inf = 0 ;
+        tx_bd[i].data_length = 0 ;      
+        tx_bd[i].starting_adress = &tx_arrays[i][0];
+    }
+    
+#if LWIP_TCPIP_CORE_LOCKING_INPUT    
+    eth0_rcv_queue = OSQCreate( rx_messages_array, RX_QUEUE_LEN ) ;
+#endif    
+    
+      
+    out_descr = &default_eth;    
+    return TRUE;      
+}
 
 
 /*!
@@ -70,6 +163,11 @@ u32 Dnepr_Ethernet_Init( const u8* maddr )
 _err:
 	return ERROR ;
 }
+
+
+
+
+
 
 /*=============================================================================================================*/
 /*!  \brief Управляем режимом автоопределения типа сети auto-negotiation для SFP
@@ -127,20 +225,22 @@ int dnepr_ethernet_fec_init
     mii_config.fec_mii_speed = FEC_MII_CLOCK_DEV_CALC(2500);
     memcpy(mii_config.mac_addr, mac_adress, 6);
     mii_config.fec_max_eth_pocket = MAX_ETH_PKT;
-  
-  //mii_config
     
-    
-    
+    mii_config.rxbd_ring = rx_bd;
+    mii_config.rxbd_ring_len = ETHERNET_RX_BD_NUMBER;
+
+    mii_config.txbd_ring = tx_bd;
+    mii_config.txbd_ring_len = ETHERNET_TX_BD_NUMBER;
+          
     t8_m5282_fec_init(&mii_config);
   
 // инициализация прерывания о конце передаче фрейма
-    MCU_ConfigureIntr(INTR_ID_FEC_X_INTF, 6, 1 );
-    MCU_EnableIntr(INTR_ID_FEC_X_INTF,1);
+//    MCU_ConfigureIntr(INTR_ID_FEC_X_INTF, 6, 1 );
+//    MCU_EnableIntr(INTR_ID_FEC_X_INTF,1);
     
 // инициализация прерывания о конце передачи одного буфера
-    MCU_ConfigureIntr(INTR_ID_FEC_X_INTB, 6, 2 );
-    MCU_EnableIntr(INTR_ID_FEC_X_INTB,1);
+//    MCU_ConfigureIntr(INTR_ID_FEC_X_INTB, 6, 2 );
+//    MCU_EnableIntr(INTR_ID_FEC_X_INTB,1);
     
 // инициализация прерывания о приёме фрейма
     MCU_ConfigureIntr(INTR_ID_FEC_R_INTF, 6, 3 );
@@ -159,7 +259,7 @@ int dnepr_ethernet_fec_init
 /*=============================================================================================================*/
 int dnepr_ethernet_phy_init(void)
 {
-  u32_t i;
+//  u32   i;
 
 //  /* Configure EMDC clock, frequency = 2.50 MHz */
 //  FEC_MSCR = MSCR_MII_SPEED;
@@ -279,3 +379,137 @@ void dnepr_ethernet_mac_2_str
 		}
 	}
 }
+
+
+#if LWIP_TCPIP_CORE_LOCKING_INPUT
+_BOOL   dnepr_ethernet_rx_check
+(
+    t_eth_data_descr    *data_descr
+)
+{   
+    _BOOL    ret_code;
+   
+    data_descr->rx_cur_message = (net_meassage_t*)OSQAccept( eth0_rcv_queue, 0, &ret_code );
+    
+    return ret_code;
+}
+#endif
+
+
+void isr_FEC_TxFrame_Handler()
+{
+//	MCF_FEC_EIR |= MCF_FEC_EIR_TXF ;
+//	T8_Dnepr_FEC_TX_Frame_Sent() ;
+//	__tx_cnt1-- ;
+}
+
+
+static size_t __tx_bd_isr_i = 0 ;
+void isr_FEC_TxBuffer_Handler()
+{
+//	u8 i, err ;
+//	Dnepr_Ethertnet_TX_Frame_t *q_mess ;
+//
+//	MCF_FEC_EIR |= MCF_FEC_EIR_TXB ;
+//	__tx_cnt2-- ;
+//
+//
+//	return ;
+//	if( !__tx_queue ){
+//		return ;
+//	}
+//	// Проверяем есть ли фреймы в очереди
+//	// Сначала идёт сообщение с заголовком пакета
+//	q_mess = (Dnepr_Ethertnet_TX_Frame_t*)OSQAccept( __tx_queue, &err );
+//	assert( err == OS_ERR_NONE || err == OS_ERR_Q_EMPTY );
+//	if( err == OS_ERR_Q_EMPTY ){
+//		T8_Dnepr_TS_Ethernet_TX_Disactivate() ;
+//		return ;
+//	}
+//
+//	// Добавляем их в дескрипторы, если есть свободные. 
+//	// Надо добавить весь пакет
+//	i = __tx_bd_isr_i ;
+//	do {
+//		if( ++i >= FEC_TX_BD_NUMBER ){
+//			i = 0 ;
+//		}
+//		// Если дескриптор свободен -- добавляем заголовок.
+//		if( fec_tx_cstatus( i ) & MCF_FEC_TxBD_R == 0 ){
+//			break ;
+//		}
+//
+//	} while( i != __tx_bd_isr_i );
+//	// Нет свободных дескрипторов, где-то ошибка.
+//	assert( i != __tx_bd_isr_i );
+//
+//	++__tx_bd_isr_i ;
+//	fec_add_tx_buffer( q_mess->data, i, q_mess->length );
+//	if( ++i >= FEC_TX_BD_NUMBER ){
+//		i = 0 ;
+//	}
+//	// Следующий дескриптор тоже должен быть пустым, потому что посылаем по-пакетно,
+//	// а в каждом пакете два дескриптора.
+//	assert( fec_tx_cstatus( i ) & MCF_FEC_TxBD_R == 0 );
+//
+//	// Теперь сообщение с телом пакета
+//	q_mess = (Dnepr_Ethertnet_TX_Frame_t*)OSQAccept( __tx_queue, &err );
+//	assert( err == OS_ERR_NONE );
+//	fec_add_tx_buffer( q_mess->data, i, q_mess->length );
+}
+
+void isr_FEC_FIFOUnderrun_Handler()
+{}
+
+void isr_FEC_CollisionRetryLimit_Handler()
+{}
+
+void isr_FEC_ReceiveFrame_Handler()
+{
+        
+        t8_m5282_fec_reset_rx_isr();
+        
+        
+
+//        pocket_pools.pockets_array[last_rx_buf_descr][0]
+#if LWIP_TCPIP_CORE_LOCKING_INPUT
+        /* сообщение собственному потоку */
+        OSQPost( __NetRcvQueue, (void*)&__change_mac_struct );
+#else
+        /* пихаем сообщения в tcp/ip поток lwip */
+         //      eth0.netif->input(&eth0.data_descr->pockets_array[last_rx_buf_descr][0], );
+#endif        
+                                                                                            /* начинаем прием в следующий буфер */
+        if ( ++last_rx_buf_descr == ETHERNET_RX_BD_NUMBER ) {
+           last_rx_buf_descr = 0;
+        }
+        
+        t8_m5282_fec_set_empty_status(&rx_bd[last_rx_buf_descr].contr_status_inf);        
+	t8_m5282_fec_start_rx();
+}
+
+
+void isr_FEC_ReceiveBuffer_Handler()
+{}
+
+void isr_FEC_MII_Handler()
+{}
+
+void isr_FEC_LateCollision_Handler()
+{}
+
+void isr_FEC_HeartbeatError_Handler()
+{}
+
+void isr_FEC_GracefulStopComplete_Handler()
+{}
+
+void isr_FEC_EthernetBusError_Handler()
+{}
+
+void isr_FEC_BabblingTransmitError_Handler()
+{}
+
+void isr_FEC_BabblingReceiveError_Handler()
+{}
+

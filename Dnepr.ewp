@@ -201,7 +201,7 @@
         </option>
         <option>
           <name>IccOptLevel</name>
-          <state>0</state>
+          <state>3</state>
         </option>
         <option>
           <name>IccOptStrategy</name>
@@ -210,12 +210,12 @@
         </option>
         <option>
           <name>IccOptLevelSlave</name>
-          <state>0</state>
+          <state>3</state>
         </option>
         <option>
           <name>IccOptAllowList</name>
           <version>0</version>
-          <state>00000</state>
+          <state>11111</state>
         </option>
         <option>
           <name>IccModuleTypeOverride</name>
@@ -1970,7 +1970,7 @@
           <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_SMI.h</name>
         </file>
         <file>
-          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_Uart_Profile.h</name>
+          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_UART_Profile.h</name>
         </file>
       </group>
       <group>
@@ -2416,6 +2416,9 @@
       <name>inc</name>
       <file>
         <name>$PROJ_DIR$\Sources\lwip\include\arch\cc.h</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\Sources\lwip\include\lwip\opt.h</name>
       </file>
       <file>
         <name>$PROJ_DIR$\Sources\lwip\include\arch\sys_arch.h</name>

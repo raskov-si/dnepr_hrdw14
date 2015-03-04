@@ -75,7 +75,6 @@ void t8_m5282_fec_init
  *   MSCR (optional)
  *   Clear MIB_RAM  
  */
-    u8      i;
   
     MCF_FEC_ECR |= MCF_FEC_ECR_RESET;                                   /* Сброс FEC */
     while( MCF_FEC_ECR & MCF_FEC_ECR_RESET ) {
@@ -118,25 +117,14 @@ void t8_m5282_fec_init
     MCF_FEC_TCR = MCF_FEC_TCR_FDEN ;                                                  /* инициализация передатчика */
     
         
-    for( i = 0; i < input->rxbd_ring_len; i++ ){                                      /* инициализация приемного буфера */
-        input->rxbd_ring[ i ].addr = NULL ;
-        input->rxbd_ring[ i ].cstatus = 0 ;
-        input->rxbd_ring[ i ].length = 0 ;
-    }
-    input->rxbd_ring[ i-1 ].cstatus |= MCF_FEC_RxBD_W ;
-    
+    input->rxbd_ring[ input->rxbd_ring_len-1 ].contr_status_inf |= MCF_FEC_RxBD_W ;   /* инициализация приемного буфера */   
     MCF_FEC_ERDSR = (u32)input->rxbd_ring;
     MCF_FEC_EMRBR = input->rxbd_ring_len;
     
 
-    for( i = 0; i <  input->txbd_ring_len; i++ ){
-        input->txbd_ring[ i ].addr = 0 ;
-        input->txbd_ring[ i ].cstatus = 0 ;
-        input->txbd_ring[ i ].length = 0 ;
-    }
-    input->txbd_ring[ i-1 ].cstatus |= MCF_FEC_TxBD_W ;
-    
+    input->txbd_ring[ input->txbd_ring_len-1 ].contr_status_inf |= MCF_FEC_TxBD_W ;  /* инициализация передающего буфера */  
     MCF_FEC_ETSDR = (uint32_t)input->txbd_ring;
+    
       
     MCF_FEC_ECR |= MCF_FEC_ECR_ETHER_EN ;                                            /* включаем приемник с передатчиком */
 
@@ -149,19 +137,6 @@ void t8_m5282_fec_init
     // включаем MIB
     MCF_FEC_MIBC &= ~MCF_FEC_MIBC_MIB_DISABLE ;
 }
-
-
-////    // Семафор массива дескрипторов на посылку. В 2 раза меньше количества дескрипторов,
-////    // потому что на каждый пакет приходиться по 2 дескриптора -- заголовок и тело отдельно.
-////    __eth_tx_sem = OSSemCreate( (u8)(FEC_TX_BD_NUMBER / 2) );
-//
-//
-//
-//
-//
-//
-//
-
 
 
 

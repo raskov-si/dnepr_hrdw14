@@ -156,11 +156,100 @@ err_t dnepr_eth0_if_output(struct netif *netif, struct pbuf *p, ip_addr_t *ipadd
 
 /*-----------------------------------------Прием-------------------------------------------------------*/
 
-err_t dnepr_eth0_if_input(struct pbuf *p, struct netif *inp)
-{
-  
-  
-}
+/**
+    * Collect frame by chaining the corresponding pbufs
+    *
+    * @param first Index of first buffer descriptor to collect
+    * @param last Index of last buffer descriptor to collect
+    * @param lastlen Length of last buffer in chain
+*/
+
+
+//static struct pbuf* collect_frame
+//(
+//    u8_t first, 
+//    u8_t last, 
+//    u16_t lastlen
+//)
+//{
+//    u8_t i, prev;
+//    struct pbuf *head, *tail;
+//    
+//    tail = PAYLOAD2PBUF(rxbd_ring[last].ptr);
+//    /* Trim last buffer, so that complete frame length is correct */
+//    pbuf_realloc(tail, lastlen);
+//    /* Walk the buffers from last to first */
+//    for (i = last; i != first; i = prev) {
+//        prev = (u8_t)((i + RX_RING_SIZE - 1) % RX_RING_SIZE);
+//        head = PAYLOAD2PBUF(rxbd_ring[prev].ptr);
+//        /* Grow the chain */
+//        pbuf_cat(head, tail);
+//        tail = head;
+//    }
+//    
+//    /* Keep index in sync with Rx DMA */
+//    rxbd_index = (last + 1) % RX_RING_SIZE;
+//    return tail;
+//} 
+
+
+/**
+    * Zero-copy reception. Collect DMA'ed data and return frame as pbuf chain.
+    *
+    * @return a pbuf filled with the received packet (including MAC header),
+    *         NULL if no received frames
+*/
+//static struct pbuf* 
+//low_level_input(void)
+//{   
+//  u8_t  i, n;
+//  u16_t len;
+//  
+//  /* No initialized Rx buffer descriptors? Then quit. */
+//  
+//  if (rxbd_inuse == 0)
+//        return NULL;
+//  
+//  i = rxbd_index;
+//  len = 0;
+//  n = 0;
+//  
+//  /* Scan the Rx buffer rescriptor ring */
+//    for (;;) {
+//        if ((rxbd_ring[i].ctl & RXBD_RO1) != 0)
+//          
+//          /* Descriptor uninitialized due to buffer allocation failure, quit */
+//          return NULL;
+//        
+//        if ((rxbd_ring[i].ctl & RXBD_E) != 0)
+//          /* Buffer empty, quit */
+//          return NULL;
+//        
+//        /* Buffer contains frame data, continue */
+//        n++;
+//        if ((rxbd_ring[i].ctl & RXBD_L) != 0) {
+//                /* Last buffer in frame, finalize */
+//            break;
+//        }
+//        
+//        len += rxbd_ring[i].len;
+//        i = (u8_t)((i + 1) % RX_RING_SIZE);
+//        /* Move on to next buffer in frame */
+//    }
+//    
+//    /* Mark processed descriptors as uninitialized */
+//    rxbd_inuse -= n;
+//    
+//    if ((rxbd_ring[i].ctl & (RXBD_LG|RXBD_NO|RXBD_CR|RXBD_OV|RXBD_TR)) != 0) {
+//        /* Reception error */
+//        discard_frame(rxbd_index, i);
+//        return NULL;
+//    }
+//    
+//    return collect_frame(rxbd_index, i, (u16_t)(rxbd_ring[i].len - len));
+//}
+
+
 
 
 

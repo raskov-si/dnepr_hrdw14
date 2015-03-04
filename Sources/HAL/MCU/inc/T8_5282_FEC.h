@@ -78,9 +78,9 @@
 #pragma pack(1)
 typedef struct BufferDescriptor 
 {
-   volatile u16  cstatus;     /*!< control and status */
-   volatile u16  length;      /*!< transfer length    */
-   volatile u8 * addr;        /*!< buffer address     */
+   volatile u16  contr_status_inf;     /*!< control and status */
+   volatile u16  data_length;      /*!< transfer length    */
+   volatile u8   *starting_adress;        /*!< buffer address     */
 } t_txrx_desc;
 #pragma pack(pop)
       
@@ -104,8 +104,33 @@ typedef struct _FEC_CONFIG
 //Fucntion Protoypes
 void t8_m5282_fec_init(t_fec_config *input);
 
-u32  t8_m5282_fec_mdio_write(u32, u32, u16);
-u32  t8_m5282_fec_mdio_read(u32, u32, u16*);
+u32  t8_m5282_fec_mdio_write    (u32, u32, u16);
+u32  t8_m5282_fec_mdio_read     (u32, u32, u16*);
+
+/*=============================================================================================================*/
+
+static inline void t8_m5282_fec_start_rx (void)
+{
+    MCF_FEC_RDAR = MCF_FEC_RDAR_R_DES_ACTIVE ;  
+}
+
+
+static inline void t8_m5282_fec_start_tx (void)
+{
+    MCF_FEC_TDAR |= MCF_FEC_TDAR_X_DES_ACTIVE ;
+}
+
+static inline void t8_m5282_fec_set_empty_status ( volatile u16 *status )
+{
+   *status &= (~MCF_FEC_RxBD_E);
+}
+
+static inline void t8_m5282_fec_reset_rx_isr (void)
+{
+    MCF_FEC_EIR |= MCF_FEC_EIR_RXF ;
+}
+
+
 
 
 //void fec_mii_reg_printf(void);

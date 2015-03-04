@@ -213,7 +213,7 @@ void taskDeviceController(void *pdata)
           assert( (return_code == OS_ERR_NONE) || (return_code == OS_ERR_TIMEOUT) );
           // если прошел таймаут и необходимо перечитать PSU -- посылаем сами себе команду
           if( return_code == OS_ERR_TIMEOUT ){
-        	// раз в 5 секунд реагируем на alarm
+        	// раз в 2,5 секунд реагируем на alarm
           	if( Dnepr_EdgePort_is_IRQ4_active() &&
         		((llUptime - __last_pmbus_alarm) > PMBUS_ALARM_TIMEOUT) ){
         		__last_pmbus_alarm = llUptime ;
@@ -541,7 +541,8 @@ static const task_message_t __pmbusalarmmess = { PMBUS_ALARM, 0 };
 void Dnepr_DControl_PMBusAlarm()
 {
 	if( __qRcvQueue  ){
-		OSQPost( __qRcvQueue, (void*)&__pmbusalarmmess ) ;
+//		OSQPost( __qRcvQueue, (void*)&__pmbusalarmmess ) ;
+                OSQPostFront( __qRcvQueue, (void*)&__pmbusalarmmess ) ;                
 	}
 }
 
@@ -558,7 +559,9 @@ void Dnepr_DControl_Present_Interrupt()
 		}
 		if( diff >= __present_react_timeout ){
 			__pres_uptime = __present_react_timeout ;
-			OSQPost( __qRcvQueue, (void*)&__fpgamess ) ;
+//			OSQPost( __qRcvQueue, (void*)&__fpgamess ) ;
+                        OSQPostFront( __qRcvQueue, (void*)&__fpgamess ) ;                
+                        
 		}
 	}
 }
@@ -567,7 +570,8 @@ static const task_message_t __sfpmess = { SFP_INTERRUPT, 0 };
 void Dnepr_DControl_SFP_Interrupt()
 {
 	if( __qRcvQueue  ){
-		OSQPost( __qRcvQueue, (void*)&__sfpmess ) ;
+//		OSQPost( __qRcvQueue, (void*)&__sfpmess ) ;
+                OSQPostFront( __qRcvQueue, (void*)&__sfpmess ) ;                
 	}
 }
 

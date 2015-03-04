@@ -29,7 +29,8 @@
 #define hs_mutex_PRIO 			17 	//!< приоритет мьютекса для защиты функций hotswap'а
 
 #define tackDController_PRIO	30
-#define TASK_SNMP_PRIORITY      (35)
+#define TASK_ETH_PRIORITY      (35)
+#define TASK_SNMP_PRIORITY     (TASK_ETH_PRIORITY+1)
 #define taskCU_PRIO     		40	//!< приоритет задачи работы с backplane-uart'ом
 
 

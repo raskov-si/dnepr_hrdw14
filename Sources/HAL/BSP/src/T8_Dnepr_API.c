@@ -174,21 +174,14 @@ _BOOL I2C_DNEPR_ClearPresentDevices(I2C_DNEPR_PresentDevicesTypedef* tPresentDev
 _BOOL Dnepr_Refresh_Presents()
 {
 	u16 nPresent = 0 ;
-	u32 i ;
 
-	if(!nCuPresentDevicesInits){
-		I2C_DNEPR_ClearPresentDevices(&tCuPresentDevices);
+	if(!nCuPresentDevicesInits) {
+	    I2C_DNEPR_ClearPresentDevices(&tCuPresentDevices);
 	}
 
 	/* Get Present*/
-	for( i = 0; i < 3; i++ ){
-		if( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_PRESENT_ADDR, &nPresent ) ){
-			break ;
-		}
-	}
-	// не удалось прочитать present'ы
-	if( i >= 3 ){
-		return FALSE ;
+	if( TCA9539_ReadGPIO(Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_PRESENT_ADDR, &nPresent) == FALSE ) {
+	    return FALSE ;  /* не удалось прочитать present'ы */
 	}
 
 	tCuPresentDevices.bSlotPresent[0] = 	(nPresent & 0x0001) == 0 ;

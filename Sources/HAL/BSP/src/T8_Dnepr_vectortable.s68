@@ -24,12 +24,30 @@
         EXTERN  isr_EdgePortISR6_wrap
         EXTERN  isr_EdgePortISR7_wrap
         EXTERN  isr_QSPI_wrap
+        
+        EXTERN  isr_FEC_TxFrame_Handler_wrap
+        EXTERN  isr_FEC_TxBuffer_Handler_wrap
+        EXTERN  isr_FEC_FIFOUnderrun_Handler_wrap
+        EXTERN  isr_FEC_CollisionRetryLimit_Handler_wrap
+        EXTERN  isr_FEC_ReceiveFrame_Handler_wrap
+        EXTERN  isr_FEC_ReceiveBuffer_Handler_wrap
+        EXTERN  isr_FEC_MII_Handler_wrap
+        EXTERN  isr_FEC_LateCollision_Handler_wrap
+        EXTERN  isr_FEC_HeartbeatError_Handler_wrap
+        EXTERN  isr_FEC_GracefulStopComplete_Handler_wrap
+        EXTERN  isr_FEC_EthernetBusError_Handler_wrap
+        EXTERN  isr_FEC_BabblingTransmitError_Handler_wrap
+        EXTERN  isr_FEC_BabblingReceiveError_Handler_wrap
+        
+                
 	EXTERN AccessErrorHandler_wrap
 	EXTERN Trap8Handler_wrap
         EXTERN AddressErrorHandler_wrap
 	
         EXTERN  ReservedHandler_wrap
         EXTERN  FormatErrorHandler_wrap
+        
+        
 	
 //		EXTERN  UART1_Handler           // T8_5282_Dnepr_UART_Profile.c
 
@@ -121,19 +139,19 @@
         DC32    ReservedHandler_wrap              ;; 84  0x150 DTIM1 interrupt
         DC32    ReservedHandler_wrap              ;; 85  0x154 DTIM2 interrupt
         DC32    ReservedHandler_wrap              ;; 86  0x158 DTIM3 interrupt
-        DC32    ReservedHandler_wrap              ;; 87  0x15C reserved
-        DC32    ReservedHandler_wrap              ;; 88  0x160 reserved
-        DC32    ReservedHandler_wrap              ;; 89  0x164 reserved
-        DC32    ReservedHandler_wrap              ;; 90  0x168 reserved
-        DC32    ReservedHandler_wrap              ;; 91  0x16C reserved
-        DC32    ReservedHandler_wrap              ;; 92  0x170 reserved
-        DC32    ReservedHandler_wrap              ;; 93  0x174 reserved
-        DC32    ReservedHandler_wrap              ;; 94  0x178 reserved
-        DC32    ReservedHandler_wrap              ;; 95  0x17C reserved
-        DC32    ReservedHandler_wrap              ;; 96  0x180 reserved
-        DC32    ReservedHandler_wrap              ;; 97  0x184 reserved
-        DC32    ReservedHandler_wrap              ;; 98  0x188 reserved
-        DC32    ReservedHandler_wrap              ;; 99  0x18C reserved
+        DC32    isr_FEC_TxFrame_Handler_wrap                   ;; 87  0x15C reserved
+        DC32    isr_FEC_TxBuffer_Handler_wrap                  ;; 88  0x160 reserved
+        DC32    isr_FEC_FIFOUnderrun_Handler_wrap              ;; 89  0x164 reserved
+        DC32    isr_FEC_CollisionRetryLimit_Handler_wrap       ;; 90  0x168 reserved
+        DC32    isr_FEC_ReceiveFrame_Handler_wrap              ;; 91  0x16C reserved
+        DC32    isr_FEC_ReceiveBuffer_Handler_wrap             ;; 92  0x170 reserved
+        DC32    isr_FEC_MII_Handler_wrap                       ;; 93  0x174 reserved
+        DC32    isr_FEC_LateCollision_Handler_wrap             ;; 94  0x178 reserved
+        DC32    isr_FEC_HeartbeatError_Handler_wrap            ;; 95  0x17C reserved
+        DC32    isr_FEC_GracefulStopComplete_Handler_wrap      ;; 96  0x180 reserved
+        DC32    isr_FEC_EthernetBusError_Handler_wrap          ;; 97  0x184 reserved
+        DC32    isr_FEC_BabblingTransmitError_Handler_wrap     ;; 98  0x188 reserved
+        DC32    isr_FEC_BabblingReceiveError_Handler_wrap      ;; 99  0x18C reserved
         DC32    ReservedHandler_wrap              ;; 100 0x190 reserved
         DC32    ReservedHandler_wrap              ;; 101 0x194 reserved
         DC32    ReservedHandler_wrap              ;; 102 0x198 reserved

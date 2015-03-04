@@ -13,6 +13,7 @@
 
       
 void task_snmp( void *pdata );
+void task_eth( void *pdata );
      
       
  

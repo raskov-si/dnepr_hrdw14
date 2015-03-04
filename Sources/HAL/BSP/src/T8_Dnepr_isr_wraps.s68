@@ -53,6 +53,21 @@
                 EXTERN  isr_EdgePortISR6
                 EXTERN  isr_EdgePortISR7
                 EXTERN  isr_QSPI
+                
+                EXTERN  isr_FEC_TxFrame_Handler
+                EXTERN  isr_FEC_TxBuffer_Handler
+                EXTERN  isr_FEC_FIFOUnderrun_Handler
+                EXTERN  isr_FEC_CollisionRetryLimit_Handler
+                EXTERN  isr_FEC_ReceiveFrame_Handler
+                EXTERN  isr_FEC_ReceiveBuffer_Handler
+                EXTERN  isr_FEC_MII_Handler
+                EXTERN  isr_FEC_LateCollision_Handler
+                EXTERN  isr_FEC_HeartbeatError_Handler
+                EXTERN  isr_FEC_GracefulStopComplete_Handler
+                EXTERN  isr_FEC_EthernetBusError_Handler
+                EXTERN  isr_FEC_BabblingTransmitError_Handler
+                EXTERN  isr_FEC_BabblingReceiveError_Handler
+                
 				
 				EXTERN s_ptr ; T8_Dnepr_isr.c: указатель на стэк исключения
 		
@@ -102,6 +117,21 @@
                 PUBLIC  isr_EdgePortISR7_wrap
                 PUBLIC  isr_QSPI_wrap
                 PUBLIC  isr_Watchdog_wrap
+                
+                PUBLIC  isr_FEC_TxFrame_Handler_wrap
+                PUBLIC  isr_FEC_TxBuffer_Handler_wrap
+                PUBLIC  isr_FEC_FIFOUnderrun_Handler_wrap
+                PUBLIC  isr_FEC_CollisionRetryLimit_Handler_wrap
+                PUBLIC  isr_FEC_ReceiveFrame_Handler_wrap
+                PUBLIC  isr_FEC_ReceiveBuffer_Handler_wrap
+                PUBLIC  isr_FEC_MII_Handler_wrap
+                PUBLIC  isr_FEC_LateCollision_Handler_wrap
+                PUBLIC  isr_FEC_HeartbeatError_Handler_wrap
+                PUBLIC  isr_FEC_GracefulStopComplete_Handler_wrap
+                PUBLIC  isr_FEC_EthernetBusError_Handler_wrap
+                PUBLIC  isr_FEC_BabblingTransmitError_Handler_wrap
+                PUBLIC  isr_FEC_BabblingReceiveError_Handler_wrap
+                
 		
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Макрос для обёртки ISR -- производятся действия, необходимые для корректного переключения контекста uC/OS-II.
@@ -237,6 +267,46 @@ isr_QSPI_wrap:
 
 //RTC_IntrHandler _wrap:
 //                UCOS_ISR_WRAP_MACRO(RTC_IntrHandler )
+
+isr_FEC_TxFrame_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_TxFrame_Handler)
+                
+isr_FEC_TxBuffer_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_TxBuffer_Handler)
+                
+isr_FEC_FIFOUnderrun_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_FIFOUnderrun_Handler)
+                
+isr_FEC_CollisionRetryLimit_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_CollisionRetryLimit_Handler)
+                
+isr_FEC_ReceiveFrame_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_ReceiveFrame_Handler)
+                
+isr_FEC_ReceiveBuffer_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_ReceiveBuffer_Handler)
+                
+isr_FEC_MII_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_MII_Handler)
+                
+isr_FEC_LateCollision_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_LateCollision_Handler)
+                
+isr_FEC_HeartbeatError_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_HeartbeatError_Handler)
+                
+isr_FEC_GracefulStopComplete_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_GracefulStopComplete_Handler)
+                
+isr_FEC_EthernetBusError_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_EthernetBusError_Handler)
+                
+isr_FEC_BabblingTransmitError_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_BabblingTransmitError_Handler)
+                
+isr_FEC_BabblingReceiveError_Handler_wrap:
+                UCOS_ISR_WRAP_MACRO(isr_FEC_BabblingReceiveError_Handler)
+
 
 		END
 
