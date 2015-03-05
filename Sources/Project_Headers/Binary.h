@@ -55,7 +55,12 @@
 
 #define SWAP_BYTES_16W(x)   x = (_WORD(_LSB(x), _MSB(x) ))
 
-
+#ifndef MAX
+	#define MAX(x,y) (x > y ? x : y)
+#endif
+#ifndef MIN
+	#define MIN(x,y) (x < y ? x : y)
+#endif
 
 
 #endif

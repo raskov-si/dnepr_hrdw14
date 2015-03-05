@@ -35,6 +35,9 @@
 #define RX_QUEUE_LEN	        ETHERNET_RX_BD_NUMBER        
 #define TX_QUEUE_LEN	        ETHERNET_TX_BD_NUMBER
 
+#define PAYLOAD2PBUF(p) (struct pbuf*)((u8*)(p) - LWIP_MEM_ALIGN_SIZE(sizeof(struct pbuf))) 
+
+
 
 #pragma data_alignment=16
 //_Pragma("location=\"packets_sram\"")
@@ -45,6 +48,12 @@ __no_init static t_txrx_desc rx_bd[ ETHERNET_RX_BD_NUMBER ] ;  /*! дескрипторы н
 //_Pragma("location=\"packets_sram\"")
 _Pragma("location=\"sdram\"")
 __no_init static t_txrx_desc tx_bd[ ETHERNET_TX_BD_NUMBER ] ;  /*! дескрипторы на передачу пакетов для DMA */
+
+#pragma data_alignment=16
+//_Pragma("location=\"packets_sram\"")
+_Pragma("location=\"sdram\"")
+__no_init static struct pbuf *rx_pbuf_array[ETHERNET_RX_BD_NUMBER];
+
 
 #pragma data_alignment=16
 //_Pragma("location=\"packets_sram\"")
@@ -464,28 +473,32 @@ void isr_FEC_FIFOUnderrun_Handler()
 void isr_FEC_CollisionRetryLimit_Handler()
 {}
 
+
 void isr_FEC_ReceiveFrame_Handler()
 {
+    u8    ret;
         
-        t8_m5282_fec_reset_rx_isr();
+    t8_m5282_fec_reset_rx_isr();
         
-        
-
 //        pocket_pools.pockets_array[last_rx_buf_descr][0]
 #if LWIP_TCPIP_CORE_LOCKING_INPUT
-        /* сообщение собственному потоку */
-        OSQPost( __NetRcvQueue, (void*)&__change_mac_struct );
-#else
-        /* пихаем сообщения в tcp/ip поток lwip */
-         //      eth0.netif->input(&eth0.data_descr->pockets_array[last_rx_buf_descr][0], );
-#endif        
-                                                                                            /* начинаем прием в следующий буфер */
-        if ( ++last_rx_buf_descr == ETHERNET_RX_BD_NUMBER ) {
-           last_rx_buf_descr = 0;
-        }
         
-        t8_m5282_fec_set_empty_status(&rx_bd[last_rx_buf_descr].contr_status_inf);        
-	t8_m5282_fec_start_rx();
+    OSQPost( __NetRcvQueue, (void*)&__change_mac_struct );                                              /* сообщение собственному потоку */
+    
+#else        
+    // if (rx_pbuf_array[last_rx_buf_descr] == NULL)                                           /* пихаем сообщения в tcp/ip поток lwip */
+    rx_pbuf_array[last_rx_buf_descr]->payload = &default_eth.data_descr.rx_pool.pockets_array[last_rx_buf_descr][0];
+    ret = (*default_eth.netif.input)(rx_pbuf_array[last_rx_buf_descr], &default_eth.netif);
+    if ( ret == ERR_OK )    
+#endif                                                                                                    /* начинаем прием в следующий буфер если его уже обработали (очередь увеличилась) */
+    {          
+        if ( ++last_rx_buf_descr == ETHERNET_RX_BD_NUMBER ) {
+            last_rx_buf_descr = 0;
+        }
+    }
+        
+    t8_m5282_fec_set_empty_status(&rx_bd[last_rx_buf_descr].contr_status_inf);        
+    t8_m5282_fec_start_rx();
 }
 
 

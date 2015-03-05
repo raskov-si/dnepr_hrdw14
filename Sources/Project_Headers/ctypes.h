@@ -65,12 +65,6 @@ typedef double				f64;
 	#define NULL	0
 #endif
 
-#ifndef MAX
-	#define MAX(x,y) (x > y ? x : y)
-#endif
-#ifndef MIN
-	#define MIN(x,y) (x < y ? x : y)
-#endif
 
 #define ASF32(x) (*(f32*)&x)
 #define ASS32(x) (*(s32*)&x)

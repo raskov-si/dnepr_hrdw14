@@ -23,8 +23,8 @@
 /*=============================================================================================================*/
 
 const  void * const         pvNullPointer = NULL;
-static OS_MEM              *pQueueMem;
-static char                 pcQueueMemoryPool[MAX_QUEUES * sizeof(TQ_DESCR)];
+static OS_MEM               *pQueueMem;
+static u8                   pcQueueMemoryPool[MAX_QUEUES * sizeof(TQ_DESCR)];
 static u8_t                 task_id;
 OS_STK                      LWIP_TASK_STK[LWIP_TASK_MAX][LWIP_STK_SIZE];
 
@@ -131,26 +131,30 @@ void sys_sem_set_invalid(sys_sem_t *sem)
 /*=============================================================================================================*/
 /*!  \brief Создает новую очередь сообщений размера size */
 /*=============================================================================================================*/
+//PQ_DESCR    pQDesc[MAX_QUEUES];
+//u8          cur_desr_index = 0;
 err_t sys_mbox_new(sys_mbox_t *mbox, int size)
 {
     INT8U       err;
     PQ_DESCR    pQDesc;
     
-    size = size;    
+    size = (size > MAX_QUEUE_ENTRIES) ? MAX_QUEUE_ENTRIES: size;    
+    
     if( mbox == NULL ){
         return (err_t)ERR_VAL ;
     }
     
+    //*mbox = xQueueCreate( size, sizeof( void * ) );    
     pQDesc = (PQ_DESCR)OSMemGet(pQueueMem, &err);
     
     if (err == OS_ERR_NONE) {
-        pQDesc->pQ = OSQCreate(&(pQDesc->pvQEntries[0]), MAX_QUEUE_ENTRIES);
+        pQDesc->pQ = OSQCreate(&(pQDesc->pvQEntries[0]), size);
         if (pQDesc->pQ != NULL) {
             mbox = pQDesc;
             return (err_t)ERR_OK;
         }
     }
-    
+        
     return (err_t)ERR_MEM;
 }
 
@@ -282,8 +286,8 @@ sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg, 
     LWIP_PLATFORM_ASSERT ( stacksize <= LWIP_STK_SIZE );
     
     if (task_id < LWIP_TASK_MAX) {        
-	LWIP_PLATFORM_ASSERT(OSTaskCreateExt(thread, (void *)0, &LWIP_TASK_STK[task_id][stacksize-1], LWIP_START_PRIO+prio, task_id, &LWIP_TASK_STK[task_id][0], stacksize, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE );
-        OSTaskNameSet( prio, (INT8U*)name, (INT8U*)&ret ) ;
+	LWIP_PLATFORM_ASSERT(OSTaskCreateExt(thread, (void *)0, &LWIP_TASK_STK[task_id][stacksize-1], prio+task_id, task_id, &LWIP_TASK_STK[task_id][0], stacksize, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE );
+        OSTaskNameSet( prio+task_id, (INT8U*)name, (INT8U*)&ret ) ;
         LWIP_PLATFORM_ASSERT( ret == OS_ERR_NONE ) ;
         task_id++;
     } 

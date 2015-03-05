@@ -14,12 +14,13 @@
       
 #include "support_common.h"
 #include "uCOS_II.H"
+#include "lwip/opt.h" 
 
-#define LWIP_STK_SIZE                  1200
+#define LWIP_STK_SIZE                  MAX(DEFAULT_THREAD_STACKSIZE,TCPIP_THREAD_STACKSIZE)
 #define LWIP_TASK_MAX                  5
 #define LWIP_START_PRIO                36     //so priority of lwip tasks is from 5-9
 #define MAX_QUEUES                     35    // 
-#define MAX_QUEUE_ENTRIES              35    // number of mboxs
+#define MAX_QUEUE_ENTRIES              TCPIP_MBOX_SIZE    // number of mboxs
 #define SYS_MBOX_NULL                  NULL
 #define SYS_SEM_NULL                   NULL
       

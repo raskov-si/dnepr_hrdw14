@@ -201,7 +201,7 @@
         </option>
         <option>
           <name>IccOptLevel</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>IccOptStrategy</name>
@@ -210,12 +210,12 @@
         </option>
         <option>
           <name>IccOptLevelSlave</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>IccOptAllowList</name>
           <version>0</version>
-          <state>11111</state>
+          <state>00000</state>
         </option>
         <option>
           <name>IccModuleTypeOverride</name>
@@ -670,7 +670,7 @@
         </option>
         <option>
           <name>XclFile</name>
-          <state>$PROJ_DIR$\lnkM5282_dbg.xcl</state>
+          <state>$PROJ_DIR$\lnkM5282_dbg_new.xcl</state>
         </option>
         <option>
           <name>XclFileSlave</name>
@@ -1758,7 +1758,7 @@
     <group>
       <name>inc</name>
       <file>
-        <name>$PROJ_DIR$\Sources\HAL\IC\inc\Binary.h</name>
+        <name>$PROJ_DIR$\Sources\Project_Headers\Binary.h</name>
       </file>
       <file>
         <name>$PROJ_DIR$\Sources\Project_Headers\ctypes.h</name>
@@ -1970,7 +1970,7 @@
           <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_SMI.h</name>
         </file>
         <file>
-          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_UART_Profile.h</name>
+          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_Uart_Profile.h</name>
         </file>
       </group>
       <group>

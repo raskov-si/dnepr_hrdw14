@@ -270,7 +270,7 @@ static void ping_thread
      \sa 
 */
 /*=============================================================================================================*/
-static void task_eth_init (void)
+void task_eth_init (void)
 {
  /* Network interface variables */
     ip_addr_t       ipaddr, netmask, gw;
@@ -297,13 +297,13 @@ static void task_eth_init (void)
     IP4_ADDR(&ipaddr,      192,168,1,7);
     IP4_ADDR(&netmask,     255,255,255,0);
  
- // Start the TCP/IP thread & init stuff  
+// Start the TCP/IP thread & init stuff  
     tcpip_init(NULL, NULL);      
     
 // WARNING: This must only be run after the OS has been started.  
     // Typically this is the case, however, if not, you must place this  
     // in a post-OS initialization  
-    netifapi_netif_add(&eth0->netif, &ipaddr, &netmask, &gw, NULL, cb_dnepr_eth0_if_init, tcpip_input);      
+//    netifapi_netif_add(&eth0->netif, &ipaddr, &netmask, &gw, NULL, cb_dnepr_eth0_if_init, tcpip_input);      
   
 //  netif_set_up(&net);
         
@@ -318,30 +318,37 @@ static void task_eth_init (void)
 /*=============================================================================================================*/
 void task_eth( void *pdata )
 {
-      task_eth_init();
+//      task_eth_init();
                   
       
-#if LWIP_TCPIP_CORE_LOCKING_INPUT
-      while ( TRUE )    {
-//          watch_dog_thread_is_alive()          
+    while ( TRUE )    {
         
-//        dnepr_ethernet_rx_check(eth0.data_descr)t_eth_data_descr
         
-            {
-             
-            /* принимаем сообщения */
-            //      eth0.netif->input(eth0.data_descr->pockets_array[eth0 msg][0]);         
-              ;
-            }
-            
-//        dnepr_ethernet_tx_check(eth0.data_descr)
-            {
-              
-            }
-      };
-#else
-         OSTaskDel( OS_PRIO_SELF ) ;           
-#endif        
+      
+        OSTimeDly(1 * OS_TICKS_PER_SEC);
+    }      
+      
+      
+      
+//#if LWIP_TCPIP_CORE_LOCKING_INPUT
+//      while ( TRUE )    {
+////          watch_dog_thread_is_alive()          
+//        
+////        dnepr_ethernet_rx_check(eth0.data_descr)t_eth_data_descr
+//        
+//            {
+//             
+//            /* принимаем сообщения */
+//              //  default_eth.netif->input(&eth0.data_descr->pockets_array[][0]);         
+//              ;
+//            }
+//            
+////        dnepr_ethernet_tx_check(eth0.data_descr)
+//            {
+//              
+//            }
+//      };
+//#endif        
 }
 
 

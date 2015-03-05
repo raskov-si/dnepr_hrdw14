@@ -18,6 +18,9 @@
 //	EDGEPORT3						5 		5	// FPGA_nINT
 //	EDGEPORT4						5 		6	// I2C_SW_INT
 
+#include "lwip/opt.h" 
+
+
 #define taskInit_PRIO			20	//!< приоритет задачи инициализации остальных задач, очень большой приоритет
 
 
@@ -29,9 +32,10 @@
 #define hs_mutex_PRIO 			17 	//!< приоритет мьютекса для защиты функций hotswap'а
 
 #define tackDController_PRIO	30
-#define TASK_ETH_PRIORITY      (35)
-#define TASK_SNMP_PRIORITY     (TASK_ETH_PRIORITY+1)
 #define taskCU_PRIO     		40	//!< приоритет задачи работы с backplane-uart'ом
+
+#define TASK_ETH_PRIORITY      (TCPIP_THREAD_PRIO-1)
+#define TASK_SNMP_PRIORITY     (TCPIP_THREAD_PRIO+1)
 
 
 #define taskMeasure_PRIO    	50	//!< приоритет задачи измерения динамических параметров
@@ -40,6 +44,6 @@
 #define taskFlash_COMM_PRIO 	53	//!< 
 #define taskFS_COMM_PRIO    	54	//!< 
 
-#define TASKTERM_COMM_PRIO     		(52)	//!< приоритет задачи работы с терминалом на backplane
+#define TASKTERM_COMM_PRIO     		(56)	//!< приоритет задачи работы с терминалом на backplane
 
 #define taskWDT_PRIO    		(OS_LOWEST_PRIO - 4)	//!< нужно чтобы любой другой НАШ подвисший поток не дал выполниться этому потоку

@@ -174,6 +174,7 @@ static void task_terminal_init (void)
 }
 
 
+extern void task_eth_init (void);
 
 void task_terminal (void *pdata)
 {
@@ -184,6 +185,9 @@ void task_terminal (void *pdata)
     
     pdata = pdata;      // чтобы не было warning'а о неиспользовании    
     task_terminal_init();
+    
+    task_eth_init();
+
 
     while( TRUE ) {
       

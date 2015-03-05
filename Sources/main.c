@@ -55,9 +55,9 @@ static OS_STK  taskDControllerStk[1024];
 #pragma data_alignment=4
 static OS_STK  task_terminal_stack[512];
 #pragma data_alignment=4
-static OS_STK  task_eth_stk[128];
-#pragma data_alignment=4
-static OS_STK  task_snmp_stk[512];
+static OS_STK  task_eth_stk[512];
+//#pragma data_alignment=4
+//static OS_STK  task_snmp_stk[512];
 
 static void taskInit(void *pdata);
 void taskMeasure(void *pdata);
@@ -120,6 +120,7 @@ static void taskInit(void *pdata)
 			3, 1 );
 	
 	OSStatInit() ;
+        
 
 	////////////////////////////////////////////////////////////////////////////
 	// инициализируем переферию тут, чтобы работал таймер ОС (для таймаута в I2C)
@@ -160,15 +161,13 @@ static void taskInit(void *pdata)
     
     {
         /* сетевые функции CU */
-        assert(OSTaskCreateExt(task_eth, (void *)0, (void *)&task_eth_stk[127], TASK_ETH_PRIORITY, TASK_ETH_PRIORITY, (void *)&task_eth_stk, 128, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
-        OSTaskNameSet( TASK_SNMP_PRIORITY, "task_eth", &return_code ) ;
-        assert( return_code == OS_ERR_NONE ) ;
-
-  
+//        assert(OSTaskCreateExt(task_eth, (void *)0, (void *)&task_eth_stk[511], TASK_ETH_PRIORITY, TASK_ETH_PRIORITY, (void *)&task_eth_stk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+//        OSTaskNameSet( TASK_SNMP_PRIORITY, "task_eth", &return_code ) ;
+//        assert( return_code == OS_ERR_NONE ) ;  
       
-        assert(OSTaskCreateExt(task_snmp, (void *)0, (void *)&task_snmp_stk[511], TASK_SNMP_PRIORITY, TASK_SNMP_PRIORITY, (void *)&task_snmp_stk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
-        OSTaskNameSet( TASK_SNMP_PRIORITY, "task_snmp", &return_code ) ;
-        assert( return_code == OS_ERR_NONE ) ;
+//        assert(OSTaskCreateExt(task_snmp, (void *)0, (void *)&task_snmp_stk[511], TASK_SNMP_PRIORITY, TASK_SNMP_PRIORITY, (void *)&task_snmp_stk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+//        OSTaskNameSet( TASK_SNMP_PRIORITY, "task_snmp", &return_code ) ;
+//        assert( return_code == OS_ERR_NONE ) ;
       
 //        assert(OSTaskCreateExt(task_vlan_rstp, (void *)0, (void *)&taskNetStk[511], taskNet_PRIO, taskNet_PRIO, (void *)&taskNetStk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
 //        OSTaskNameSet( taskNet_PRIO, "task_vlan_rstp", &return_code ) ;
