@@ -23,19 +23,24 @@
 #define MAX_QUEUE_ENTRIES              TCPIP_MBOX_SIZE    // number of mboxs
 #define SYS_MBOX_NULL                  NULL
 #define SYS_SEM_NULL                   NULL
+
+
+typedef void (*lwip_thread_fn)(void *arg);
+
+typedef struct SYS_MBOX {
+	OS_EVENT	*q;
+	OS_EVENT	*sem;
+	void		*start[MAX_QUEUE_ENTRIES];
+        _BOOL           valid;
+}sys_mbox, *sys_mbox_t;
+
+typedef struct SYS_SEM  {
+        OS_EVENT*   sem;
+        _BOOL       valid;
+} sys_sem_t;
       
-
-typedef struct
-{
-    OS_EVENT *pQ;
-    void     *pvQEntries[MAX_QUEUE_ENTRIES];
-} TQ_DESCR,  *PQ_DESCR;
-
-typedef OS_EVENT        sys_sem_t;
-typedef TQ_DESCR        sys_mbox_t;
 typedef OS_CPU_SR       sys_prot_t;
 typedef INT8U           sys_thread_t;
-typedef void (*lwip_thread_fn)(void *arg);
 
 
 #ifdef	__cplusplus

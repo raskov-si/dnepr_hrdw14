@@ -47,7 +47,7 @@ typedef u32 mem_ptr_t ;
 #define LWIP_PROVIDE_ERRNO
 
 #define LINK_SPEED_OF_YOUR_NETIF_IN_BPS     100000000
-#define LWIP_PLATFORM_ASSERT(x)		    assert(x)
+#define LWIP_PLATFORM_ASSERT(x)		    
 
 #ifdef	__cplusplus
     }

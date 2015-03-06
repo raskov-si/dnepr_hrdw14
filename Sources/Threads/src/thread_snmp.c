@@ -288,8 +288,7 @@ void task_eth_init (void)
 #endif    
     
     (void)dnepr_ethernet_open(eth0);
-    
-    
+       
 /* Стартуем LwIP */
   
  /* Set network address variables */
@@ -303,10 +302,8 @@ void task_eth_init (void)
 // WARNING: This must only be run after the OS has been started.  
     // Typically this is the case, however, if not, you must place this  
     // in a post-OS initialization  
-//    netifapi_netif_add(&eth0->netif, &ipaddr, &netmask, &gw, NULL, cb_dnepr_eth0_if_init, tcpip_input);      
-  
-//  netif_set_up(&net);
-        
+    netifapi_netif_add(&eth0->netif, &ipaddr, &netmask, &gw, NULL, cb_dnepr_eth0_if_init, tcpip_input);        
+    netif_set_up(&eth0->netif);        
 }
 
 
