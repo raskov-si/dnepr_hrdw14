@@ -174,8 +174,6 @@ static void task_terminal_init (void)
 }
 
 
-extern void task_eth_init (void);
-
 void task_terminal (void *pdata)
 {
     INT8U                   return_code = OS_ERR_NONE;
@@ -184,10 +182,7 @@ void task_terminal (void *pdata)
     taskTerm_message_t       *qCurMessage ;
     
     pdata = pdata;      // чтобы не было warning'а о неиспользовании    
-    task_terminal_init();
-    
-    task_eth_init();
-
+    task_terminal_init();    
 
     while( TRUE ) {
       

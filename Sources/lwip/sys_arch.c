@@ -85,9 +85,9 @@ void sys_sem_free(sys_sem_t *sem)
 {
     INT8U     err;
 
+    sem->valid = 0;
     OSSemDel(sem->sem, OS_DEL_NO_PEND, &err);
     LWIP_ASSERT("OSSemDel ", err == OS_ERR_NONE);
-    sem->valid = 0;
 }
 
 
@@ -132,6 +132,22 @@ u32_t sys_arch_sem_wait(sys_sem_t *sem, u32_t timeout)
     return ticks_to_ms(OSTimeGet() - begin_time);
 }
 
+
+/*=============================================================================================================*/
+/*!  \brief     Проверяет есть ли у этого семафора значение
+ */
+/*=============================================================================================================*/
+u32_t   sys_arch_sem_fetch (sys_sem_t *sem)
+{
+    LWIP_ASSERT("msg NULL", sem != NULL);
+        
+    if ( sem->valid == FALSE ) {
+        return 0;
+    }    
+    return OSSemAccept(sem->sem);
+}
+
+
 /*=============================================================================================================*/
 /*!  \brief     Проверяет жив ли этот семафор  
  *   \retval    1 for valid, 0 for invalid
@@ -139,7 +155,11 @@ u32_t sys_arch_sem_wait(sys_sem_t *sem, u32_t timeout)
 /*=============================================================================================================*/
 int sys_sem_valid(sys_sem_t *sem) 
 {
-  return    sem->valid;
+    if ( sem != NULL )  {
+        return    sem->valid;
+    }
+  
+    return 0;
 }
 
 /*=============================================================================================================*/
@@ -147,7 +167,9 @@ int sys_sem_valid(sys_sem_t *sem)
 /*=============================================================================================================*/
 void sys_sem_set_invalid(sys_sem_t *sem)
 {
-    sem->valid = 0;
+    if ( sem != NULL )  {
+        sem->valid = 0;
+    }
 }
 
 
@@ -171,9 +193,8 @@ err_t sys_mbox_new(sys_mbox_t *mbox, int size)
 	if (tmp_mbox->q) {
 		tmp_mbox->sem = OSSemCreate(MAX_QUEUE_ENTRIES);
 		if (tmp_mbox->sem) {
-                        
-			*mbox = tmp_mbox;
                         tmp_mbox->valid = 1;
+			*mbox = tmp_mbox;
 			return (err_t)ERR_OK;
 		}
 		OSQDel(tmp_mbox->q, OS_DEL_ALWAYS, &err);
@@ -200,9 +221,9 @@ void sys_mbox_free(sys_mbox_t *mbox)
     LWIP_ASSERT("OSSemDel", err == OS_ERR_NONE);
     OSQDel(tmp_mbox->q, OS_DEL_ALWAYS, &err);
     LWIP_ASSERT("OSQDel", err == OS_ERR_NONE);
+    tmp_mbox->valid = 0;    
     err = OSMemPut(ptr_queue_memory_pool, tmp_mbox);
     LWIP_ASSERT("OSMemPut", err == OS_ERR_NONE);
-    tmp_mbox->valid = 0;    
 }
 
 
@@ -249,7 +270,7 @@ err_t   sys_mbox_trypost(sys_mbox_t *mbox, void *msg)
 
 
 /*=============================================================================================================*/
-/*!  \brief Ждет пока сообщение упадет в очередь  */
+/*!  \brief Ждет пока сообщение упадет в очередь в течение заданного таймаута */
 /*=============================================================================================================*/
 u32_t sys_arch_mbox_fetch(sys_mbox_t *mbox, void **msg, u32_t timeout)
 {
@@ -268,6 +289,8 @@ u32_t sys_arch_mbox_fetch(sys_mbox_t *mbox, void **msg, u32_t timeout)
                 }
 	}
 	begin_time = OSTimeGet();
+        
+        LWIP_ASSERT("msg NULL", msg != NULL);
 	*msg = OSQPend(tmp_mbox->q, ucos_timeout, &err);
 	if (err == OS_ERR_NONE) {
 		LWIP_ASSERT("OSQPend", *msg);
@@ -283,6 +306,34 @@ u32_t sys_arch_mbox_fetch(sys_mbox_t *mbox, void **msg, u32_t timeout)
 	}
 }
 
+
+
+/*=============================================================================================================*/
+/*!  \brief     Проверяет есть ли сообщения в очереди без таймаута ожидания  */
+/*=============================================================================================================*/
+u32_t sys_arch_mbox_tryfetch(sys_mbox_t *mbox, void **msg)
+{
+    INT8U       err;
+    sys_mbox_t  tmp_mbox = *mbox;
+
+    LWIP_ASSERT("msg NULL", msg != NULL);
+    *msg = OSQAccept(tmp_mbox->q, &err);
+    
+    if (err == OS_ERR_NONE) {
+	LWIP_ASSERT("OSQPend", *msg);
+	err = OSSemPost(tmp_mbox->sem);
+	LWIP_ASSERT("OSSemPost", err == OS_ERR_NONE);
+	if ((*msg) == __ESC_NULL) {
+	    *msg = NULL;
+        }
+        return 0;
+    } else {
+	LWIP_ASSERT("OSQPend", err == OS_ERR_Q_EMPTY);
+	return SYS_MBOX_EMPTY;
+    }
+    
+}
+
 /*=============================================================================================================*/
 /*!  \brief     Проверяет жива ли эта очередь  
  *   \retval    1 for valid, 0 for invalid
@@ -290,7 +341,11 @@ u32_t sys_arch_mbox_fetch(sys_mbox_t *mbox, void **msg, u32_t timeout)
 /*=============================================================================================================*/
 int sys_mbox_valid(sys_mbox_t *mbox)
 {
-    return (*mbox)->valid ;
+    if ( (*mbox) != NULL )     {
+        return (*mbox)->valid ;
+    }
+    
+    return 0;
 }
 
 
@@ -299,7 +354,9 @@ int sys_mbox_valid(sys_mbox_t *mbox)
 /*=============================================================================================================*/
 void sys_mbox_set_invalid(sys_mbox_t *mbox) 
 {
-    (*mbox)->valid = 0;
+    if ( (*mbox) != NULL  )    {      
+      (*mbox)->valid = 0; 
+    }
 }
 
 
@@ -316,13 +373,14 @@ sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg, 
     LWIP_PLATFORM_ASSERT ( stacksize <= LWIP_STK_SIZE );
     
     if (task_id < LWIP_TASK_MAX) {        
-	LWIP_PLATFORM_ASSERT(OSTaskCreateExt(thread, (void *)0, &LWIP_TASK_STK[task_id][stacksize-1], prio+task_id, task_id, &LWIP_TASK_STK[task_id][0], stacksize, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE );
+        ret = OSTaskCreateExt(thread, arg, &LWIP_TASK_STK[task_id][stacksize-1], prio+task_id, prio+task_id, &LWIP_TASK_STK[task_id][0], stacksize, NULL, OS_TASK_OPT_STK_CHK );
+	LWIP_PLATFORM_ASSERT(ret == OS_ERR_NONE );
         OSTaskNameSet( prio+task_id, (INT8U*)name, (INT8U*)&ret ) ;
         LWIP_PLATFORM_ASSERT( ret == OS_ERR_NONE ) ;
         task_id++;
     } 
     
-    return (task_id);
+    return (prio+task_id);
 }
 
 /*=============================================================================================================*/

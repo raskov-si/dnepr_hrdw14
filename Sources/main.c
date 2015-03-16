@@ -147,23 +147,23 @@ static void taskInit(void *pdata)
             assert( return_code == OS_ERR_NONE ) ;
         }
 
-    assert(OSTaskCreateExt(taskMeasure, (void *)0, (void *)&taskMeasureStk[1023], taskMeasure_PRIO, taskMeasure_PRIO, (void *)&taskMeasureStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE );
-    OSTaskNameSet( taskMeasure_PRIO, "taskMeasure", &return_code ) ;
-    assert( return_code == OS_ERR_NONE ) ;
+        assert(OSTaskCreateExt(taskMeasure, (void *)0, (void *)&taskMeasureStk[1023], taskMeasure_PRIO, taskMeasure_PRIO, (void *)&taskMeasureStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE );
+        OSTaskNameSet( taskMeasure_PRIO, "taskMeasure", &return_code ) ;
+        assert( return_code == OS_ERR_NONE ) ;
 
-    assert(OSTaskCreateExt(taskCU, (void *)0, (void *)&taskCUStk[1023], taskCU_PRIO, taskCU_PRIO, (void *)&taskCUStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
-    OSTaskNameSet( taskCU_PRIO, "taskCU", &return_code ) ;
-    assert( return_code == OS_ERR_NONE ) ;
+        assert(OSTaskCreateExt(taskCU, (void *)0, (void *)&taskCUStk[1023], taskCU_PRIO, taskCU_PRIO, (void *)&taskCUStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+        OSTaskNameSet( taskCU_PRIO, "taskCU", &return_code ) ;
+        assert( return_code == OS_ERR_NONE ) ;
 
-    assert(OSTaskCreateExt(taskDeviceController, (void *)0, (void *)&taskDControllerStk[1023], tackDController_PRIO, tackDController_PRIO, (void *)&taskDControllerStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
-    OSTaskNameSet( tackDController_PRIO, "taskDeviceController", &return_code ) ;
-    assert( return_code == OS_ERR_NONE ) ;
+        assert(OSTaskCreateExt(taskDeviceController, (void *)0, (void *)&taskDControllerStk[1023], tackDController_PRIO, tackDController_PRIO, (void *)&taskDControllerStk, 1024, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+        OSTaskNameSet( tackDController_PRIO, "taskDeviceController", &return_code ) ;
+        assert( return_code == OS_ERR_NONE ) ;
     
-    {
-        /* сетевые функции CU */
-//        assert(OSTaskCreateExt(task_eth, (void *)0, (void *)&task_eth_stk[511], TASK_ETH_PRIORITY, TASK_ETH_PRIORITY, (void *)&task_eth_stk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
-//        OSTaskNameSet( TASK_SNMP_PRIORITY, "task_eth", &return_code ) ;
-//        assert( return_code == OS_ERR_NONE ) ;  
+        {
+            /* сетевые функции CU */
+            assert(OSTaskCreateExt(task_eth, (void *)0, (void *)&task_eth_stk[511], TASK_ETH_PRIORITY, TASK_ETH_PRIORITY, (void *)&task_eth_stk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+            OSTaskNameSet( TASK_ETH_PRIORITY, "task_eth", &return_code ) ;
+            assert( return_code == OS_ERR_NONE ) ;  
       
 //        assert(OSTaskCreateExt(task_snmp, (void *)0, (void *)&task_snmp_stk[511], TASK_SNMP_PRIORITY, TASK_SNMP_PRIORITY, (void *)&task_snmp_stk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
 //        OSTaskNameSet( TASK_SNMP_PRIORITY, "task_snmp", &return_code ) ;
@@ -172,13 +172,13 @@ static void taskInit(void *pdata)
 //        assert(OSTaskCreateExt(task_vlan_rstp, (void *)0, (void *)&taskNetStk[511], taskNet_PRIO, taskNet_PRIO, (void *)&taskNetStk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
 //        OSTaskNameSet( taskNet_PRIO, "task_vlan_rstp", &return_code ) ;
 //        assert( return_code == OS_ERR_NONE ) ;
-    }
+        }
 
 #ifdef DEBUG_TERMINAL
-    assert(OSTaskCreateExt(task_terminal, (void *)0, (void *)&task_terminal_stack[511], TASKTERM_COMM_PRIO, TASKTERM_COMM_PRIO, (void *)&task_terminal_stack, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
-    OSTaskNameSet( TASKTERM_COMM_PRIO, "task_terminal", &return_code ) ;
-    assert( return_code == OS_ERR_NONE ) ;    
+        assert(OSTaskCreateExt(task_terminal, (void *)0, (void *)&task_terminal_stack[511], TASKTERM_COMM_PRIO, TASKTERM_COMM_PRIO, (void *)&task_terminal_stack, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+        OSTaskNameSet( TASKTERM_COMM_PRIO, "task_terminal", &return_code ) ;
+        assert( return_code == OS_ERR_NONE ) ;    
 #endif
     
-    OSTaskDel( OS_PRIO_SELF ) ;
+        OSTaskDel( OS_PRIO_SELF ) ;
 }

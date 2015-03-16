@@ -1764,6 +1764,9 @@
         <name>$PROJ_DIR$\Sources\Project_Headers\ctypes.h</name>
       </file>
       <file>
+        <name>$PROJ_DIR$\Sources\Application\inc\Dlib_prod.h</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\Sources\Project_Headers\support_common.h</name>
       </file>
       <file>
@@ -1787,6 +1790,9 @@
     </group>
     <group>
       <name>src</name>
+      <file>
+        <name>$PROJ_DIR$\Sources\Application\src\DLib_product.c</name>
+      </file>
       <file>
         <name>$PROJ_DIR$\Sources\Application\src\T8_Dnepr_Profile_params.c</name>
       </file>
@@ -1970,7 +1976,7 @@
           <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_SMI.h</name>
         </file>
         <file>
-          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_Uart_Profile.h</name>
+          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_UART_Profile.h</name>
         </file>
       </group>
       <group>

@@ -117,13 +117,13 @@ void t8_m5282_fec_init
     MCF_FEC_TCR = MCF_FEC_TCR_FDEN ;                                                  /* инициализация передатчика */
     
         
-    input->rxbd_ring[ input->rxbd_ring_len-1 ].contr_status_inf |= MCF_FEC_RxBD_W ;   /* инициализация приемного буфера */   
+    input->rxbd_ring[ input->rxbd_ring_len-1 ].contr_status_flags |= MCF_FEC_RxBD_W ;   /* инициализация приемного буфера */   
     MCF_FEC_ERDSR = (u32)input->rxbd_ring;
     MCF_FEC_EMRBR = input->rxbd_ring_len;
     
 
-    input->txbd_ring[ input->txbd_ring_len-1 ].contr_status_inf |= MCF_FEC_TxBD_W ;  /* инициализация передающего буфера */  
-    MCF_FEC_ETSDR = (uint32_t)input->txbd_ring;
+    input->txbd_ring[ input->txbd_ring_len-1 ].contr_status_flags |= MCF_FEC_TxBD_W ;  /* инициализация передающего буфера */  
+    MCF_FEC_ETDSR = (uint32_t)input->txbd_ring;
     
       
     MCF_FEC_ECR |= MCF_FEC_ECR_ETHER_EN ;                                            /* включаем приемник с передатчиком */

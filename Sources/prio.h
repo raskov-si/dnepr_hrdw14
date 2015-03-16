@@ -34,8 +34,8 @@
 #define tackDController_PRIO	30
 #define taskCU_PRIO     		40	//!< приоритет задачи работы с backplane-uart'ом
 
-#define TASK_ETH_PRIORITY      (TCPIP_THREAD_PRIO-1)
-#define TASK_SNMP_PRIORITY     (TCPIP_THREAD_PRIO+1)
+#define TASK_ETH_PRIORITY      (TCPIP_THREAD_PRIO+1)
+#define TASK_SNMP_PRIORITY     (TCPIP_THREAD_PRIO+2)
 
 
 #define taskMeasure_PRIO    	50	//!< приоритет задачи измерения динамических параметров

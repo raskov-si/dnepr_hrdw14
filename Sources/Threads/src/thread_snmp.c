@@ -5,6 +5,7 @@
 */
 /*=============================================================================================================*/
 
+#include <time.h>
 #include "OS_CPU.H"
 #include "OS_CFG.H"
 #include "uCOS_II.H"
@@ -46,12 +47,10 @@
 /** ping identifier - must fit on a u16_t */
 #define PING_ID        0xAFAFu 
 
-
 #define PING_THREAD_STACKSIZE   (100)
 #define PING_THREAD_PRIO        (36)
-
-
-#define PING_TARGET   (netif_default?netif_default->gw:ip_addr_any)
+#define PING_RESULT(ping_ok)
+#define PING_TARGET             (netif_default?netif_default->gw:ip_addr_any)
 
 /*=============================================================================================================*/
 
@@ -60,11 +59,16 @@
     int         debug_netlog_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog);
 #endif
     extern  err_t cb_dnepr_eth0_if_init(struct netif *netif);
-
+    
+    static void     ping_prepare_echo( struct icmp_echo_hdr *iecho, u16_t len);
+    static void     ping_recv(int s);
+    static err_t    ping_send(int s, ip_addr_t *addr);
 
 /*=============================================================================================================*/
 /* ping variables */
-static t_eth    *eth0;
+static t_eth            *eth0;
+static struct netif     eth0_netif;
+
 
 static u16 ping_seq_num;
 static u32 ping_time; 
@@ -107,7 +111,7 @@ int         debug_netcmd_term(const char* in, char* out, size_t out_len_max, t_l
 int         debug_netlog_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog)
 {
   char  *second_word;
-  char  pars_buf[5+1];
+//  char  pars_buf[5+1];
 //  u8    idx_beg;
   
   if ( (second_word = strstr (in, "show")) != NULL )  {
@@ -130,6 +134,151 @@ int         debug_netlog_term(const char* in, char* out, size_t out_len_max, t_l
     return 0;
 }
 #endif
+
+
+
+
+
+void mcf5282_ethernet_init(void);
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+void task_eth_init (void)
+{
+ /* Network interface variables */
+    ip_addr_t       ipaddr, netmask, gw;
+    
+#ifdef DEBUG_NET
+
+    volatile  char*  temp;
+    volatile  char*  temp2;
+
+    temp =  (volatile  char*)debug_netlog_term_handler.cmd_name;
+    temp2 = temp;
+    temp =  (volatile  char*)debug_netcmd_term_handler.cmd_name;
+    temp = temp2;   
+        
+#endif    
+    
+    
+    mcf5282_ethernet_init();
+    
+//    (void)dnepr_ethernet_open(eth0);
+    
+    
+       
+///* Стартуем LwIP */
+//  
+// /* Set network address variables */
+//    IP4_ADDR(&gw,          192,168,1,100);
+//    IP4_ADDR(&ipaddr,      192,168,1,7);
+//    IP4_ADDR(&netmask,     255,255,255,0);
+// 
+//// Start the TCP/IP thread & init stuff  
+//    tcpip_init(NULL, NULL);      
+//    
+//// WARNING: This must only be run after the OS has been started.  
+//    // Typically this is the case, however, if not, you must place this  
+//    // in a post-OS initialization  
+////    netifapi_netif_add(&(eth0->netif), &ipaddr, &netmask, &gw, NULL, cb_dnepr_eth0_if_init, tcpip_input);        
+//    netifapi_netif_add(&eth0_netif, &ipaddr, &netmask, &gw, NULL, cb_dnepr_eth0_if_init, tcpip_input);        
+//    netif_set_up(&eth0_netif);        
+////    netif_set_default(&eth0_netif);
+}
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+void task_eth( void *pdata )
+{
+    int         sock_desc;
+    ip_addr_t   ping_target;
+    int         timeout         = PING_RCV_TIMEO;
+  
+    LWIP_UNUSED_ARG(pdata);
+
+    task_eth_init();
+
+    sock_desc = lwip_socket(AF_INET, SOCK_RAW, IP_PROTO_ICMP);
+    assert(sock_desc >= 0);
+
+    lwip_setsockopt(sock_desc, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    
+      
+    while ( TRUE )    {
+          
+        /* ping */
+          
+       ping_target = PING_TARGET;
+
+    if (ping_send(sock_desc, &ping_target) == ERR_OK) {
+      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
+      ip_addr_debug_print(PING_DEBUG, &ping_target);
+      LWIP_DEBUGF( PING_DEBUG, ("\n"));
+
+      ping_time = time(NULL);
+//      ping_recv(sock_desc);
+    } else {
+      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
+      ip_addr_debug_print(PING_DEBUG, &ping_target);
+      LWIP_DEBUGF( PING_DEBUG, (" - error\n"));
+    }
+      
+      sys_msleep(PING_DELAY);                    
+    }      
+      
+}
+
+
+//#if LWIP_TCPIP_CORE_LOCKING_INPUT
+//      while ( TRUE )    {
+////          watch_dog_thread_is_alive()          
+//        
+////        dnepr_ethernet_rx_check(eth0.data_descr)t_eth_data_descr
+//        
+//            {
+//             
+//            /* принимаем сообщения */
+//              //  default_eth.netif->input(&eth0.data_descr->pockets_array[][0]);         
+//              ;
+//            }
+//            
+////        dnepr_ethernet_tx_check(eth0.data_descr)
+//            {
+//              
+//            }
+//      };
+//#endif        
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+void task_snmp( void *pdata )
+{
+
+  
+        
+    while ( TRUE )    {
+        OSTimeDly(1 * OS_TICKS_PER_SEC);
+    }      
+}
+
+
+
+
 
 /*=============================================================================================================*/
 /** Prepare a echo ICMP request */
@@ -167,7 +316,7 @@ ping_send(int s, ip_addr_t *addr)
 
     iecho = (struct icmp_echo_hdr *)mem_malloc((mem_size_t)ping_size);
     if (!iecho) {
-        return ERR_MEM;
+        return (err_t)ERR_MEM;
     }
 
     ping_prepare_echo(iecho, (u16_t)ping_size);
@@ -180,7 +329,7 @@ ping_send(int s, ip_addr_t *addr)
 
     mem_free(iecho);
 
-    return (err ? ERR_OK : ERR_VAL);
+    return (err_t)(err ? ERR_OK : ERR_VAL);
 } 
 
 
@@ -220,149 +369,4 @@ ping_recv(int s)
   /* do some ping result processing */
   PING_RESULT(0);
 } 
-
-
-static void ping_thread
-(
-    void *arg
-)
-{
-  int s;
-  int timeout = PING_RCV_TIMEO;
-  ip_addr_t   ping_target;
-
-  LWIP_UNUSED_ARG(arg);
-
-  if ((s = lwip_socket(AF_INET, SOCK_RAW, IP_PROTO_ICMP)) < 0) {
-    return;
-  }
-
-  lwip_setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-
-  while (1) {
-    ping_target = PING_TARGET;
-
-    if (ping_send(s, &ping_target) == ERR_OK) {
-      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
-      ip_addr_debug_print(PING_DEBUG, &ping_target);
-      LWIP_DEBUGF( PING_DEBUG, ("\n"));
-
-      ping_time = sys_now();
-      ping_recv(s);
-    } else {
-      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
-      ip_addr_debug_print(PING_DEBUG, &ping_target);
-      LWIP_DEBUGF( PING_DEBUG, (" - error\n"));
-    }
-    sys_msleep(PING_DELAY);
-  }
-} 
 /*=============================================================================================================*/
-
-
-
-
-
-
-/*=============================================================================================================*/
-/*!  \brief 
-
-     \sa 
-*/
-/*=============================================================================================================*/
-void task_eth_init (void)
-{
- /* Network interface variables */
-    ip_addr_t       ipaddr, netmask, gw;
-    
-#ifdef DEBUG_NET
-
-    volatile  char*  temp;
-    volatile  char*  temp2;
-
-    temp =  (volatile  char*)debug_netlog_term_handler.cmd_name;
-    temp2 = temp;
-    temp =  (volatile  char*)debug_netcmd_term_handler.cmd_name;
-    temp = temp2;   
-        
-#endif    
-    
-    (void)dnepr_ethernet_open(eth0);
-       
-/* Стартуем LwIP */
-  
- /* Set network address variables */
-    IP4_ADDR(&gw,          192,168,1,100);
-    IP4_ADDR(&ipaddr,      192,168,1,7);
-    IP4_ADDR(&netmask,     255,255,255,0);
- 
-// Start the TCP/IP thread & init stuff  
-    tcpip_init(NULL, NULL);      
-    
-// WARNING: This must only be run after the OS has been started.  
-    // Typically this is the case, however, if not, you must place this  
-    // in a post-OS initialization  
-    netifapi_netif_add(&eth0->netif, &ipaddr, &netmask, &gw, NULL, cb_dnepr_eth0_if_init, tcpip_input);        
-    netif_set_up(&eth0->netif);        
-}
-
-
-/*=============================================================================================================*/
-/*!  \brief 
-
-     \sa 
-*/
-/*=============================================================================================================*/
-void task_eth( void *pdata )
-{
-//      task_eth_init();
-                  
-      
-    while ( TRUE )    {
-        
-        
-      
-        OSTimeDly(1 * OS_TICKS_PER_SEC);
-    }      
-      
-      
-      
-//#if LWIP_TCPIP_CORE_LOCKING_INPUT
-//      while ( TRUE )    {
-////          watch_dog_thread_is_alive()          
-//        
-////        dnepr_ethernet_rx_check(eth0.data_descr)t_eth_data_descr
-//        
-//            {
-//             
-//            /* принимаем сообщения */
-//              //  default_eth.netif->input(&eth0.data_descr->pockets_array[][0]);         
-//              ;
-//            }
-//            
-////        dnepr_ethernet_tx_check(eth0.data_descr)
-//            {
-//              
-//            }
-//      };
-//#endif        
-}
-
-
-
-/*=============================================================================================================*/
-/*!  \brief 
-
-     \sa 
-*/
-/*=============================================================================================================*/
-void task_snmp( void *pdata )
-{
-
-  
-    /* ping */
-        
-    while ( TRUE )    {
-        OSTimeDly(1 * OS_TICKS_PER_SEC);
-    }      
-}

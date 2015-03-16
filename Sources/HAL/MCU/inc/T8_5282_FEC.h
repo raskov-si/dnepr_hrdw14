@@ -75,10 +75,10 @@
 
 /*! \brief дескриптор буфера FEC'а  */
 #pragma pack(push)
-#pragma pack(1)
+#pragma pack(16)
 typedef struct BufferDescriptor 
 {
-   volatile u16  contr_status_inf;     /*!< control and status */
+   volatile u16  contr_status_flags;     /*!< control and status */
    volatile u16  data_length;      /*!< transfer length    */
    volatile u8   *starting_adress;        /*!< buffer address     */
 } t_txrx_desc;

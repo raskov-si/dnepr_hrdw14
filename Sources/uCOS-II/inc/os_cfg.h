@@ -40,12 +40,12 @@
                                        /* ... MUST NEVER be higher than 254!                           */
 
 //#define OS_MAX_EVENTS            16u   /* Max. number of event control blocks in your application      */
-#define OS_MAX_EVENTS            46u   /* Max. number of event control blocks in your application      */
+#define OS_MAX_EVENTS            56u   /* Max. number of event control blocks in your application      */
 //#define OS_MAX_FLAGS              5u   /* Max. number of Event Flag Groups    in your application      */
 #define OS_MAX_FLAGS              6u   /* Max. number of Event Flag Groups    in your application      */
 #define OS_MAX_MEM_PART           5u   /* Max. number of memory partitions                             */
 //#define OS_MAX_QS                 8u   /* Max. number of queue control blocks in your application      */
-#define OS_MAX_QS                 38u   /* Max. number of queue control blocks in your application      */
+#define OS_MAX_QS                 48u   /* Max. number of queue control blocks in your application      */
 #define OS_MAX_TASKS              20u   /* Max. number of tasks in your application, MUST be >= 2       */
 
 #define OS_SCHED_LOCK_EN          1u   /* Include code for OSSchedLock() and OSSchedUnlock()           */

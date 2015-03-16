@@ -11,7 +11,6 @@
 /* Common standard types */
 #include "ctypes.h"
 
-
 /*
  * Include the derivative header files
  */

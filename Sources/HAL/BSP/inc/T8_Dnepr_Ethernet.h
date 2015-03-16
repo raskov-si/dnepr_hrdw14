@@ -10,6 +10,13 @@
 #include "lwip/netif.h"
 
 
+//    if (!LWIP_HOOK_VLAN_CHECK(netif, ethhdr, vlan)) {
+//#elif defined(ETHARP_VLAN_CHECK_FN)
+//    if (!ETHARP_VLAN_CHECK_FN(ethhdr, vlan)) {
+//#elif defined(ETHARP_VLAN_CHECK)
+//    if (VLAN_ID(vlan) != ETHARP_VLAN_CHECK) {
+
+
 //! адрес  первого MV88E6095 по SMI в multichip mode
 #define MV88E6095_1_CHIPADDR			0x01
 //! адрес  второго MV88E6095 по SMI в multichip mode
@@ -27,15 +34,18 @@
 #define ETHERNET_TX_BD_NUMBER    (4)      /*!< количество дескрипторов буферов для отсылки   */
 
 //! Пул массивов для пакетов.
-typedef struct POCKET_POOL
+#pragma pack(push)
+#pragma pack(4)
+
+struct POCKET_POOL
 {
 	size_t 	pocket_len ; 	        //!< Длина буфера одного пакета.
 	size_t 	pockets_number ;        //!< Сколько всего буферов пакетов.
 	_BOOL 	*pockets_busy;	        //!< Массив с булами, определяющими содержит ли конкретный пакет данные.
 	u8	**pockets_array;	//!< Массив с буферами данных пакетов.
-} t_eth_pocket_pool ;
+};
 
-typedef struct net_meassage_t_
+struct net_meassage_t_
 {
 //	enum {
 ////		CHANGE_MAC,
@@ -47,24 +57,32 @@ typedef struct net_meassage_t_
 	size_t packet_index ;
 	size_t packet_len ;
 //	u8 new_local_mac[ 6 ];
-} t_net_message;
+};
 
 
-typedef struct ETH_POOL_DESC {
-  t_eth_pocket_pool     rx_pool;
-  t_eth_pocket_pool     tx_pool;  
+struct ETH_POOL_DESC {
+  struct POCKET_POOL     rx_pool;
+  struct POCKET_POOL     tx_pool;  
   
 #if LWIP_TCPIP_CORE_LOCKING_INPUT  
-  t_net_message         *rx_cur_message;
-  t_net_message         *tx_cur_message;  
+  struct net_meassage_t_         *rx_cur_message;
+  struct net_meassage_t_         *tx_cur_message;  
 #endif  
-}t_eth_data_descr;
+};
 
 
-typedef struct ETH_DESC {
-    struct netif        netif;
-    t_eth_data_descr    data_descr;
-} t_eth;
+struct ETH_DESC {
+    struct netif            netif;
+    struct ETH_POOL_DESC    data_descr;
+};
+
+#pragma pack(pop)
+
+
+typedef struct POCKET_POOL      t_eth_pocket_pool;
+typedef struct net_meassage_t_  t_net_message;
+typedef struct ETH_POOL_DESC    t_eth_data_descr;
+typedef struct ETH_DESC         t_eth;
 
 
 
