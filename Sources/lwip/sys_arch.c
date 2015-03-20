@@ -8,8 +8,8 @@
 */
 /*=============================================================================================================*/
 
-#include "arch/sys_arch.h"
-#include "arch/cc.h"
+#include "lwip/include/arch/sys_arch.h"
+#include "lwip/include/arch/cc.h"
 #include "common_lib/memory.h"
 
 #include "lwip/debug.h"
@@ -403,4 +403,13 @@ void sys_arch_unprotect(sys_prot_t pval)
     
     cpu_sr = pval;
     OS_EXIT_CRITICAL();
+}
+
+
+/*=============================================================================================================*/
+/*!  \brief возвращает время в миллисекундах.   */
+/*=============================================================================================================*/
+u32_t sys_now(void)
+{
+    return ticks_to_ms(OSTimeGet());
 }

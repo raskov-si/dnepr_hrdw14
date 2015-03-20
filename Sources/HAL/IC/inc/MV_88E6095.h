@@ -128,6 +128,10 @@
 #define MV88E6095_PORT_LEARNING	0x2
 #define MV88E6095_PORT_FORWARDING	0x3
 
+#define MV88E6095_CASCADE_PORT(x) ((x & 0x0F) << 12)
+#define MV88E6095_DEV_NUM(x)	(x & 0x0F)
+
+
 //! \brief Инициализазирует интерфейс SMI
 //! \param _smi_iface указатель на структуру с указателями на функции SMI
 void MV_88E6095_InitPeripheralInterface( SMI_PeriphInterfaceTypedef* _smi_iface );

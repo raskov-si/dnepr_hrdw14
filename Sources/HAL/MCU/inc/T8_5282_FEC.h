@@ -76,7 +76,7 @@
 /*! \brief дескриптор буфера FEC'а  */
 #pragma pack(push)
 #pragma pack(16)
-typedef struct BufferDescriptor 
+typedef struct _BufferDescriptor 
 {
    volatile u16  contr_status_flags;     /*!< control and status */
    volatile u16  data_length;      /*!< transfer length    */
@@ -90,9 +90,10 @@ typedef struct _FEC_CONFIG
     u32         fec_mii_speed;                  /*!< делитель частоты для MII, считается через FEC_MII_CLOCK_DEV_CALC               */
     u8          fec_mode;                       /*!< режим FEC, FEC_MODE_7WIRE, FEC_MODE_MII, FEC_MODE_LOOPBACK                     */
     u8          mac_addr[6];		        /*!< мак-адрес                                                                      */
-    u8          ignore_mac_adress_when_recv;    /*!< Promiscuous mode. Все ethernet фреймы принимаются даже при несовпадении адреса */
-    u8          rcv_broadcast_clock;	        /*!< RX должен реагировать на broadcast пакеты или нет                              */
-    u16         fec_max_eth_pocket;
+    _BOOL       ignore_mac_adress_when_recv;    /*!< Promiscuous mode. Все ethernet фреймы принимаются даже при несовпадении адреса */
+    _BOOL       rcv_broadcast;	                /*!< RX должен реагировать на broadcast пакеты или нет                              */
+    u16         max_eth_frame;
+    u16         max_rcv_buf;
     t_txrx_desc *rxbd_ring;
     u8          rxbd_ring_len;
     t_txrx_desc *txbd_ring;
@@ -102,30 +103,32 @@ typedef struct _FEC_CONFIG
 /*=============================================================================================================*/
       
 //Fucntion Protoypes
-void t8_m5282_fec_init(t_fec_config *input);
+void m5282_fec_init     (t_fec_config *input);
+void m5282_fec_enable   (t_fec_config *input);
+void m5282_fec_disable  (t_fec_config *input);
+
 
 u32  t8_m5282_fec_mdio_write    (u32, u32, u16);
 u32  t8_m5282_fec_mdio_read     (u32, u32, u16*);
 
 /*=============================================================================================================*/
 
-static inline void t8_m5282_fec_start_rx (void)
+static inline void m5282_fec_start_rx (void)
 {
     MCF_FEC_RDAR = MCF_FEC_RDAR_R_DES_ACTIVE ;  
 }
 
-
-static inline void t8_m5282_fec_start_tx (void)
+static inline void m5282_fec_start_tx (void)
 {
     MCF_FEC_TDAR |= MCF_FEC_TDAR_X_DES_ACTIVE ;
 }
 
-static inline void t8_m5282_fec_set_empty_status ( volatile u16 *status )
+static inline void m5282_fec_set_empty_status ( volatile u16 *status )
 {
    *status &= (~MCF_FEC_RxBD_E);
 }
 
-static inline void t8_m5282_fec_reset_rx_isr (void)
+static inline void m5282_fec_reset_rx_isr (void)
 {
     MCF_FEC_EIR |= MCF_FEC_EIR_RXF ;
 }

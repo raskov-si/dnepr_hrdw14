@@ -56,7 +56,7 @@ static u32 fec_multicast_address_set
     \sa  
 */
 /*=============================================================================================================*/
-void t8_m5282_fec_init
+void m5282_fec_init
 (
     t_fec_config    *input
 )
@@ -75,14 +75,8 @@ void t8_m5282_fec_init
  *   MSCR (optional)
  *   Clear MIB_RAM  
  */
-  
-    MCF_FEC_ECR |= MCF_FEC_ECR_RESET;                                   /* Сброс FEC */
-    while( MCF_FEC_ECR & MCF_FEC_ECR_RESET ) {
-        continue;
-    };
-    
-    MCF_FEC_EIMR = MCF_FEC_EIMR_UNMASK_ALL;                             /*  чистим все флаги прерываний */    
-    MCF_FEC_EIR  = MCF_FEC_EIR_CLEAR_ALL;
+      
+    m5282_fec_disable(input);
 
     MCF_FEC_GAUR = 0;                                                   /* чистим хэши для распознавания адресов при групповом и индивидуальном приеме */
     MCF_FEC_GALR = 0;
@@ -101,45 +95,113 @@ void t8_m5282_fec_init
         | (input->mac_addr[4] <<24)
         | (input->mac_addr[5] <<16)
         | MCF_FEC_PAUR_TYPE(0x00008808)));
+   
     
-    input->fec_max_eth_pocket = ( input->fec_max_eth_pocket > 0 ) ? input->fec_max_eth_pocket : 1518;   /* инициализация приемника */
-    MCF_FEC_RCR =    MCF_FEC_RCR_MAX_FL(input->fec_max_eth_pocket) 
+    
+    input->max_eth_frame = ( input->max_eth_frame > 0 ) ? input->max_eth_frame : 1518;   /* инициализация приемника */
+    MCF_FEC_RCR =    MCF_FEC_RCR_MAX_FL(input->max_eth_frame)                               /*  (netif->mtu << 16) */
                   |  MCF_FEC_RCR_FCE 
                   | ((input->fec_mode == FEC_MODE_7WIRE) ? FEC_MODE_7WIRE : MCF_FEC_RCR_MII_MODE )
                   | (input->ignore_mac_adress_when_recv > 0 ? MCF_FEC_RCR_PROM : 0)
-                  | (input->rcv_broadcast_clock > 0 ? 0: MCF_FEC_RCR_BC_REJ);
+                  | (input->rcv_broadcast > 0 ? 0 : MCF_FEC_RCR_BC_REJ);
+//                  | MCF_FEC_RCR_DRT;           // half duplex
                   
     if (input->fec_mode == FEC_MODE_LOOPBACK) {
         MCF_FEC_RCR |= MCF_FEC_RCR_LOOP;
         MCF_FEC_RCR &= ~MCF_FEC_RCR_DRT;
     }
 
-    MCF_FEC_TCR = MCF_FEC_TCR_FDEN ;                                                  /* инициализация передатчика */
-    
-        
-    input->rxbd_ring[ input->rxbd_ring_len-1 ].contr_status_flags |= MCF_FEC_RxBD_W ;   /* инициализация приемного буфера */   
-    MCF_FEC_ERDSR = (u32)input->rxbd_ring;
-    MCF_FEC_EMRBR = input->rxbd_ring_len;
+    /* Only operate in half-duplex, no heart beat control */
+//    MCF_FEC_TCR = 0;
+            
+    MCF_FEC_TCR = MCF_FEC_TCR_FDEN ;                             /* инициализация передатчика */
     
 
-    input->txbd_ring[ input->txbd_ring_len-1 ].contr_status_flags |= MCF_FEC_TxBD_W ;  /* инициализация передающего буфера */  
-    MCF_FEC_ETDSR = (uint32_t)input->txbd_ring;
     
-      
-    MCF_FEC_ECR |= MCF_FEC_ECR_ETHER_EN ;                                            /* включаем приемник с передатчиком */
+    MCF_FEC_EMRBR = input->max_rcv_buf;                          /* Program receive buffer size */
 
+                                                        /* Point to the start of the circular Rx buffer descriptor queue */
+//    MCF_FEC_ERDSR = ((u32) input->rxbd_ring);
+
+                                                        /* Point to the start of the circular Tx buffer descriptor queue */
+//    MCF_FEC_ETDSR = ((u32) input->txbd_ring);
+    
+    
+    input->txbd_ring[ input->txbd_ring_len-1 ].contr_status_flags |= MCF_FEC_TxBD_W ;  
+    input->rxbd_ring[ input->rxbd_ring_len-1 ].contr_status_flags |= MCF_FEC_RxBD_W ;  
+    
     fec_multicast_address_set(0x0180, 0xC2000000);
-    
+        
     // disable MIB
     MCF_FEC_MIBC |= MCF_FEC_MIBC_MIB_DISABLE ;
     // чистим память для MIB
     t8_memzero( (u8*)p_mib, sizeof(fec_mib_t) ) ;
     // включаем MIB
     MCF_FEC_MIBC &= ~MCF_FEC_MIBC_MIB_DISABLE ;
+    
+    m5282_fec_enable(input);
+  
 }
 
 
 
+/*=============================================================================================================*/
+/*! \brief   
+    \return 
+    \retval 
+    \sa  
+*/
+/*=============================================================================================================*/
+void m5282_fec_disable  (t_fec_config *input) 
+{
+  
+    input = input;
+  
+    MCF_FEC_ECR |= MCF_FEC_ECR_RESET;                                   /* Сброс FEC */
+    while( MCF_FEC_ECR & MCF_FEC_ECR_RESET ) {
+        continue;
+    };
+    
+    /* Set the Graceful Transmit Stop bit */
+    MCF_FEC_TCR = (MCF_FEC_TCR | MCF_FEC_TCR_GTS);
+
+    /* Wait for the current transmission to complete */
+    while ( !(MCF_FEC_EIR & MCF_FEC_EIR_GRA) ) {
+        continue;
+    };
+    
+    /* Disable the FEC */
+    MCF_FEC_ECR = 0;
+
+    MCF_FEC_EIMR = MCF_FEC_EIMR_UNMASK_ALL;                             /*  чистим все флаги прерываний */    
+    MCF_FEC_EIR  = MCF_FEC_EIR_CLEAR_ALL;
+
+    /* Clear the GTS bit so frames can be tranmitted when restarted */
+    MCF_FEC_TCR = (MCF_FEC_TCR & ~MCF_FEC_TCR_GTS);  
+}
+
+
+/*=============================================================================================================*/
+/*! \brief   
+    \return 
+    \retval 
+    \sa  
+*/
+/*=============================================================================================================*/
+void m5282_fec_enable   (t_fec_config *input)
+{
+    input = input;
+
+    MCF_FEC_ECR |= MCF_FEC_ECR_ETHER_EN ;                                            /* включаем приемник с передатчиком */
+
+    /* Allow interrupts by setting IMR register */
+    MCF_FEC_EIMR = MCF_FEC_EIMR_RXF | MCF_FEC_EIMR_TXF;
+
+    /* Indicate that there have been empty receive buffers produced */
+//    MCF_FEC_RDAR = 1;          
+}
+
+  
 
 /********************************************************************/
 /*

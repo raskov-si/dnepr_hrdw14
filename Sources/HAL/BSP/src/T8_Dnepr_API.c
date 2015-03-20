@@ -76,7 +76,7 @@ void DNEPR_InitPeripherials()
 //        MV_88E6095_InitPeripheralInterface( &tSMIPeriphInterface ) ;
         MV_88E6095_InitPeripheralInterface( dnepr_smi_get_driver_descriptor() ) ;
 
-	Dnepr_Ethernet_Init( switch_mac_addr_default ) ;
+//	Dnepr_Ethernet_Init( switch_mac_addr_default ) ;
 
 	/////////////////////////////////////////////////////////////////////////
 	// SPI

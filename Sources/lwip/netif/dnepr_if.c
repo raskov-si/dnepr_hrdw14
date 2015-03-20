@@ -4,16 +4,22 @@
 *    \details   
 */
 /*=============================================================================================================*/
+#include <string.h>
 
+#include "lwip/debug.h"
+#include "lwip/sys.h"
+#include "lwip/opt.h"
 #include "lwip/def.h"
 #include "lwip/mem.h"
 #include "lwip/pbuf.h"
 #include "lwip/stats.h"
 #include "lwip/snmp.h"
 #include "lwip/ethip6.h"
+#include "lwip/debug.h"
 #include "netif/etharp.h"
 #include "netif/ppp/pppoe.h"
-#include "lwip\debug.h"
+#include "lwip/include/arch/sys_arch.h"
+#include "lwip/include/lwip/sys.h"
 
 #include "support_common.h"
 #include "common_lib/memory.h"
@@ -29,6 +35,11 @@
 #define MTU_FEC  (512)
 
 
+#define INC_RX_BD_INDEX(idx) { if (++idx >= ETHERNET_RX_BD_NUMBER) idx = 0;     }
+#define INC_TX_BD_INDEX(idx) { if (++idx >= ETHERNET_TX_BD_NUMBER) idx = 0;     }
+#define DEC_TX_BD_INDEX(idx) { if (idx-- == 0) idx = ETHERNET_TX_BD_NUMBER-1;   }
+
+
 /*=============================================================================================================*/
 /**
  * Helper struct to hold private data used to operate your ethernet interface.
@@ -36,25 +47,45 @@
  * as it is already kept in the struct netif.
  * But this is only an example, anyway...
  */
+#pragma pack(push)
+#pragma pack(8)
 struct ethernetif {
   struct eth_addr *ethaddr;
   /* Add whatever per-interface state that is needed here. */
-  u16 portnum ;
-  u16 vlan ;
+  t_txrx_desc     rxbd_a[ETHERNET_RX_BD_NUMBER];      // Rx descriptor ring. Must be aligned to double-word
+  t_txrx_desc     txbd_a[ETHERNET_TX_BD_NUMBER];      // Tx descriptor ring. Must be aligned to double-word
+  struct pbuf     *rx_pbuf_a[ETHERNET_RX_BD_NUMBER];  // Array of pbufs corresponding to payloads in rx desc ring.
+  struct pbuf     *tx_pbuf_a[ETHERNET_TX_BD_NUMBER];  // Array of pbufs corresponding to payloads in tx desc ring.
+  u32             rx_remove;                          // Index that driver will remove next rx frame from.
+  u32             rx_insert;                          // Index that driver will insert next empty rx buffer.
+  u32             tx_insert;                          // Index that driver will insert next tx frame to.
+  u32             tx_remove;                          // Index that driver will clean up next tx buffer.
+  u32             tx_free;                            // Number of free transmit descriptors.
+  u32             rx_buf_len;                         // number of bytes in a rx buffer (that we can use).   
 };
+#pragma pack(pop)
 
+/*=============================================================================================================*/
+
+typedef  struct ethernetif  t_dnepr_if;
 
 /*=============================================================================================================*/
 
 
-static void low_level_init(struct netif *netif);
-err_t       dnepr_eth0_if_link_output(struct netif *netif, struct pbuf *p); 
-err_t       dnepr_eth0_if_output(struct netif *netif, struct pbuf *p, ip_addr_t *ipaddr); 
+static void     low_level_init(struct netif *netif);
+static err_t    low_level_output(struct netif *netif, struct pbuf *p); 
+err_t           dnepr_if_output(struct netif *netif, struct pbuf *p, ip_addr_t *ipaddr);
 
+extern  sys_prot_t  sys_arch_protect(void);
+extern  void        sys_arch_unprotect(sys_prot_t pval);
 
 /*=============================================================================================================*/
 
-extern s8 val_CMPhyAddr[];
+t_dnepr_if      s_dnepr_if;
+
+extern s8       val_CMPhyAddr[];
+s8              val_CMMAC[19] = "00:01:02:03:04:05";
+
 
 /*=============================================================================================================*/
 
@@ -74,18 +105,14 @@ extern s8 val_CMPhyAddr[];
  *  \sa netif_add, low_level_init
  */
 /*=============================================================================================================*/
-err_t cb_dnepr_eth0_if_init(struct netif *netif)
+err_t dnepr_if_init(struct netif *netif)
 {
-    struct ethernetif     *ethernetif;
 
     LWIP_PLATFORM_ASSERT( netif != NULL );
+        
     
-/* инициализируем netif */       
-    ethernetif = mem_malloc(sizeof(struct ethernetif));
-    if (ethernetif == NULL) {
-            return (s8)ERR_MEM;
-    } 
-    netif->state = ethernetif;                               /* указатель на пользовательскую структуру отображающую состояние */
+    netif->state = &s_dnepr_if;                               /* указатель на пользовательскую структуру отображающую состояние */
+    
 #if LWIP_NETIF_STATUS_CALLBACK
 //  netif->status_callback = ;
 #endif /* LWIP_NETIF_STATUS_CALLBACK */
@@ -97,23 +124,29 @@ err_t cb_dnepr_eth0_if_init(struct netif *netif)
     netif->hostname = "lwip";                                /* Initialize interface hostname */
 #endif /* LWIP_NETIF_HOSTNAME */
     
-    netif->hwaddr_len  = 6;                                  /* The number of bytes in the link address (e.g., MAC address for Ethernet) */                  
-     /*! \todo поменять на мак-адрес контроллера */
-    dnepr_ethernet_str_2_mac(netif->hwaddr, val_CMPhyAddr);  /* The hardware address itself. */
-
-    netif->mtu = MTU_FEC - 18;            //32               /* The MTU (maximum transmission unit) for the interface. */
+        
+    netif->hwaddr_len = 6;                                  /* set MAC hardware address length */
     
-    netif->flags = NETIF_FLAG_UP | NETIF_FLAG_LINK_UP | NETIF_FLAG_ETHERNET | NETIF_FLAG_BROADCAST;      /* пока без DHCP */
-   
+    dnepr_ethernet_str_2_mac( netif->hwaddr, val_CMMAC );     /* set MAC hardware address */
+
+    /* maximum transfer unit */
+//    netif->mtu = MTU_FEC - 18; (512-18)
+//    netif->mtu = FEC_MTU;  (1518)
+    netif->mtu = MAX_ETH_BUFF_SIZE - 18;  //(1518)
+      
+    netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHERNET | NETIF_FLAG_UP;  /* broadcast capability */
+       
    /* We directly use etharp_output() here to save a function call.
    * You can instead declare your own function an call etharp_output()
    * from it if you have to do some checks before sending (e.g. if link
    * is available...) */
-//  netif->output = etharp_output;
+    
+  netif->output = etharp_output;
 #if LWIP_IPV6
 //  netif->output_ip6 = ethip6_output;
 #endif /* LWIP_IPV6 */
-//  netif->linkoutput = low_level_output;
+  
+  netif->linkoutput = low_level_output;
           
 #if LWIP_NETIF_LINK_CALLBACK
 //  /** This function is called when the netif link is set to up or down
@@ -128,312 +161,408 @@ err_t cb_dnepr_eth0_if_init(struct netif *netif)
  */
 //    NETIF_INIT_SNMP(netif, snmp_ifType_ethernet_csmacd, LINK_SPEED_OF_YOUR_NETIF_IN_BPS);
       
-/* инициализируем "железо" */
-    low_level_init(netif); 
+    
+    low_level_init(netif);                  /* инициализируем "железо" и модуль работы с дма */
   
     return (s8)ERR_OK;   
 }
 
 
+/*=============================================================================================================*/
+/*! \brief 
+
+    \return 
+    \retval 
+    \sa 
+*/
+/*=============================================================================================================*/
+static void fill_rx_ring(t_dnepr_if *dnepr_if)
+{
+    struct pbuf         *p;
+    t_txrx_desc         *p_rxbd;
+    int                 i               = dnepr_if->rx_insert;
+    void                *new_payload;
+    u32_t               u_p_pay;
+    
+    /* Try and fill as many receive buffers as we can */
+    while ( dnepr_if->rx_pbuf_a[i] == 0 )
+    {
+        p = pbuf_alloc(PBUF_RAW, (u16_t) dnepr_if->rx_buf_len, PBUF_POOL);
+
+        if (p == 0) {           
+            return;    /* No pbufs, so can't refill ring */
+        }
+
+        /* Align payload start to be divisible by 16 as required by HW */
+        u_p_pay = (u32_t) p->payload;
+        new_payload = p->payload = (void *) (((u_p_pay + 15) / 16) * 16);
+        
+        dnepr_if->rx_pbuf_a[i] = p;
+        p_rxbd = &dnepr_if->rxbd_a[i];
+        p_rxbd->starting_adress = (u8_t *) new_payload;
+        p_rxbd->contr_status_flags = (p_rxbd->contr_status_flags & MCF_FEC_RxBD_W) | MCF_FEC_RxBD_E;
+        INC_RX_BD_INDEX(dnepr_if->rx_insert);
+        i = dnepr_if->rx_insert;
+    }
+}
+
 
 /*=============================================================================================================*/
-/*!  \brief Функция обратного вызова инициализирующая интерфейс ethernet для lwIP
-     \sa cb_dnepr_eth0_if_init
+/*!  \brief 
+     \sa 
+*/
+/*=============================================================================================================*/
+static void dnepr_if_buf_clear
+(
+    t_dnepr_if  *dnepr_if
+)
+{
+    int i;
+  
+    for (i = 0; i < ETHERNET_RX_BD_NUMBER; i++) {
+        if (dnepr_if->rx_pbuf_a[i])   {
+              pbuf_free(dnepr_if->rx_pbuf_a[i]);
+              dnepr_if->rx_pbuf_a[i] = 0;
+              dnepr_if->rxbd_a->starting_adress = 0;
+        }
+    }
+    
+        for (i = 0; i < ETHERNET_TX_BD_NUMBER; i++) {
+            if (dnepr_if->tx_pbuf_a[i])   {
+                pbuf_free(dnepr_if->tx_pbuf_a[i]);
+                dnepr_if->tx_pbuf_a[i] = 0;
+                dnepr_if->txbd_a->starting_adress = 0;
+            }
+        }
+  
+}
+/*=============================================================================================================*/
+/*!  \brief 
+     \sa 
+*/
+/*=============================================================================================================*/
+
+static void dnepr_if_buf_init
+(
+    t_dnepr_if  *dnepr_if
+)
+{
+    int i;
+
+    /* Initialize empty tx descriptor ring */
+    for(i = 0; i < ETHERNET_TX_BD_NUMBER-1; i++)    {
+        dnepr_if->txbd_a[i].contr_status_flags = 0;
+    }
+
+    /* Set wrap bit for last descriptor */
+    dnepr_if->txbd_a[i].contr_status_flags = MCF_FEC_TxBD_W;
+        
+
+    /* initialize tx indexes */
+    dnepr_if->tx_remove = dnepr_if->tx_insert = 0;
+    dnepr_if->tx_free = ETHERNET_TX_BD_NUMBER;
+
+        /* Initialize empty rx descriptor ring */
+    for (i = 0; i < ETHERNET_RX_BD_NUMBER-1; i++) {
+        dnepr_if->rxbd_a[i].contr_status_flags = 0;
+    }
+
+    /* Set wrap bit for last descriptor */
+    dnepr_if->rxbd_a[i].contr_status_flags = MCF_FEC_RxBD_W;
+
+    /* Initialize rx indexes */
+    dnepr_if->rx_remove = dnepr_if->rx_insert = 0;
+
+    /* Fill receive descriptor ring */
+    fill_rx_ring(dnepr_if);
+}
+
+
+
+
+/*=============================================================================================================*/
+/*!  \brief Функция инициализирующая интерфейс ethernet для lwIP
+     \sa dnepr_if_init
 */
 /*=============================================================================================================*/
 static void low_level_init(struct netif *netif)
 {
+    t_dnepr_if          *dnepr_if;
+    struct pbuf         *p;
+    int                 i;
+
+#ifdef MCF5282_DEBUG
+    printf("low_level_init\n");
+#endif
+    
+    dnepr_if = netif->state;
+    
+   /* Set Receive Buffer Size. We subtract 16 because the start of the receive
+    *  buffer MUST be divisible by 16, so depending on where the payload really
+    *  starts in the pbuf, we might be increasing the start point by up to 15 bytes.
+    *  See the alignment code in fill_rx_ring() */
+    /* There might be an offset to the payload address and we should subtract
+     * that offset */
+    p = pbuf_alloc(PBUF_RAW, PBUF_POOL_BUFSIZE, PBUF_POOL);
+    i = 0;
+    if (p)
+    {
+        struct pbuf *q = p;
+        
+        while ((q = q->next) != 0) {
+            i += q->len;
+        }
+
+        dnepr_if->rx_buf_len = PBUF_POOL_BUFSIZE-16-i;
+
+        pbuf_free(p);
+    }
+     
+    dnepr_if_buf_clear(dnepr_if);
+    
+    (void)dnepr_ethernet_lwip_open(netif);    
     (void)dnepr_ethernet_fec_init(netif->hwaddr);   
-    (void)dnepr_ethernet_phy_init();  
+    (void)dnepr_ethernet_phy_init();
+    
+    dnepr_if_buf_init(dnepr_if);
 }
 
 
 
 /*-----------------------------------------Передача---------------------------------------------------*/
 
-err_t dnepr_eth0_if_link_output(struct netif *netif, struct pbuf *p); // Called when a raw link packet is ready to be transmitted. This function should not add any more headers. You must set netif->linkoutput to the address of this function.
-err_t dnepr_eth0_if_output(struct netif *netif, struct pbuf *p, ip_addr_t *ipaddr); //Called by ip_output when a packet is ready for transmission. Any link headers will be added here. This function should call the myif_link_output function when the packet is ready. You must set netif->output to the address of this function. If your driver supports ARP, you can simply set netif->output to etharp_output.
-
-/*-----------------------------------------Прием-------------------------------------------------------*/
-
-/**
-    * Collect frame by chaining the corresponding pbufs
-    *
-    * @param first Index of first buffer descriptor to collect
-    * @param last Index of last buffer descriptor to collect
-    * @param lastlen Length of last buffer in chain
+/*=============================================================================================================*/
+/*!  \brief
+     \detail  Called when a raw link packet is ready to be transmitted. 
+     \detail  This function should not add any more headers. 
+     \detail  You must set netif->linkoutput to the address of this function.
+     \detail   Should do the actual transmission of the packet. The packet is
+     \detail  contained in the pbuf that is passed to the function. This pbuf might be chained.
+     \detail  canonical name is low_level_output()
+     \sa 
 */
+/*=============================================================================================================*/
+static err_t low_level_output(struct netif *netif, struct pbuf *p)
+{
+    t_dnepr_if      *dnepr_if = netif->state;
+    struct pbuf     *q, *r;
+    char            *ptr;
+    char            *pStart;
+    unsigned int    len;
+        
+#if SYS_LIGHTWEIGHT_PROT == 1
+    u32_t           old_level;
+#endif
+
+    
+#if SYS_LIGHTWEIGHT_PROT == 1
+    /* Interrupts are disabled through this whole thing to support  multi-threading
+     * transmit calls. Also this function might be called from an ISR. */
+    old_level = sys_arch_protect();
+#endif
+
+    // make sure a descriptor free
+    if (dnepr_if->tx_free)    {
+        r = pbuf_alloc(PBUF_RAW, p->tot_len + 16, PBUF_RAM);            
+        // alloc mem for buffer
+
+        if (r != NULL) {
+            ptr = pStart = (void *) ((((u32)r->payload + 15) / 16) * 16);         // get start address aligned on 16 byte boundary
+
+            for(q = p, len = 0; q != NULL; q = q->next) {
+                memcpy(ptr + len, q->payload, q->len);
+                len += q->len;
+            }
+
+#if defined(MCF5282_DEBUG)
+            printf("low_level_output: mcf5282->tx_insert: %d\n", mcf5282->tx_insert);
+#endif
+
+                                                                                            /* put buffer on descriptor ring */
+            dnepr_if->tx_free--;                                     
+                                                                                            // dec free descriptors
+            dnepr_if->tx_pbuf_a[dnepr_if->tx_insert] = r;                         
+                                                                                            // save pointer to pbuf
+            dnepr_if->txbd_a[dnepr_if->tx_insert].starting_adress = (volatile u8*)pStart;                 
+                                                                                            // set start address of data
+            dnepr_if->txbd_a[dnepr_if->tx_insert].data_length = len;                 
+                                                                                            // set len of data
+
+#if defined(MCF5282_DEBUG)
+                printf("low_level_output: pbuf: 0x%08X, buf: 0x%08X, data_len: %d\n", dnepr_if->tx_pbuf_a[dnepr_if->tx_insert], 
+                dnepr_if->txbd_a[mcf5282->tx_insert].starting_adress, 
+                dnepr_if->txbd_a[mcf5282->tx_insert].data_len);
+                printf("p_buf:\n");
+                printf("\tdest mac: ");
+                for(len = 0; len < 6; len++) {
+                        printf("%02X%c", ((BYTE*)dnepr_if->txbd_a[dnepr_if->tx_insert].p_buf)[len], len == 5 ? '\n' : ':');
+                }
+                printf("\tsrc mac: ");
+                for(; len < 12; len++) {
+                    printf("%02X%c", ((BYTE*)dnepr_if->txbd_a[dnepr_if->tx_insert].p_buf)[len], len == 11 ? '\n' : ':');
+                }
+
+                for(; len < mcf5282->txbd_a[dnepr_if->tx_insert].data_len; len++) {
+                    printf("%02X ", ((BYTE*)dnepr_if->txbd_a[dnepr_if->tx_insert].p_buf)[len]);
+                }
+                printf("\n");
+#endif
+
+                            // set flags
+           dnepr_if->txbd_a[dnepr_if->tx_insert].contr_status_flags = (u16_t)(MCF_FEC_TxBD_R 
+                                                                         | (dnepr_if->txbd_a[dnepr_if->tx_insert].contr_status_flags & MCF_FEC_TxBD_W)
+                                                                         | (MCF_FEC_TxBD_L | MCF_FEC_TxBD_TC));
+
+           INC_TX_BD_INDEX(dnepr_if->tx_insert);
+
+#ifdef LINK_STATS
+                lwip_stats.link.xmit++;
+#endif
+                        /* Indicate that there has been a transmit buffer produced */
+           MCF_FEC_TDAR = 1;
+        
+#if SYS_LIGHTWEIGHT_PROT == 1
+          sys_arch_unprotect(old_level);
+#endif
+          return ERR_OK;    
+       } /*if (r != NULL) */
+    } /* if (dnepr_if->tx_free) */
+
+        /* Drop the frame, we have no place to put it */
+#ifdef LINK_STATS
+            lwip_stats.link.memerr++;
+#endif
+#if SYS_LIGHTWEIGHT_PROT == 1
+    sys_arch_unprotect(old_level);
+#endif
+
+   return (u8_t)ERR_MEM;
+}
 
 
-//static struct pbuf* collect_frame
-//(
-//    u8_t first, 
-//    u8_t last, 
-//    u16_t lastlen
-//)
-//{
-//    u8_t i, prev;
-//    struct pbuf *head, *tail;
-//    
-//    tail = PAYLOAD2PBUF(rxbd_ring[last].ptr);
-//    /* Trim last buffer, so that complete frame length is correct */
-//    pbuf_realloc(tail, lastlen);
-//    /* Walk the buffers from last to first */
-//    for (i = last; i != first; i = prev) {
-//        prev = (u8_t)((i + RX_RING_SIZE - 1) % RX_RING_SIZE);
-//        head = PAYLOAD2PBUF(rxbd_ring[prev].ptr);
-//        /* Grow the chain */
-//        pbuf_cat(head, tail);
-//        tail = head;
-//    }
-//    
-//    /* Keep index in sync with Rx DMA */
-//    rxbd_index = (last + 1) % RX_RING_SIZE;
-//    return tail;
-//} 
-
-
-/**
-    * Zero-copy reception. Collect DMA'ed data and return frame as pbuf chain.
-    *
-    * @return a pbuf filled with the received packet (including MAC header),
-    *         NULL if no received frames
+/*=============================================================================================================*/
+/*!  \brief
+     \detail  Called by ip_output when a packet is ready for transmission.  Any link headers will be added here.
+     \detail   This function should call the myif_link_output function when the packet is ready.
+     \detail  You must set netif->output to the address of this function.
+     \detail  If your driver supports ARP, you can simply set netif->output to etharp_output.      
+     \sa 
 */
-//static struct pbuf* 
-//low_level_input(void)
-//{   
-//  u8_t  i, n;
-//  u16_t len;
-//  
-//  /* No initialized Rx buffer descriptors? Then quit. */
-//  
-//  if (rxbd_inuse == 0)
-//        return NULL;
-//  
-//  i = rxbd_index;
-//  len = 0;
-//  n = 0;
-//  
-//  /* Scan the Rx buffer rescriptor ring */
-//    for (;;) {
-//        if ((rxbd_ring[i].ctl & RXBD_RO1) != 0)
-//          
-//          /* Descriptor uninitialized due to buffer allocation failure, quit */
-//          return NULL;
-//        
-//        if ((rxbd_ring[i].ctl & RXBD_E) != 0)
-//          /* Buffer empty, quit */
-//          return NULL;
-//        
-//        /* Buffer contains frame data, continue */
-//        n++;
-//        if ((rxbd_ring[i].ctl & RXBD_L) != 0) {
-//                /* Last buffer in frame, finalize */
-//            break;
-//        }
-//        
-//        len += rxbd_ring[i].len;
-//        i = (u8_t)((i + 1) % RX_RING_SIZE);
-//        /* Move on to next buffer in frame */
-//    }
-//    
-//    /* Mark processed descriptors as uninitialized */
-//    rxbd_inuse -= n;
-//    
-//    if ((rxbd_ring[i].ctl & (RXBD_LG|RXBD_NO|RXBD_CR|RXBD_OV|RXBD_TR)) != 0) {
-//        /* Reception error */
-//        discard_frame(rxbd_index, i);
-//        return NULL;
-//    }
-//    
-//    return collect_frame(rxbd_index, i, (u16_t)(rxbd_ring[i].len - len));
-//}
-
-
-
+/*=============================================================================================================*/
+err_t dnepr_if_output(struct netif *netif, struct pbuf *p, ip_addr_t *ipaddr)
+{
+        /* resolve hardware address, then send (or queue) packet */
+        return etharp_output(netif, p, ipaddr);
+}
 
 
 
 /*=============================================================================================================*/
+/*! \brief 
 
-
-
-
-
-
-
-
-
-
-/* Forward declarations. */
-static void  ethernetif_input(struct netif *netif);
-
-
-/**
- * This function should do the actual transmission of the packet. The packet is
- * contained in the pbuf that is passed to the function. This pbuf
- * might be chained.
- *
- * @param netif the lwip network interface structure for this ethernetif
- * @param p the MAC packet to send (e.g. IP packet including MAC addresses and type)
- * @return ERR_OK if the packet could be sent
- *         an err_t value if the packet couldn't be sent
- *
- * @note Returning ERR_MEM here if a DMA queue of your MAC is full can lead to
- *       strange results. You might consider waiting for space in the DMA queue
- *       to become availale since the stack doesn't retry to send a packet
- *       dropped because of memory failure (except for the TCP timers).
- */
-
-// Массив с сообщениями для посылки в очередь, из которой прерывание фрейма забирает эти
-// сообщения и назначает массивы дескрипторам.
-static size_t __tx_packet_mess_ind = 0 ;
-#define TX_PACKET_MESS_LEN  32
-//debug
-//static Dnepr_Ethertnet_TX_Frame_t __tx_packet_mess[ TX_PACKET_MESS_LEN ] ;
-
-static size_t __tx_hdr_i ;
-#define TX_HDR_NUM  16
-#define TX_HDR_LEN  (6+6+sizeof(FROM_CPU_TAG)) // длина заголовка: 2 мак-адреса и FROM_CPU_TAG
-#pragma data_alignment=16
-_Pragma("location=\"packets_sram\"")
-//debug
-//__no_init static u8 __tx_hdr_array[TX_HDR_NUM][TX_HDR_LEN] ;
-
-static err_t
-low_level_output(struct netif *netif, struct pbuf *p)
+    \return 
+    \retval 
+    \sa 
+*/
+/*=============================================================================================================*/
+void dnepr_if_tx_cleanup(void)
 {
-  struct ethernetif *ethernetif = netif->state;
-  struct pbuf *q;
+    struct pbuf     *p;
+    unsigned int    tx_remove_sof;
+    unsigned int    tx_remove_eof;
+    unsigned int    i;
+    u16_t           flags;
+    t_dnepr_if      *dnepr_if = &s_dnepr_if;
+    
 
-//debug
-//  FROM_CPU_TAG from_cpu_tag ;
-  size_t hdr_len = 0 ;
-
-  //initiate transfer();
-  
-#if ETH_PAD_SIZE
-  pbuf_header(p, -ETH_PAD_SIZE); /* drop the padding word */
+#if SYS_LIGHTWEIGHT_PROT == 1
+    sys_prot_t       old_level;
 #endif
 
+    tx_remove_sof = tx_remove_eof = dnepr_if->tx_remove;
 
-  // Делаем DSA tag
-//  Dnepr_net_Fill_From_CPU_Tag( &from_cpu_tag, ethernetif->portnum );
-  // копируем в буфер
-//  t8_memcopy( &__tx_hdr_array[ __tx_hdr_i ][ hdr_len ], (u8*)p->payload, 12 );
-//  hdr_len += 12 ;
-//  Dnepr_net_Fill_From_CPU_Tag( &from_cpu_tag, 0 );
-//  t8_memcopy( &__tx_hdr_array[ __tx_hdr_i ][ hdr_len ], (u8*)&from_cpu_tag, sizeof( from_cpu_tag ) );
-//  hdr_len += 4 ;
-//
-//  fec_Transmit_2_BD( &__tx_hdr_array[ __tx_hdr_i ][ 0 ], hdr_len, (u8*)p->payload, p->len );
-
-
-  // for(q = p; q != NULL; q = q->next) {
-    /* Send the data from the pbuf to the interface, one pbuf at a
-       time. The size of the data in each pbuf is kept in the ->len
-       variable. */
-    // send data from(q->payload, q->len);
-  // }
-
-  // signal that packet should be sent();
-
-  if( ++__tx_hdr_i >= TX_HDR_NUM ){
-    __tx_hdr_i = 0 ;
-  }
-
-
-#if ETH_PAD_SIZE
-  pbuf_header(p, ETH_PAD_SIZE); /* reclaim the padding word */
+#if defined(MCF5282_DEBUG)
+        printf("mcf5282fec_tx_cleanup: tx_remove_eof: %d\n", tx_remove_eof);
 #endif
-  
-  LINK_STATS_INC(link.xmit);
 
-  return ERR_OK;
+    /* We must protect reading the flags and then reading the buffer pointer. They must
+       both be read together. */
+
+#if SYS_LIGHTWEIGHT_PROT == 1
+    old_level = sys_arch_protect();
+#endif
+
+    /* Loop, looking for completed buffers at eof */
+    while ((((flags = dnepr_if->txbd_a[tx_remove_eof].contr_status_flags) & MCF_FEC_TxBD_R) == 0) &&
+           (dnepr_if->tx_pbuf_a[tx_remove_eof] != 0))    {
+        /* See if this is last buffer in frame */
+        if ((flags & MCF_FEC_TxBD_L) != 0)  {
+            i = tx_remove_eof;
+            /* This frame is complete. Take the frame off backwards */
+            do {
+                p = dnepr_if->tx_pbuf_a[i];
+                dnepr_if->tx_pbuf_a[i] = 0;
+                dnepr_if->txbd_a[i].starting_adress = 0;
+                dnepr_if->tx_free++;
+                if (i != tx_remove_sof) {
+                    DEC_TX_BD_INDEX(i);
+                } else {
+                    break;
+                }
+            } while (TRUE);
+
+#if SYS_LIGHTWEIGHT_PROT == 1
+            sys_arch_unprotect(old_level);
+#endif
+#if defined(MCF5282_DEBUG)
+            printf("mcf5282fec_tx_cleanup: pbuf_free -> 0x%08X\n", p);
+#endif
+            pbuf_free(p);       // Will be head of chain
+
+#if SYS_LIGHTWEIGHT_PROT == 1
+            old_level = sys_arch_protect();
+#endif
+            /* Look at next descriptor */
+            INC_TX_BD_INDEX(tx_remove_eof);
+            tx_remove_sof = tx_remove_eof;
+        }
+        else
+            INC_TX_BD_INDEX(tx_remove_eof);
+    }
+    dnepr_if->tx_remove = tx_remove_sof;
+
+        //MCF5282_FEC_EIMR |= MCF5282_FEC_EIMR_TXF;             // renable interrupt
+
+#if SYS_LIGHTWEIGHT_PROT == 1
+    sys_arch_unprotect(old_level);
+#endif
 }
 
-/**
- * Should allocate a pbuf and transfer the bytes of the incoming
- * packet from the interface into the pbuf.
- *
- * @param netif the lwip network interface structure for this ethernetif
- * @return a pbuf filled with the received packet (including MAC header)
- *         NULL on memory error
- */
-static struct pbuf *
-low_level_input(struct netif *netif)
-{
-//   struct ethernetif *ethernetif = netif->state;
-//   struct pbuf *p, *q;
-//   u16_t len;
 
-//   // Obtain the size of the packet and put it into the "len"
-//   // variable. 
-//   len = ;
 
-// #if ETH_PAD_SIZE
-//   len += ETH_PAD_SIZE;  allow room for Ethernet padding 
-// #endif
+/*-----------------------------------------Прием-------------------------------------------------------*/
 
-//    // We allocate a pbuf chain of pbufs from the pool. 
-//   p = pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
-  
-//   if (p != NULL) {
-
-// #if ETH_PAD_SIZE
-//     pbuf_header(p, -ETH_PAD_SIZE); // drop the padding word 
-// #endif
-
-//      // We iterate over the pbuf chain until we have read the entire
-//      // * packet into the pbuf. 
-//     for(q = p; q != NULL; q = q->next) {
-//        // Read enough bytes to fill this pbuf in the chain. The
-//        // available data in the pbuf is given by the q->len
-//        // variable.
-//        // This does not necessarily have to be a memcpy, you can also preallocate
-//        // pbufs for a DMA-enabled MAC and after receiving truncate it to the
-//        // actually received size. In this case, ensure the tot_len member of the
-//        // pbuf is the sum of the chained pbuf len members.
-       
-//       read data into(q->payload, q->len);
-//     }
-//     acknowledge that packet has been read();
-
-// #if ETH_PAD_SIZE
-//     pbuf_header(p, ETH_PAD_SIZE); // reclaim the padding word
-// #endif
-
-//     LINK_STATS_INC(link.recv);
-//   } else {
-//     drop packet();
-//     LINK_STATS_INC(link.memerr);
-//     LINK_STATS_INC(link.drop);
-//   }
-
-//   return p;  
-  return NULL ;
-}
-
-/**
- * This function should be called when a packet is ready to be read
- * from the interface. It uses the function low_level_input() that
- * should handle the actual reception of bytes from the network
- * interface. Then the type of the received packet is determined and
- * the appropriate input function is called.
- *
- * @param netif the lwip network interface structure for this ethernetif
- */
+/*=============================================================================================================*/
+/*! \brief
+    \detail  This function should be called when a packet is ready to be read
+    \detail  from the interface. It uses the function low_level_input() that
+    \detail  should handle the actual reception of bytes from the network
+    \detail  interface. Then the type of the received packet is determined and
+    \detail  the appropriate input function is called.
+ 
+    \param netif the lwip network interface structure for this ethernetif
+    \sa 
+*/
+/*=============================================================================================================*/
 static void
-ethernetif_input(struct netif *netif)
+//ethernetif_input(struct netif *netif)
+ethernetif_input(struct pbuf  *p, struct netif *netif)
 {
-  struct ethernetif *ethernetif;
-  struct eth_hdr *ethhdr;
-  struct pbuf *p;
-
-  ethernetif = netif->state;
-
-  /* move received packet into a new pbuf */
-  p = low_level_input(netif);
+  struct eth_hdr        *ethhdr;
+//  struct pbuf           *p;
+//  /* move received packet into a new pbuf */
+//  p = low_level_input(netif);
+  
   /* no packet could be read, silently ignore this */
   if (p == NULL) return;
   /* points to packet payload, which starts with an Ethernet header */
@@ -463,4 +592,188 @@ ethernetif_input(struct netif *netif)
     break;
   }
 }
+
+
+/*=============================================================================================================*/
+/*! \brief
+    \detail  Should allocate a pbuf and transfer the bytes of the incoming
+    \detail  packet from the interface into the pbuf.
+    \param netif the lwip network interface structure for this ethernetif
+    \return a pbuf filled with the received packet (including MAC header) NULL on memory error
+    \sa 
+*/
+/*=============================================================================================================*/
+void low_level_input(struct netif *netif)
+{
+    u16_t               flags;
+    unsigned int        rx_remove_sof;
+    unsigned int        rx_remove_eof;
+    struct pbuf         *p;
+    t_dnepr_if          *dnepr_if = netif->state;    
+    
+    rx_remove_sof = rx_remove_eof = dnepr_if->rx_remove;
+
+        /* Loop, looking for filled buffers at eof */
+    while ((((flags = dnepr_if->rxbd_a[rx_remove_eof].contr_status_flags) & MCF_FEC_RxBD_E) == 0) && (dnepr_if->rx_pbuf_a[rx_remove_eof] != 0))  {
+      /* See if this is last buffer in frame */
+        if ((flags & MCF_FEC_RxBD_L) != 0)  {
+            /* This frame is ready to go. Start at first descriptor in frame. */
+            p = 0;
+            do  {
+                /* Adjust pbuf length if this is last buffer in frame */
+                if (rx_remove_sof == rx_remove_eof)  {
+                    dnepr_if->rx_pbuf_a[rx_remove_sof]->tot_len = dnepr_if->rx_pbuf_a[rx_remove_sof]->len = (u16_t)(dnepr_if->rxbd_a[rx_remove_sof].data_length - (p ? p->tot_len : 0));
+                }
+                else    {
+                    dnepr_if->rx_pbuf_a[rx_remove_sof]->len =  dnepr_if->rx_pbuf_a[rx_remove_sof]->tot_len = dnepr_if->rxbd_a[rx_remove_sof].data_length;
+                }
+                
+                /* Chain pbuf */
+                if (p == 0)
+                {
+                    p = dnepr_if->rx_pbuf_a[rx_remove_sof];       // First in chain
+                    p->tot_len = p->len;                        // Important since len might have changed
+                } else {
+                    pbuf_chain(p, dnepr_if->rx_pbuf_a[rx_remove_sof]);
+                    pbuf_free(dnepr_if->rx_pbuf_a[rx_remove_sof]);
+                }
+                
+                /* Clear pointer to mark descriptor as free */
+                dnepr_if->rx_pbuf_a[rx_remove_sof] = 0;
+                dnepr_if->rxbd_a[rx_remove_sof].starting_adress = 0;
+                
+                if (rx_remove_sof != rx_remove_eof) {
+                    INC_RX_BD_INDEX(rx_remove_sof);
+                }
+                else    {
+                    break;
+                }
+               
+            } while (TRUE);
+
+            INC_RX_BD_INDEX(rx_remove_sof);
+
+            /* Check error status of frame */
+            if (flags & (MCF_FEC_RxBD_LG |
+                         MCF_FEC_RxBD_NO |
+                         MCF_FEC_RxBD_CR |
+                         MCF_FEC_RxBD_OV))
+            {
+#ifdef LINK_STATS
+                lwip_stats.link.drop++;
+                if (flags & MCF_FEC_RxBD_LG)    {
+                    lwip_stats.link.lenerr++;                //Jumbo gram
+                } else {
+                  if (flags & (MCF_FEC_RxBD_NO | MCF_FEC_RxBD_OV)) {
+                        lwip_stats.link.err++;
+                  } else {
+                    if (flags & MCF_FEC_RxBD_CR) {
+                            lwip_stats.link.chkerr++;        // CRC errors
+                    }
+                  }
+                }
+#endif
+                /* Drop errored frame */
+                pbuf_free(p);
+            } else {
+                /* Good frame. increment stat */
+#ifdef LINK_STATS
+                lwip_stats.link.recv++;
+#endif
+                   ethernetif_input(p, netif);
+            }
+        }
+        INC_RX_BD_INDEX(rx_remove_eof);
+    }
+    dnepr_if->rx_remove = rx_remove_sof;
+
+        /* Fill up empty descriptor rings */
+    fill_rx_ring(dnepr_if);
+
+        /* Set rx interrupt bit again */
+    MCF_FEC_EIMR |= MCF_FEC_EIMR_RXF;
+
+    /* Tell fec that we have filled up her ring */
+    MCF_FEC_RDAR = 1;
+}
+
+
+
+
+
+/*=============================================================================================================*/
+
+
+
+
+//void arp_timer(void *arg)
+//{
+//        etharp_tmr();
+//        sys_timeout(ARP_TMR_INTERVAL, arp_timer, NULL);
+//}
+//
+//void dhcp_fine_timer(void *arg)
+//{
+//        dhcp_fine_tmr();
+//        sys_timeout(DHCP_FINE_TIMER_MSECS, dhcp_fine_timer, NULL);
+//}
+//
+//void dhcp_coarse_timer(void *arg)
+//{
+//        dhcp_coarse_tmr();
+//        sys_timeout(DHCP_COARSE_TIMER_SECS * 1000, dhcp_coarse_timer, NULL);
+//}
+//
+
+
+
+
+
+
+
+
+/**
+ * This function should do the actual transmission of the packet. The packet is
+ * contained in the pbuf that is passed to the function. This pbuf
+ * might be chained.
+ *
+ * @param netif the lwip network interface structure for this ethernetif
+ * @param p the MAC packet to send (e.g. IP packet including MAC addresses and type)
+ * @return ERR_OK if the packet could be sent
+ *         an err_t value if the packet couldn't be sent
+ *
+ * @note Returning ERR_MEM here if a DMA queue of your MAC is full can lead to
+ *       strange results. You might consider waiting for space in the DMA queue
+ *       to become availale since the stack doesn't retry to send a packet
+ *       dropped because of memory failure (except for the TCP timers).
+ */
+
+
+
+
+// Массив с сообщениями для посылки в очередь, из которой прерывание фрейма забирает эти
+// сообщения и назначает массивы дескрипторам.
+
+
+  // Делаем DSA tag
+//  Dnepr_net_Fill_From_CPU_Tag( &from_cpu_tag, ethernetif->portnum );
+  // копируем в буфер
+//  t8_memcopy( &__tx_hdr_array[ __tx_hdr_i ][ hdr_len ], (u8*)p->payload, 12 );
+//  hdr_len += 12 ;
+//  Dnepr_net_Fill_From_CPU_Tag( &from_cpu_tag, 0 );
+//  t8_memcopy( &__tx_hdr_array[ __tx_hdr_i ][ hdr_len ], (u8*)&from_cpu_tag, sizeof( from_cpu_tag ) );
+//  hdr_len += 4 ;
+//
+//  fec_Transmit_2_BD( &__tx_hdr_array[ __tx_hdr_i ][ 0 ], hdr_len, (u8*)p->payload, p->len );
+
+
+  // for(q = p; q != NULL; q = q->next) {
+    /* Send the data from the pbuf to the interface, one pbuf at a
+       time. The size of the data in each pbuf is kept in the ->len
+       variable. */
+    // send data from(q->payload, q->len);
+  // }
+
+  // signal that packet should be sent();
+
 
