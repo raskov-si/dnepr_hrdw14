@@ -39,9 +39,9 @@
 
 
 /** ping receive timeout - in milliseconds */
-#define PING_RCV_TIMEO 1000
+#define PING_RCV_TIMEO 2000
 /** ping delay - in milliseconds */
-#define PING_DELAY     500 
+#define PING_DELAY     1000 
 /** ping additional data size to include in the packet */
 #define PING_DATA_SIZE 32
 /** ping identifier - must fit on a u16_t */
@@ -60,7 +60,7 @@
     int         debug_netcmd_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog);
     int         debug_netlog_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog);
 #endif
-    extern  err_t cb_dnepr_eth0_if_init(struct netif *netif);
+    extern  err_t   dnepr_if_init(struct netif *netif);
     
     static void     ping_prepare_echo( struct icmp_echo_hdr *iecho, u16_t len);
     static void     ping_recv(int s);
@@ -142,7 +142,59 @@ int         debug_netlog_term(const char* in, char* out, size_t out_len_max, t_l
 
 
 
-void mcf5282_ethernet_init(void);
+
+//void mcf5282_ethernet_init(void)
+//{
+//        
+//        struct ip_addr ipaddr, netmask, gw;
+//
+//
+//#ifdef STATS
+//        stats_init();
+//#endif
+//
+//        sys_init();
+//
+//        mem_init();
+//        memp_init();
+//        pbuf_init();
+//
+//        netif_init();
+//
+//
+//
+//        printf("TCP/IP initialized.\n");
+//
+//        IP4_ADDR(&gw, 0,0,0,0);
+//        IP4_ADDR(&ipaddr, 192,168,1,6);
+//        IP4_ADDR(&netmask, 255,255,255,0);
+//
+//        netif_add(&mcf282_fec_netif, &ipaddr, &netmask, &gw, NULL, mcf5282_if_init, tcpip_input);
+//        netif_set_default(&mcf282_fec_netif);
+//        //netif_set_up(&mcf282_fec_netif);
+//
+//
+////        dhcp_start(&mcf282_fec_netif);          // start dhcp
+//
+//        //httpd_init();                                         // start web server
+//}
+
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+void tcpip_init_done(void *arg)
+{
+        sys_sem_t *sem;
+
+
+        sem = arg;
+        sys_sem_signal(sem);
+}
 
 
 /*=============================================================================================================*/
@@ -155,6 +207,7 @@ void task_eth_init (void)
 {
  /* Network interface variables */
     ip_addr_t       ipaddr, netmask, gw;
+    sys_sem_t       sem;
     
 #ifdef DEBUG_NET
 
@@ -166,27 +219,29 @@ void task_eth_init (void)
     temp =  (volatile  char*)debug_netcmd_term_handler.cmd_name;
     temp = temp2;   
         
-#endif    
-    
+#endif        
     
        
-///* Стартуем LwIP */
-//  
-// /* Set network address variables */
-//    IP4_ADDR(&gw,          192,168,1,100);
-//    IP4_ADDR(&ipaddr,      192,168,1,7);
-//    IP4_ADDR(&netmask,     255,255,255,0);
-// 
-//// Start the TCP/IP thread & init stuff  
-//    tcpip_init(NULL, NULL);      
-//    
-//// WARNING: This must only be run after the OS has been started.  
-//    // Typically this is the case, however, if not, you must place this  
-//    // in a post-OS initialization  
-////    netifapi_netif_add(&(eth0->netif), &ipaddr, &netmask, &gw, NULL, cb_dnepr_eth0_if_init, tcpip_input);        
-//    netifapi_netif_add(&eth0_netif, &ipaddr, &netmask, &gw, NULL, dnepr_if_eth0_init, tcpip_input);        
-//    netif_set_up(&eth0_netif);        
-////    netif_set_default(&eth0_netif);
+/* Стартуем LwIP */
+  
+ /* Set network address variables */
+    IP4_ADDR(&gw,          192,168,1,100);
+    IP4_ADDR(&ipaddr,      192,168,1,7);
+    IP4_ADDR(&netmask,     255,255,255,0);
+ 
+// Start the TCP/IP thread & init stuff  
+    sys_sem_new(&sem, 0);
+    tcpip_init(tcpip_init_done, &sem);
+    sys_sem_wait(&sem);
+    sys_sem_free(&sem);
+    
+// WARNING: This must only be run after the OS has been started.  
+    // Typically this is the case, however, if not, you must place this  
+    // in a post-OS initialization  
+    netifapi_netif_add(&eth0_netif, &ipaddr, &netmask, &gw, NULL, dnepr_if_init, tcpip_input);            
+    netif_set_default(&eth0_netif);
+    netif_set_up(&eth0_netif);        
+
 }
 
 
@@ -216,72 +271,62 @@ void task_eth( void *pdata )
 
     assert( Packet_Pool_Init() );
   
-//    LWIP_UNUSED_ARG(pdata);
+    LWIP_UNUSED_ARG(pdata);
 
     task_eth_init();
 
-//    sock_desc = lwip_socket(AF_INET, SOCK_RAW, IP_PROTO_ICMP);
-//    sock_desc = socket(AF_INET, SOCK_RAW, IP_PROTO_ICMP);
-//    assert(sock_desc >= 0);
-//
-//    retsock = setsockopt(sock_desc, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));    
-//    assert(retsock == 0);
+    sock_desc = socket(AF_INET, SOCK_RAW, IP_PROTO_ICMP);
+    assert(sock_desc >= 0);
 
-    dnepr_ethernet_str_2_mac( mac_address, val_CMMAC );
-    dnepr_ethernet_fec_init(mac_address);
-    dnepr_ethernet_phy_init();
+    retsock = setsockopt(sock_desc, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));    
+    assert(retsock == 0);
 
-    
-//    Dnepr_Ethernet_Init( mac_address );
-    
-    
-//    Dnepr_Ethernet_Enable_Mgmt( FALSE );    
-//    Dnepr_Ethernet_Register_rx_calrx_cb_tlback( &Dnepr_net_rx_callback );
-    
+
 	// Инициализируем дескрипторы буферов принятых пакетов.
-	i = 0 ;
-	do {
-		i = pool_getfree( &__rx_packet_pool );
-		ctr = Dnepr_Ethernet_Init_RX_BD( __rx_packet_pool.packets_array[ i ], __rx_packet_pool.packet_len );
-	} while( !ctr );
+//	i = 0 ;
+//	do {
+//		i = pool_getfree( &__rx_packet_pool );
+//		ctr = Dnepr_Ethernet_Init_RX_BD( __rx_packet_pool.packets_array[ i ], __rx_packet_pool.packet_len );
+//	} while( !ctr );
 
-    while( !Dnepr_Ethernet_Init_TX_BD( NULL, 0 ) );
+//    while( !Dnepr_Ethernet_Init_TX_BD( NULL, 0 ) );
         
-    fec_Start_RX() ;        
+//    fec_Start_RX() ;        
       
     while ( TRUE )    {
 //	u8 DA[] = {0x01, 0x80, 0xC2, 0x00, 0x00, 0x00};
 //	u8 DA[] = {0x01, 0x80, 0xC2, 0x00, 0x00, 0x01};  //PAUSE DA
-	u8 DA[] = {0x5C, 0xD9, 0x98, 0xF5, 0xE3, 0x14};
 //	u8 DA[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+      
 //        u8 DA[] = {0x01, 0x02,0x03,0x04,0x05,0x06};
-        u8 SA[] = {0x01, 0x02,0x03,0x04,0x05,0x06};
+//	u8 SA[] = {0x5C, 0xD9, 0x98, 0xF5, 0xE3, 0x14};
         
-        for( i = 0; i < 16; ++i ){
-		data[ i ] = 16-i ;
-	}
-        Dnepr_net_transmit( SA, DA, 0, data, sizeof(data) );
+//	u8 DA[] = {0x5C, 0xD9, 0x98, 0xF5, 0xE3, 0x14};
+//        u8 SA[] = {0x01, 0x02,0x03,0x04,0x05,0x06};
+//        
+//        for( i = 0; i < 16; ++i ){
+//		data[ i ] = 16-i ;
+//	}
+//        Dnepr_net_transmit( SA, DA, 0, data, sizeof(data) );
 
           
         /* ping */          
 //       ping_target = PING_TARGET;
           PING_TARGET(ping_target);
-
-//    ping_recv(sock_desc);
       
-//    if (ping_send(sock_desc, &ping_target) == ERR_OK) {
-//      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
-//      ip_addr_debug_print(PING_DEBUG, &ping_target);
-//      LWIP_DEBUGF( PING_DEBUG, ("\n"));
-//
+    if (ping_send(sock_desc, &ping_target) == ERR_OK) {
+      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
+      ip_addr_debug_print(PING_DEBUG, &ping_target);
+      LWIP_DEBUGF( PING_DEBUG, ("\n"));
+
 //      ping_time = time(NULL);
-//      
-//      ping_recv(sock_desc);
-//    } else {
-//      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
-//      ip_addr_debug_print(PING_DEBUG, &ping_target);
-//      LWIP_DEBUGF( PING_DEBUG, (" - error\n"));
-//    }
+      
+      ping_recv(sock_desc);
+    } else {
+      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
+      ip_addr_debug_print(PING_DEBUG, &ping_target);
+      LWIP_DEBUGF( PING_DEBUG, (" - error\n"));
+    }
       
       sys_msleep(PING_DELAY);                    
     }      
@@ -311,17 +356,6 @@ void task_eth( void *pdata )
 
 
 
-void tcpip_init_done(void *arg)
-{
-        sys_sem_t *sem;
-
-#ifdef DEBUG_PRINTF
-        printf("tcpip thread: %d\n", TS_GetCurrentTask());
-#endif
-
-        sem = arg;
-        sys_sem_signal(sem);
-}
 
 //void mcf5282_ethernet_timers_thread(void *arg)
 //{
@@ -341,46 +375,6 @@ void tcpip_init_done(void *arg)
 //}
 
 
-//void mcf5282_ethernet_init(void)
-//{
-//        sys_sem_t sem;
-//        
-//        struct ip_addr ipaddr, netmask, gw;
-//
-//
-//#ifdef STATS
-//        stats_init();
-//#endif
-//
-//        sys_init();
-//
-//        mem_init();
-//        memp_init();
-//        pbuf_init();
-//
-//        netif_init();
-//
-//
-//        sys_sem_new(&sem, 0);
-//        tcpip_init(tcpip_init_done, &sem);
-//        sys_sem_wait(&sem);
-//        sys_sem_free(&sem);
-//
-//        printf("TCP/IP initialized.\n");
-//
-//        IP4_ADDR(&gw, 0,0,0,0);
-//        IP4_ADDR(&ipaddr, 192,168,1,6);
-//        IP4_ADDR(&netmask, 255,255,255,0);
-//
-//        netif_add(&mcf282_fec_netif, &ipaddr, &netmask, &gw, NULL, mcf5282_if_init, tcpip_input);
-//        netif_set_default(&mcf282_fec_netif);
-//        //netif_set_up(&mcf282_fec_netif);
-//
-//
-////        dhcp_start(&mcf282_fec_netif);          // start dhcp
-//
-//        //httpd_init();                                         // start web server
-//}
 
 
 /*=============================================================================================================*/
@@ -465,7 +459,7 @@ ping_recv(int s)
   struct ip_hdr *iphdr;
   struct icmp_echo_hdr *iecho;
 
-  while((len = lwip_recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr*)&from, (socklen_t*)&fromlen)) > 0) {
+  while((len = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr*)&from, (socklen_t*)&fromlen)) > 0) {
     if (len >= (int)(sizeof(struct ip_hdr)+sizeof(struct icmp_echo_hdr))) {
       ip_addr_t fromaddr;
       inet_addr_to_ipaddr(&fromaddr, &from.sin_addr);

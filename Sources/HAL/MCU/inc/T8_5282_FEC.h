@@ -85,6 +85,8 @@ typedef struct _BufferDescriptor
 #pragma pack(pop)
       
 /*! \brief конфигурация FEC'а  */
+#pragma pack(push)
+#pragma pack(8)
 typedef struct _FEC_CONFIG
 {
     u32         fec_mii_speed;                  /*!< делитель частоты для MII, считается через FEC_MII_CLOCK_DEV_CALC               */
@@ -99,6 +101,7 @@ typedef struct _FEC_CONFIG
     t_txrx_desc *txbd_ring;
     u8          txbd_ring_len;
 } t_fec_config;
+#pragma pack(pop)
             
 /*=============================================================================================================*/
       

@@ -131,7 +131,7 @@
  *    2 byte alignment -> #define MEM_ALIGNMENT 2
  */
 #ifndef MEM_ALIGNMENT
-#define MEM_ALIGNMENT                   4
+#define MEM_ALIGNMENT                   1
 #endif
 
 /**
@@ -546,7 +546,7 @@
  * on a 32-bit boundary, so setting this to 2 can speed up 32-bit-platforms.
  */
 #ifndef ETH_PAD_SIZE
-#define ETH_PAD_SIZE                    2
+#define ETH_PAD_SIZE                    0
 #endif
 
 /** ETHARP_SUPPORT_STATIC_ENTRIES==1: enable code to support static ARP table

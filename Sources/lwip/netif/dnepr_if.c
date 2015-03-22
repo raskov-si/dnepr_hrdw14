@@ -274,7 +274,7 @@ static void dnepr_if_buf_init
     dnepr_if->rx_remove = dnepr_if->rx_insert = 0;
 
     /* Fill receive descriptor ring */
-    fill_rx_ring(dnepr_if);
+    fill_rx_ring(dnepr_if);    
 }
 
 
@@ -321,10 +321,12 @@ static void low_level_init(struct netif *netif)
     dnepr_if_buf_clear(dnepr_if);
     
     (void)dnepr_ethernet_lwip_open(netif);    
-    (void)dnepr_ethernet_fec_init(netif->hwaddr);   
+    (void)dnepr_ethernet_fec_init(netif->hwaddr, dnepr_if->rxbd_a, ETHERNET_RX_BD_NUMBER, dnepr_if->txbd_a, ETHERNET_TX_BD_NUMBER);   
     (void)dnepr_ethernet_phy_init();
     
     dnepr_if_buf_init(dnepr_if);
+    
+    m5282_fec_start_rx();
 }
 
 
@@ -363,6 +365,15 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
 
     // make sure a descriptor free
     if (dnepr_if->tx_free)    {
+      
+////////debug      
+//        {
+//          u8  *buf_data = p->payload;
+//            buf_data[0] = 0xFF;
+//            buf_data[1] = 0xFF;
+//        }
+//        
+////////debug        
         r = pbuf_alloc(PBUF_RAW, p->tot_len + 16, PBUF_RAM);            
         // alloc mem for buffer
 
@@ -694,7 +705,8 @@ void low_level_input(struct netif *netif)
     MCF_FEC_EIMR |= MCF_FEC_EIMR_RXF;
 
     /* Tell fec that we have filled up her ring */
-    MCF_FEC_RDAR = 1;
+//    MCF_FEC_RDAR = 1;
+    m5282_fec_start_rx();
 }
 
 

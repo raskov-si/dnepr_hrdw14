@@ -39,7 +39,11 @@
 
 _BOOL   dnepr_ethernet_lwip_open            (struct netif*);
 int     dnepr_ethernet_fec_init             (
-                                                const u8 *mac_adress
+                                                const u8        *mac_adress,    
+                                                t_txrx_desc*    rx_desc_buf,
+                                                size_t          rx_buf_len,
+                                                t_txrx_desc*    tx_desc_buf,
+                                                size_t          tx_buf_len                                                  
                                             );
 int     dnepr_ethernet_phy_init             (void);
 void    dnepr_ethernet_sfpport_autoneg_mode ( 

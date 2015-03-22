@@ -65,17 +65,43 @@ struct  netif                   *eth0;
 int dnepr_ethernet_phy_init(void)
 {
     u16	usBuffer = 0 ;
+    
+// PCS Control Register -- ForcedLink (88E6095 datasheet page 61 Note) и LinkValue 
+    MV88E6095_multichip_smi_read( MV88E6095_1_CHIPADDR, MV88E6095_PORT8, MV88E6095_PCS_CTRL_REG, &usBuffer  );
+    usBuffer |= FORCE_LINK | LINK_FORCED_VALUE(1) ;
+    MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_PORT8, MV88E6095_PCS_CTRL_REG, usBuffer  );
+    MV88E6095_multichip_smi_read( MV88E6095_2_CHIPADDR, MV88E6095_PORT8, MV88E6095_PCS_CTRL_REG, &usBuffer  );
+    usBuffer |= FORCE_LINK | LINK_FORCED_VALUE(1) ;
+    MV88E6095_multichip_smi_write( MV88E6095_2_CHIPADDR, MV88E6095_PORT8, MV88E6095_PCS_CTRL_REG, usBuffer  );
+    
 
     // Настраиваем порт MCU
-    usBuffer = DSA_TAG | FORWARD_UNKNOWN | PORT_STATE(MV88E6095_PORT_FORWARDING);
-    MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_PORT9, MV88E6095_PORT_CTRL_REG, usBuffer );
-    usBuffer = MAP_DA | DEFAULT_FORWARD | CPU_PORT(MV88E6095_PORT9);
-    MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_PORT9, MV88E6095_PORT_CTRL2_REG, usBuffer );
+//    usBuffer = DSA_TAG | FORWARD_UNKNOWN | PORT_STATE(MV88E6095_PORT_FORWARDING);
+//    MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_PORT9, MV88E6095_PORT_CTRL_REG, usBuffer );
+//    usBuffer = MAP_DA | DEFAULT_FORWARD | CPU_PORT(MV88E6095_PORT9);
+//    MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_PORT9, MV88E6095_PORT_CTRL2_REG, usBuffer );
+    
     usBuffer = NOT_FORCE_SPD | FORCE_LINK | LINK_FORCED_VALUE(1);
     MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_PORT9, MV88E6095_PCS_CTRL_REG, usBuffer);
 
-    MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_GLOBAL, MV88E6095_GLOBAL_2, MV88E6095_CASCADE_PORT(0x8) | MV88E6095_DEV_NUM(1)  );
-    MV88E6095_multichip_smi_write( MV88E6095_2_CHIPADDR, MV88E6095_GLOBAL, MV88E6095_GLOBAL_2, MV88E6095_CASCADE_PORT(0x8) | MV88E6095_DEV_NUM(0x10)  );    
+//    MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_GLOBAL, MV88E6095_GLOBAL_2, MV88E6095_CASCADE_PORT(0x8) | MV88E6095_DEV_NUM(1)  );
+//    MV88E6095_multichip_smi_write( MV88E6095_2_CHIPADDR, MV88E6095_GLOBAL, MV88E6095_GLOBAL_2, MV88E6095_CASCADE_PORT(0x8) | MV88E6095_DEV_NUM(0x10)  );  
+    
+    
+    
+
+//	// Инициализируем MAC
+//	if( !maddr )
+//		goto _err ;
+//	for(i=0;i<3;i++){
+//		usBuffer = ((u16)(maddr[i*2]) << 8) | (u16)maddr[i*2+1];
+//		MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR,  MV88E6095_GLOBAL, (u8)(i+1), (u16)usBuffer );
+//		if(i==2)
+//			MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR,  MV88E6095_GLOBAL, (u8)(i+1), (u16)usBuffer+1 );
+//		else
+//			MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR,  MV88E6095_GLOBAL, (u8)(i+1), (u16)usBuffer );
+//	}
+    
     
   return 0;
 }
@@ -155,24 +181,24 @@ void dnepr_ethernet_tx_thread(void *arg)
 /*=============================================================================================================*/
 /*! \brief      */
 /*=============================================================================================================*/
-//void isr_FEC_TxFrame_Handler()
-//{
-//    /* clear interrupt status for tx interrupt */
-//    MCF_FEC_EIR = MCF_FEC_EIR_TXF;
-//    sys_sem_signal(&tx_sem);
-//}
+void isr_FEC_TxFrame_Handler()
+{
+    /* clear interrupt status for tx interrupt */
+    MCF_FEC_EIR = MCF_FEC_EIR_TXF;
+    sys_sem_signal(&tx_sem);
+}
 
 
 /*=============================================================================================================*/
 /*! \brief      */
 /*=============================================================================================================*/
-//void isr_FEC_ReceiveFrame_Handler()
-//{
-//    MCF_FEC_EIMR &= ~MCF_FEC_EIMR_RXF;  // disable rx int
-//    MCF_FEC_EIR = MCF_FEC_EIR_RXF;          // clear int flag
-//    
-//    sys_sem_signal(&rx_sem);        
-//}
+void isr_FEC_ReceiveFrame_Handler()
+{
+    MCF_FEC_EIMR &= ~MCF_FEC_EIMR_RXF;  // disable rx int
+    MCF_FEC_EIR = MCF_FEC_EIR_RXF;          // clear int flag
+    
+    sys_sem_signal(&rx_sem);        
+}
 //    t8_m5282_fec_reset_rx_isr();        
 
 
@@ -910,33 +936,33 @@ size_t fec_rx_data( const u8 n, u8 volatile  ** p )
 }
 
 
-void isr_FEC_TxFrame_Handler()
-{
-	MCF_FEC_EIR |= MCF_FEC_EIR_TXF ;
-	T8_Dnepr_FEC_TX_Frame_Sent() ;
-	__tx_cnt1-- ;
-}
+//void isr_FEC_TxFrame_Handler()
+//{
+//	MCF_FEC_EIR |= MCF_FEC_EIR_TXF ;
+//	T8_Dnepr_FEC_TX_Frame_Sent() ;
+//	__tx_cnt1-- ;
+//}
 
-void isr_FEC_ReceiveFrame_Handler()
-{
-	u16 c ;
-	MCF_FEC_EIR |= MCF_FEC_EIR_RXF ;
-	// смотрим все непустые буферы
-	for( __last_rx_bd = 0; __last_rx_bd < FEC_RX_BD_NUMBER; ++__last_rx_bd ){
-		c = fec_rx_cstatus( __last_rx_bd );
-		if( (c & MCF_FEC_RxBD_E) == 0 ){
-			u8* p ;
-			size_t len = fec_rx_data( __last_rx_bd, (u8 volatile **)&p );
-			if( __rx_handler ){
-				p = __rx_handler( __last_rx_bd, &len );
-				if( p ){
-					fec_add_rx_buffer( p, __last_rx_bd, len );
-				}
-			}
-		}
-	}
-	fec_Start_RX();
-}
+//void isr_FEC_ReceiveFrame_Handler()
+//{
+//	u16 c ;
+//	MCF_FEC_EIR |= MCF_FEC_EIR_RXF ;
+//	// смотрим все непустые буферы
+//	for( __last_rx_bd = 0; __last_rx_bd < FEC_RX_BD_NUMBER; ++__last_rx_bd ){
+//		c = fec_rx_cstatus( __last_rx_bd );
+//		if( (c & MCF_FEC_RxBD_E) == 0 ){
+//			u8* p ;
+//			size_t len = fec_rx_data( __last_rx_bd, (u8 volatile **)&p );
+//			if( __rx_handler ){
+//				p = __rx_handler( __last_rx_bd, &len );
+//				if( p ){
+//					fec_add_rx_buffer( p, __last_rx_bd, len );
+//				}
+//			}
+//		}
+//	}
+//	fec_Start_RX();
+//}
 
 
 
@@ -1003,25 +1029,6 @@ u32 Dnepr_Ethernet_Init( const u8* maddr )
 
 	// interswitch порты
 
-//	// PCS Control Register -- ForcedLink (88E6095 datasheet page 61 Note) и LinkValue 
-//	MV88E6095_multichip_smi_read( MV88E6095_1_CHIPADDR, MV88E6095_PORT8, MV88E6095_PCS_CTRL_REG, &usBuffer  );
-//	usBuffer |= FORCE_LINK | LINK_FORCED_VALUE(1) ;
-//	MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_PORT8, MV88E6095_PCS_CTRL_REG, usBuffer  );
-//	MV88E6095_multichip_smi_read( MV88E6095_2_CHIPADDR, MV88E6095_PORT8, MV88E6095_PCS_CTRL_REG, &usBuffer  );
-//	usBuffer |= FORCE_LINK | LINK_FORCED_VALUE(1) ;
-//	MV88E6095_multichip_smi_write( MV88E6095_2_CHIPADDR, MV88E6095_PORT8, MV88E6095_PCS_CTRL_REG, usBuffer  );
-//
-//	// Инициализируем MAC
-//	if( !maddr )
-//		goto _err ;
-//	for(i=0;i<3;i++){
-//		usBuffer = ((u16)(maddr[i*2]) << 8) | (u16)maddr[i*2+1];
-//		MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR,  MV88E6095_GLOBAL, (u8)(i+1), (u16)usBuffer );
-//		if(i==2)
-//			MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR,  MV88E6095_GLOBAL, (u8)(i+1), (u16)usBuffer+1 );
-//		else
-//			MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR,  MV88E6095_GLOBAL, (u8)(i+1), (u16)usBuffer );
-//	}
 //
 //	return OK ; 
 //
@@ -1055,7 +1062,11 @@ u32 Dnepr_Ethernet_Init( const u8* maddr )
 /*=============================================================================================================*/
 int dnepr_ethernet_fec_init
 (
-    const u8 *mac_adress
+    const u8        *mac_adress,    
+    t_txrx_desc*    rx_desc_buf,
+    size_t          rx_buf_len,
+    t_txrx_desc*    tx_desc_buf,
+    size_t          tx_buf_len
 )
 {
         s32 i ;  
@@ -1081,7 +1092,6 @@ int dnepr_ethernet_fec_init
         // потому что на каждый пакет приходиться по 2 дескриптора -- заголовок и тело отдельно.
         __eth_tx_sem = OSSemCreate( (u8)(FEC_TX_BD_NUMBER / 2) );
     // Configure Rx BD ring
-    MCF_FEC_ERDSR = (u32)&__rx_bd[0];
     for( i = 0; i < FEC_RX_BD_NUMBER; i++ ){
         __rx_bd[ i ].bd_addr = 0 ;
         __rx_bd[ i ].bd_cstatus = 0 ;
@@ -1090,7 +1100,6 @@ int dnepr_ethernet_fec_init
     __rx_bd[ i-1 ].bd_cstatus |= MCF_FEC_RxBD_W ;
 
     // Configure Tx BD ring
-    MCF_FEC_ETDSR =  (u32)&__tx_bd[0];
     for( i = 0; i < FEC_TX_BD_NUMBER; i++ ){
         __tx_bd[ i ].bd_addr = 0 ;
         __tx_bd[ i ].bd_cstatus = 0 ;
@@ -1098,7 +1107,6 @@ int dnepr_ethernet_fec_init
     }
     __tx_bd[ i-1 ].bd_cstatus |= MCF_FEC_TxBD_W ;
         
-//    fec_init(SYSTEM_CLOCK_KHZ/1000, &fec_conf ) ;
         
   
     mii_config.fec_mii_speed = FEC_MII_CLOCK_DEV_CALC(2500);
@@ -1106,15 +1114,19 @@ int dnepr_ethernet_fec_init
     mii_config.max_eth_frame = MAX_ETH_PKT;
     mii_config.max_rcv_buf = MAX_ETH_BUFF_SIZE;
     
-    
-    mii_config.rxbd_ring = (t_txrx_desc*)__rx_bd;
-    mii_config.rxbd_ring_len = FEC_RX_BD_NUMBER;
+//    mii_config.rxbd_ring = (t_txrx_desc*)__rx_bd;
+//    mii_config.rxbd_ring_len = FEC_RX_BD_NUMBER;
+    mii_config.rxbd_ring        = rx_desc_buf;
+    mii_config.rxbd_ring_len    = rx_buf_len;
 
-    mii_config.txbd_ring = (t_txrx_desc*)__tx_bd;
-    mii_config.txbd_ring_len = FEC_TX_BD_NUMBER;
+//    mii_config.txbd_ring = (t_txrx_desc*)__tx_bd;
+//    mii_config.txbd_ring_len = FEC_TX_BD_NUMBER;
+    mii_config.txbd_ring        = tx_desc_buf;
+    mii_config.txbd_ring_len    = tx_buf_len;
     
     mii_config.fec_mode= FEC_MODE_MII; 
-    mii_config.ignore_mac_adress_when_recv = TRUE;
+//    mii_config.ignore_mac_adress_when_recv = TRUE;
+    mii_config.ignore_mac_adress_when_recv = FALSE;
     mii_config.rcv_broadcast = TRUE;    
           
     m5282_fec_init(&mii_config);
@@ -1139,9 +1151,9 @@ int dnepr_ethernet_fec_init
 	// инициализация прерывания о конце передаче фрейма
 	MCU_ConfigureIntr(INTR_ID_FEC_X_INTF, 6, 1 );
 	MCU_EnableIntr(INTR_ID_FEC_X_INTF,1);
-	// инициализация прерывания о конце передачи одного буфера
-	MCU_ConfigureIntr(INTR_ID_FEC_X_INTB, 6, 2 );
-	MCU_EnableIntr(INTR_ID_FEC_X_INTB,1);
+//	// инициализация прерывания о конце передачи одного буфера
+//	MCU_ConfigureIntr(INTR_ID_FEC_X_INTB, 6, 2 );
+//	MCU_EnableIntr(INTR_ID_FEC_X_INTB,1);
 	// инициализация прерывания о приёме фрейма
 	MCU_ConfigureIntr(INTR_ID_FEC_R_INTF, 6, 3 );
 	MCU_EnableIntr(INTR_ID_FEC_R_INTF,1);
