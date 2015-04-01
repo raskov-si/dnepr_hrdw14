@@ -45,4 +45,6 @@
 #define NULL			0
 #endif //NULL
 
+
+
 #endif /* _SUPPORT_COMMON_H_ */

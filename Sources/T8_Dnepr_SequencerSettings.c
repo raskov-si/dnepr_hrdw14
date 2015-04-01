@@ -1,5 +1,5 @@
 #include "support_common.h"
-#include "C:\prj\t8\dnepr_hrdv14\Sources\T8_Dnepr_SequencerSettings.h"
+#include "D:\prj\t8\dnepr_hrdv14\Sources\T8_Dnepr_SequencerSettings.h"
 
 _Pragma("location=\"power_sequencer_settings\"") const u8 sequencer_flash_chars[SEQ_FLASH_LEN] = {
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 

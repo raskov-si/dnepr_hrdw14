@@ -57,10 +57,10 @@ void sys_init(void)
 {
     u8_t i;
     u8_t err;
-    
+
     ptr_queue_memory_pool = OSMemCreate(&queue_memory_pool[0], MAX_QUEUES, sizeof(sys_mbox), &err);
     LWIP_ASSERT("OSMemCreate", err == OS_ERR_NONE);    
-    
+
     task_id = 0;
 }
 
@@ -110,25 +110,24 @@ u32_t sys_arch_sem_wait(sys_sem_t *sem, u32_t timeout)
     INT32U  begin_time;
 
     /* Convert lwIP timeout (in milliseconds) to uC/OS-II timeout (in OS_TICKS) */
-    if( timeout ) {
+    if ( timeout ) {
         ucos_timeout = ms_to_ticks(timeout);
-        if(ucos_timeout < 1) {
+        if (ucos_timeout < 1) {
             ucos_timeout = 1;
-        }
-        else if(ucos_timeout > 65535) {
+        } else if (ucos_timeout > 65535) {
             ucos_timeout = 65535;
         }
     } else {
         ucos_timeout = 0;
     }
-    
+
     begin_time = OSTimeGet();
     OSSemPend( sem->sem, ucos_timeout, &err );
-    
-    if(err == OS_ERR_TIMEOUT) {
+
+    if (err == OS_ERR_TIMEOUT) {
         return SYS_ARCH_TIMEOUT;
     }
-    
+
     return ticks_to_ms(OSTimeGet() - begin_time);
 }
 
@@ -140,10 +139,10 @@ u32_t sys_arch_sem_wait(sys_sem_t *sem, u32_t timeout)
 u32_t   sys_arch_sem_fetch (sys_sem_t *sem)
 {
     LWIP_ASSERT("msg NULL", sem != NULL);
-        
+
     if ( sem->valid == FALSE ) {
         return 0;
-    }    
+    }
     return OSSemAccept(sem->sem);
 }
 
@@ -155,10 +154,10 @@ u32_t   sys_arch_sem_fetch (sys_sem_t *sem)
 /*=============================================================================================================*/
 int sys_sem_valid(sys_sem_t *sem) 
 {
-    if ( sem != NULL )  {
+    if ( sem != NULL ) {
         return    sem->valid;
     }
-  
+
     return 0;
 }
 
@@ -167,7 +166,7 @@ int sys_sem_valid(sys_sem_t *sem)
 /*=============================================================================================================*/
 void sys_sem_set_invalid(sys_sem_t *sem)
 {
-    if ( sem != NULL )  {
+    if ( sem != NULL ) {
         sem->valid = 0;
     }
 }
@@ -189,22 +188,22 @@ err_t sys_mbox_new(sys_mbox_t *mbox, int size)
 
     tmp_mbox = (sys_mbox_t)OSMemGet(ptr_queue_memory_pool, &err);
     if (tmp_mbox) {
-	tmp_mbox->q = OSQCreate(tmp_mbox->start, MAX_QUEUE_ENTRIES);
-	if (tmp_mbox->q) {
-		tmp_mbox->sem = OSSemCreate(MAX_QUEUE_ENTRIES);
-		if (tmp_mbox->sem) {
-                        tmp_mbox->valid = 1;
-			*mbox = tmp_mbox;
-			return (err_t)ERR_OK;
-		}
-		OSQDel(tmp_mbox->q, OS_DEL_ALWAYS, &err);
-		LWIP_ASSERT("OSQDel", err == OS_ERR_NONE);
-	}
-	err = OSMemPut(ptr_queue_memory_pool, tmp_mbox);
-	LWIP_ASSERT("OSMemPut", err == OS_ERR_NONE);
+        tmp_mbox->q = OSQCreate(tmp_mbox->start, MAX_QUEUE_ENTRIES);
+        if (tmp_mbox->q) {
+            tmp_mbox->sem = OSSemCreate(MAX_QUEUE_ENTRIES);
+            if (tmp_mbox->sem) {
+                tmp_mbox->valid = 1;
+                *mbox = tmp_mbox;
+                return(err_t)ERR_OK;
+            }
+            OSQDel(tmp_mbox->q, OS_DEL_ALWAYS, &err);
+            LWIP_ASSERT("OSQDel", err == OS_ERR_NONE);
+        }
+        err = OSMemPut(ptr_queue_memory_pool, tmp_mbox);
+        LWIP_ASSERT("OSMemPut", err == OS_ERR_NONE);
     }
 
-    return (err_t)ERR_MEM;    
+    return(err_t)ERR_MEM;    
 }
 
 /*=============================================================================================================*/
@@ -239,7 +238,7 @@ void sys_mbox_post(sys_mbox_t *mbox, void *msg)
     if (!msg) {
         msg = __ESC_NULL;
     }
-        
+
     OSSemPend(tmp_mbox->sem, 0, &err);
     LWIP_ASSERT("OSSemPend", err == OS_ERR_NONE);
     err = OSQPost(tmp_mbox->q, msg);
@@ -256,15 +255,15 @@ err_t   sys_mbox_trypost(sys_mbox_t *mbox, void *msg)
     sys_mbox_t  tmp_mbox = *mbox;
 
     if (!msg) {
-	msg = __ESC_NULL;
+        msg = __ESC_NULL;
     }
-    
+
     if ( OSSemAccept(tmp_mbox->sem) ) {
-	err = OSQPost(tmp_mbox->q, msg);
-	LWIP_ASSERT("OSQPost", err == OS_ERR_NONE);
-	return (err_t)ERR_OK;
+        err = OSQPost(tmp_mbox->q, msg);
+        LWIP_ASSERT("OSQPost", err == OS_ERR_NONE);
+        return(err_t)ERR_OK;
     } else {
-	return (err_t)ERR_MEM;
+        return(err_t)ERR_MEM;
     }
 }
 
@@ -279,31 +278,30 @@ u32_t sys_arch_mbox_fetch(sys_mbox_t *mbox, void **msg, u32_t timeout)
     INT32U      begin_time;
     INT32U      ucos_timeout;
 
-	if (timeout) {
-		ucos_timeout = ms_to_ticks(timeout);
-		if (!ucos_timeout) {
-		    ucos_timeout = 1;
-                }
-		else if (ucos_timeout > 65535) {
-		    ucos_timeout = 65535;
-                }
-	}
-	begin_time = OSTimeGet();
-        
-        LWIP_ASSERT("msg NULL", msg != NULL);
-	*msg = OSQPend(tmp_mbox->q, ucos_timeout, &err);
-	if (err == OS_ERR_NONE) {
-		LWIP_ASSERT("OSQPend", *msg);
-		err = OSSemPost(tmp_mbox->sem);
-		LWIP_ASSERT("OSSemPost", err == OS_ERR_NONE);
-		if ((*msg) == __ESC_NULL) {
-		    *msg = NULL;
-                }
-		return ticks_to_ms(OSTimeGet() - begin_time);
-	} else {
-		LWIP_ASSERT("OSQPend", err == OS_ERR_TIMEOUT);
-		return SYS_ARCH_TIMEOUT;
-	}
+    if (timeout) {
+        ucos_timeout = ms_to_ticks(timeout);
+        if (!ucos_timeout) {
+            ucos_timeout = 1;
+        } else if (ucos_timeout > 65535) {
+            ucos_timeout = 65535;
+        }
+    }
+    begin_time = OSTimeGet();
+
+    LWIP_ASSERT("msg NULL", msg != NULL);
+    *msg = OSQPend(tmp_mbox->q, ucos_timeout, &err);
+    if (err == OS_ERR_NONE) {
+        LWIP_ASSERT("OSQPend", *msg);
+        err = OSSemPost(tmp_mbox->sem);
+        LWIP_ASSERT("OSSemPost", err == OS_ERR_NONE);
+        if ((*msg) == __ESC_NULL) {
+            *msg = NULL;
+        }
+        return ticks_to_ms(OSTimeGet() - begin_time);
+    } else {
+        LWIP_ASSERT("OSQPend", err == OS_ERR_TIMEOUT);
+        return SYS_ARCH_TIMEOUT;
+    }
 }
 
 
@@ -318,20 +316,20 @@ u32_t sys_arch_mbox_tryfetch(sys_mbox_t *mbox, void **msg)
 
     LWIP_ASSERT("msg NULL", msg != NULL);
     *msg = OSQAccept(tmp_mbox->q, &err);
-    
+
     if (err == OS_ERR_NONE) {
-	LWIP_ASSERT("OSQPend", *msg);
-	err = OSSemPost(tmp_mbox->sem);
-	LWIP_ASSERT("OSSemPost", err == OS_ERR_NONE);
-	if ((*msg) == __ESC_NULL) {
-	    *msg = NULL;
+        LWIP_ASSERT("OSQPend", *msg);
+        err = OSSemPost(tmp_mbox->sem);
+        LWIP_ASSERT("OSSemPost", err == OS_ERR_NONE);
+        if ((*msg) == __ESC_NULL) {
+            *msg = NULL;
         }
         return 0;
     } else {
-	LWIP_ASSERT("OSQPend", err == OS_ERR_Q_EMPTY);
-	return SYS_MBOX_EMPTY;
+        LWIP_ASSERT("OSQPend", err == OS_ERR_Q_EMPTY);
+        return SYS_MBOX_EMPTY;
     }
-    
+
 }
 
 /*=============================================================================================================*/
@@ -341,10 +339,10 @@ u32_t sys_arch_mbox_tryfetch(sys_mbox_t *mbox, void **msg)
 /*=============================================================================================================*/
 int sys_mbox_valid(sys_mbox_t *mbox)
 {
-    if ( (*mbox) != NULL )     {
-        return (*mbox)->valid ;
+    if ( (*mbox) != NULL ) {
+        return(*mbox)->valid ;
     }
-    
+
     return 0;
 }
 
@@ -354,8 +352,8 @@ int sys_mbox_valid(sys_mbox_t *mbox)
 /*=============================================================================================================*/
 void sys_mbox_set_invalid(sys_mbox_t *mbox) 
 {
-    if ( (*mbox) != NULL  )    {      
-      (*mbox)->valid = 0; 
+    if ( (*mbox) != NULL  ) {
+        (*mbox)->valid = 0; 
     }
 }
 
@@ -369,18 +367,18 @@ void sys_mbox_set_invalid(sys_mbox_t *mbox)
 sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg, int stacksize, int prio)
 {
     u8 ret ;
-    
+
     LWIP_PLATFORM_ASSERT ( stacksize <= LWIP_STK_SIZE );
-    
-    if (task_id < LWIP_TASK_MAX) {        
+
+    if (task_id < LWIP_TASK_MAX) {
         ret = OSTaskCreateExt(thread, arg, &LWIP_TASK_STK[task_id][stacksize-1], prio+task_id, prio+task_id, &LWIP_TASK_STK[task_id][0], stacksize, NULL, OS_TASK_OPT_STK_CHK );
-	LWIP_PLATFORM_ASSERT(ret == OS_ERR_NONE );
+        LWIP_PLATFORM_ASSERT(ret == OS_ERR_NONE );
         OSTaskNameSet( prio+task_id, (INT8U*)name, (INT8U*)&ret ) ;
         LWIP_PLATFORM_ASSERT( ret == OS_ERR_NONE ) ;
         task_id++;
-    } 
-    
-    return (prio+task_id);
+    }
+
+    return(prio+task_id);
 }
 
 /*=============================================================================================================*/
@@ -389,7 +387,7 @@ sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg, 
 sys_prot_t sys_arch_protect(void)
 {
     sys_prot_t cpu_sr;
-    
+
     OS_ENTER_CRITICAL();    
     return cpu_sr;
 }
@@ -400,7 +398,7 @@ sys_prot_t sys_arch_protect(void)
 void sys_arch_unprotect(sys_prot_t pval)
 {
     sys_prot_t cpu_sr;
-    
+
     cpu_sr = pval;
     OS_EXIT_CRITICAL();
 }

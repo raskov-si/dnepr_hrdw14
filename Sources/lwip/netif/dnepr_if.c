@@ -23,16 +23,15 @@
 
 #include "support_common.h"
 #include "common_lib/memory.h"
-
-//#include "Threads/inc/threadNet.h"
-
 #include "HAL/BSP/inc/T8_Dnepr_Ethernet.h"
-//#include "HAL/MCU/inc/T8_5282_FEC.h"
 
 /* Define those to better describe your network interface. */
 #define IFNAME0 'e'
 #define IFNAME1 'n'
-#define MTU_FEC  (512)
+
+#define ETHERNET_RX_BD_NUMBER       (8)      /*!< количество дескрипторов приёмных буферов      */
+#define ETHERNET_TX_BD_NUMBER       (4)      /*!< количество дескрипторов буферов для отсылки   */
+
 
 
 #define INC_RX_BD_INDEX(idx) { if (++idx >= ETHERNET_RX_BD_NUMBER) idx = 0;     }
@@ -85,7 +84,6 @@ t_dnepr_if      s_dnepr_if;
 
 extern s8       val_CMPhyAddr[];
 s8              val_CMMAC[19] = "00:01:02:03:04:05";
-
 
 /*=============================================================================================================*/
 
@@ -318,6 +316,7 @@ static void low_level_init(struct netif *netif)
         pbuf_free(p);
     }
      
+//    memcpy(&dnepr_if->ethaddr->addr, &netif->hwaddr, netif->hwaddr_len);
     dnepr_if_buf_clear(dnepr_if);
     
     (void)dnepr_ethernet_lwip_open(netif);    
@@ -365,15 +364,6 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
 
     // make sure a descriptor free
     if (dnepr_if->tx_free)    {
-      
-////////debug      
-//        {
-//          u8  *buf_data = p->payload;
-//            buf_data[0] = 0xFF;
-//            buf_data[1] = 0xFF;
-//        }
-//        
-////////debug        
         r = pbuf_alloc(PBUF_RAW, p->tot_len + 16, PBUF_RAM);            
         // alloc mem for buffer
 
@@ -710,82 +700,4 @@ void low_level_input(struct netif *netif)
 }
 
 
-
-
-
 /*=============================================================================================================*/
-
-
-
-
-//void arp_timer(void *arg)
-//{
-//        etharp_tmr();
-//        sys_timeout(ARP_TMR_INTERVAL, arp_timer, NULL);
-//}
-//
-//void dhcp_fine_timer(void *arg)
-//{
-//        dhcp_fine_tmr();
-//        sys_timeout(DHCP_FINE_TIMER_MSECS, dhcp_fine_timer, NULL);
-//}
-//
-//void dhcp_coarse_timer(void *arg)
-//{
-//        dhcp_coarse_tmr();
-//        sys_timeout(DHCP_COARSE_TIMER_SECS * 1000, dhcp_coarse_timer, NULL);
-//}
-//
-
-
-
-
-
-
-
-
-/**
- * This function should do the actual transmission of the packet. The packet is
- * contained in the pbuf that is passed to the function. This pbuf
- * might be chained.
- *
- * @param netif the lwip network interface structure for this ethernetif
- * @param p the MAC packet to send (e.g. IP packet including MAC addresses and type)
- * @return ERR_OK if the packet could be sent
- *         an err_t value if the packet couldn't be sent
- *
- * @note Returning ERR_MEM here if a DMA queue of your MAC is full can lead to
- *       strange results. You might consider waiting for space in the DMA queue
- *       to become availale since the stack doesn't retry to send a packet
- *       dropped because of memory failure (except for the TCP timers).
- */
-
-
-
-
-// Массив с сообщениями для посылки в очередь, из которой прерывание фрейма забирает эти
-// сообщения и назначает массивы дескрипторам.
-
-
-  // Делаем DSA tag
-//  Dnepr_net_Fill_From_CPU_Tag( &from_cpu_tag, ethernetif->portnum );
-  // копируем в буфер
-//  t8_memcopy( &__tx_hdr_array[ __tx_hdr_i ][ hdr_len ], (u8*)p->payload, 12 );
-//  hdr_len += 12 ;
-//  Dnepr_net_Fill_From_CPU_Tag( &from_cpu_tag, 0 );
-//  t8_memcopy( &__tx_hdr_array[ __tx_hdr_i ][ hdr_len ], (u8*)&from_cpu_tag, sizeof( from_cpu_tag ) );
-//  hdr_len += 4 ;
-//
-//  fec_Transmit_2_BD( &__tx_hdr_array[ __tx_hdr_i ][ 0 ], hdr_len, (u8*)p->payload, p->len );
-
-
-  // for(q = p; q != NULL; q = q->next) {
-    /* Send the data from the pbuf to the interface, one pbuf at a
-       time. The size of the data in each pbuf is kept in the ->len
-       variable. */
-    // send data from(q->payload, q->len);
-  // }
-
-  // signal that packet should be sent();
-
-

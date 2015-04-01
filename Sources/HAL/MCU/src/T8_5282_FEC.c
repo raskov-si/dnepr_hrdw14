@@ -128,7 +128,7 @@ void m5282_fec_init
                                                         /* Point to the start of the circular Rx buffer descriptor queue */
     MCF_FEC_ERDSR = ((u32) input->rxbd_ring);
                                                         /* Point to the start of the circular Tx buffer descriptor queue */
-    MCF_FEC_ETDSR = ((u32) input->txbd_ring);
+    MCF_FEC_ETSDR = ((u32) input->txbd_ring);
         
     input->txbd_ring[ input->txbd_ring_len-1 ].contr_status_flags |= MCF_FEC_TxBD_W ;  
     input->rxbd_ring[ input->rxbd_ring_len-1 ].contr_status_flags |= MCF_FEC_RxBD_W ;  

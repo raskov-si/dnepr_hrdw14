@@ -68,12 +68,10 @@
 
 /*=============================================================================================================*/
 /* ping variables */
-static t_eth            *eth0;
+//static t_eth            *eth0;
 static struct netif     eth0_netif;
-
-
-static u16 ping_seq_num;
-static u32 ping_time; 
+static u16              ping_seq_num;
+//static u32 ping_time; 
 
 #ifdef DEBUG_NET
 
@@ -139,48 +137,6 @@ int         debug_netlog_term(const char* in, char* out, size_t out_len_max, t_l
 #endif
 
 
-
-
-
-
-//void mcf5282_ethernet_init(void)
-//{
-//        
-//        struct ip_addr ipaddr, netmask, gw;
-//
-//
-//#ifdef STATS
-//        stats_init();
-//#endif
-//
-//        sys_init();
-//
-//        mem_init();
-//        memp_init();
-//        pbuf_init();
-//
-//        netif_init();
-//
-//
-//
-//        printf("TCP/IP initialized.\n");
-//
-//        IP4_ADDR(&gw, 0,0,0,0);
-//        IP4_ADDR(&ipaddr, 192,168,1,6);
-//        IP4_ADDR(&netmask, 255,255,255,0);
-//
-//        netif_add(&mcf282_fec_netif, &ipaddr, &netmask, &gw, NULL, mcf5282_if_init, tcpip_input);
-//        netif_set_default(&mcf282_fec_netif);
-//        //netif_set_up(&mcf282_fec_netif);
-//
-//
-////        dhcp_start(&mcf282_fec_netif);          // start dhcp
-//
-//        //httpd_init();                                         // start web server
-//}
-
-
-
 /*=============================================================================================================*/
 /*!  \brief 
 
@@ -222,8 +178,7 @@ void task_eth_init (void)
 #endif        
     
        
-/* Стартуем LwIP */
-  
+/* Стартуем LwIP */  
  /* Set network address variables */
     IP4_ADDR(&gw,          192,168,1,100);
     IP4_ADDR(&ipaddr,      192,168,1,7);
@@ -251,25 +206,12 @@ void task_eth_init (void)
      \sa 
 */
 /*=============================================================================================================*/
-static u8 mac_address[ 6 ];
-extern Packet_Pool_t __rx_packet_pool ;
-#pragma data_alignment=16
-//_Pragma("location=\"packets_sram\"")
-__no_init static u8 data[16] ;
-
-
-
 void task_eth( void *pdata )
 {
     int         sock_desc;
     ip_addr_t   ping_target;
     int         timeout         = PING_RCV_TIMEO;
     int         retsock;
-    s8          val_CMMAC[19] = "00:01:02:03:04:05";
-    size_t i ;
-    _BOOL ctr ;
-
-    assert( Packet_Pool_Init() );
   
     LWIP_UNUSED_ARG(pdata);
 
@@ -281,38 +223,9 @@ void task_eth( void *pdata )
     retsock = setsockopt(sock_desc, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));    
     assert(retsock == 0);
 
-
-	// Инициализируем дескрипторы буферов принятых пакетов.
-//	i = 0 ;
-//	do {
-//		i = pool_getfree( &__rx_packet_pool );
-//		ctr = Dnepr_Ethernet_Init_RX_BD( __rx_packet_pool.packets_array[ i ], __rx_packet_pool.packet_len );
-//	} while( !ctr );
-
-//    while( !Dnepr_Ethernet_Init_TX_BD( NULL, 0 ) );
-        
-//    fec_Start_RX() ;        
-      
     while ( TRUE )    {
-//	u8 DA[] = {0x01, 0x80, 0xC2, 0x00, 0x00, 0x00};
-//	u8 DA[] = {0x01, 0x80, 0xC2, 0x00, 0x00, 0x01};  //PAUSE DA
-//	u8 DA[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-      
-//        u8 DA[] = {0x01, 0x02,0x03,0x04,0x05,0x06};
-//	u8 SA[] = {0x5C, 0xD9, 0x98, 0xF5, 0xE3, 0x14};
-        
-//	u8 DA[] = {0x5C, 0xD9, 0x98, 0xF5, 0xE3, 0x14};
-//        u8 SA[] = {0x01, 0x02,0x03,0x04,0x05,0x06};
-//        
-//        for( i = 0; i < 16; ++i ){
-//		data[ i ] = 16-i ;
-//	}
-//        Dnepr_net_transmit( SA, DA, 0, data, sizeof(data) );
-
-          
         /* ping */          
-//       ping_target = PING_TARGET;
-          PING_TARGET(ping_target);
+      PING_TARGET(ping_target);
       
     if (ping_send(sock_desc, &ping_target) == ERR_OK) {
       LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
@@ -334,49 +247,6 @@ void task_eth( void *pdata )
 }
 
 
-//#if LWIP_TCPIP_CORE_LOCKING_INPUT
-//      while ( TRUE )    {
-////          watch_dog_thread_is_alive()          
-//        
-////        dnepr_ethernet_rx_check(eth0.data_descr)t_eth_data_descr
-//        
-//            {
-//             
-//            /* принимаем сообщения */
-//              //  default_eth.netif->input(&eth0.data_descr->pockets_array[][0]);         
-//              ;
-//            }
-//            
-////        dnepr_ethernet_tx_check(eth0.data_descr)
-//            {
-//              
-//            }
-//      };
-//#endif        
-
-
-
-
-//void mcf5282_ethernet_timers_thread(void *arg)
-//{
-//        sys_sem_t tmr_sem;
-//
-//        tmr_sem = sys_sem_new(0);               // create sem
-//
-//        // start timers
-//        sys_timeout(ARP_TMR_INTERVAL, arp_timer, NULL);
-//        sys_timeout(DHCP_FINE_TIMER_MSECS, dhcp_fine_timer, NULL);
-//        sys_timeout(DHCP_COARSE_TIMER_SECS * 1000, dhcp_coarse_timer, NULL);
-//
-//        while(1)
-//        {
-//                sys_sem_wait(tmr_sem);          // wait forever
-//        }
-//}
-
-
-
-
 /*=============================================================================================================*/
 /*!  \brief 
 
@@ -385,10 +255,7 @@ void task_eth( void *pdata )
 /*=============================================================================================================*/
 void task_snmp( void *pdata )
 {
-
-  
-        
-    while ( TRUE )    {
+   while ( TRUE )    {
         OSTimeDly(1 * OS_TICKS_PER_SEC);
     }      
 }
