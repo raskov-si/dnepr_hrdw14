@@ -111,6 +111,7 @@ const struct STM_TRANSITION       rsrv_mcu_mcu_stchtbl[11][6] = {
 [STATE_ROGER_ROLE_SLAVE][1]                                 = { STATE_PONGSEND_UART,        NULL},
 [STATE_ROGER_ROLE_SLAVE][2]                                 = { STATE_PONGSEND_I2C,         NULL},
 [STATE_ROGER_ROLE_SLAVE][3]                                 = { STATE_INIT,                 NULL},
+
 };
 
 /*=============================================================================================================*/
@@ -388,7 +389,7 @@ static void stmch_pong_i2c_answer_wait(int state, int signal)
 /*=============================================================================================================*/
 static void stmch_vote(int state, int signal)
 {
-    resrv_mcumcu_protocol_send_vote(RESRV_UART_INTERFACE, RsrvSettings.PingTimeout);
+    rsrv_mcumcu_protocol_send_vote(RESRV_UART_INTERFACE, RsrvSettings.PingTimeout);
     mcumcu_signal_transition = SIG_VOTE_GOTO_AGRDESC;
 }
 
@@ -402,11 +403,11 @@ static void stmch_vote(int state, int signal)
 static void stmch_send_pong(int state, int signal)
 {
     if (state == STATE_PONGSEND_UART) {
-        resrv_mcumcu_protocol_send_pong(RESRV_UART_INTERFACE, RsrvSettings.PingTimeout);
+        rsrv_mcumcu_protocol_send_pong(RESRV_UART_INTERFACE, RsrvSettings.PingTimeout);
 //        mcumcu_ans_signal_transition = SIG_UART_GOTO_INCOMING;
     }
     else if (state == STATE_PONGSEND_I2C) {
-        resrv_mcumcu_protocol_send_pong(RESRV_I2C_INTERFACE, RsrvSettings.PingTimeoutI2C);
+        rsrv_mcumcu_protocol_send_pong(RESRV_I2C_INTERFACE, RsrvSettings.PingTimeoutI2C);
 //        mcumcu_ans_signal_transition = SIG_I2C_GOTO_INCOMING;
     }
 }
@@ -420,7 +421,7 @@ static void stmch_send_pong(int state, int signal)
 /*=============================================================================================================*/
 static void stmch_send_agreed(int state, int signal)
 {
-    resrv_mcumcu_protocol_send_agreed(RESRV_UART_INTERFACE, RsrvSettings.PingTimeout);
+    rsrv_mcumcu_protocol_send_agreed(RESRV_UART_INTERFACE, RsrvSettings.PingTimeout);
 //    mcumcu_ans_signal_transition = SIG_AGREED_GOTO_INCOMING;
 }
 

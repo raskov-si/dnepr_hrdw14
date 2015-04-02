@@ -108,7 +108,7 @@ int rsrv_mcumcu_protocol_ping_seng
      \sa 
 */
 /*=============================================================================================================*/
-int resrv_mcumcu_protocol_send_pong
+int rsrv_mcumcu_protocol_send_pong
 (
     int     interface,
     clock_t timeout
@@ -137,7 +137,7 @@ int resrv_mcumcu_protocol_send_pong
      \sa 
 */
 /*=============================================================================================================*/
-int resrv_mcumcu_protocol_send_vote
+int rsrv_mcumcu_protocol_send_vote
 (
     int     interface,
     clock_t timeout
@@ -159,7 +159,7 @@ int resrv_mcumcu_protocol_send_vote
      \sa 
 */
 /*=============================================================================================================*/
-int resrv_mcumcu_protocol_send_agreed
+int rsrv_mcumcu_protocol_send_agreed
 (
     int     interface,
     clock_t timeout

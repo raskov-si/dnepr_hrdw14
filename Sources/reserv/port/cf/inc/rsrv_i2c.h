@@ -16,6 +16,8 @@
 int rsrv_mcumcu_i2c_rx_init (void);
 int rsrv_mcumcu_i2c_tx_init (void);
 int rsrv_mcumcu_i2c_receive(uint8_t*, uint16_t*, uint16_t, clock_t);
+int rsrv_i2c_send    (uint8_t* buf, uint16_t len);
+
 
 
 /*=============================================================================================================*/

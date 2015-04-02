@@ -13,6 +13,7 @@ int rsrv_mcumcu_i2c_rx_init (void)
 
 int rsrv_mcumcu_i2c_tx_init (void)
 {
+
     return RSRV_OK;
 }
 
@@ -31,6 +32,7 @@ int rsrv_mcumcu_i2c_receive
     clock_t     timeout
 )
 {
+
     return RSRV_OK;
 }
 

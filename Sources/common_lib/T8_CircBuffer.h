@@ -82,6 +82,7 @@ ReturnStatus circbuffer_read_byte
 
 size_t	circbuffer_get_storage_data_size ( const T8_CircBuffer* const circbuf_desc );
 size_t	circbuffer_get_space_size( const T8_CircBuffer* const circbuf_desc );
+void    circbuffer_set_empty( T8_CircBuffer* circbuf_desc );
 
 ReturnStatus circbuffer_read_block
 ( 
@@ -89,6 +90,14 @@ ReturnStatus circbuffer_read_block
     CircBuffer_datatype             *dest, 
     size_t                          read_size,
     size_t                          *actual_read_size 
+);
+
+ReturnStatus circbuffer_write_block
+(
+	T8_CircBuffer                   *circbuf_desc,
+    size_t                          *actual_write_size,
+	CircBuffer_datatype             *source,
+	size_t                          write_size
 );
 
 
