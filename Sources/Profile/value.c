@@ -1,3 +1,7 @@
+#include "sec_level.h"
+
+#pragma define_section value ".value" far_absolute RW
+#pragma section value begin
 s8  val_Header2[23] = "3.0;dnepr1;dnepra;2;5";
 s8  val_CMHwNumber[33] = "1.4";
 s8  val_SwNumber[33] = "0";
@@ -283,3 +287,4 @@ s8  val_Slot11[3] = "0";
 s8  val_Slot12[3] = "0";
 s8  val_Slot13[3] = "0";
 s8  val_Slot14[3] = "0";
+#pragma section value end

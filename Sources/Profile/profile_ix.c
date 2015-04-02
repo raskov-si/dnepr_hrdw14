@@ -3,7 +3,7 @@
 /*  3.3: Add section VALUE, new PARAM struct */
 /*  3.4: Add GRP_ACCESS (#MFLAG) */
 /*  3.6: dynamic param colors to .value, ?_getvalue()*/
-PARAM_INDEX param_ix[] = {
+const PARAM_INDEX param_ix[] = {
 	{&pT0,NULL},
 	{&pT1,NULL},
 	{&pT2,NULL},
