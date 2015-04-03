@@ -1,4 +1,4 @@
-************** GENERATED 02.04.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
+************** GENERATED 03.04.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
 *********************************
 *********************************
 #PARAM_NAME
@@ -6920,7 +6920,7 @@ CHARLINE
 #VALUE
 CMOSCAlarm;Norm@0|Warning@1|Failure@2
 #LANGPACK
-CMOSCAlarm;Норма@0|Предупреждение@1|Сбой@2
+CMOSCAlarm;Норма@0|Предупреждение@1|Авария@2
 #END
 *********************************
 *********************************
