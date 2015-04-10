@@ -207,6 +207,7 @@
         <Folder
             Name="Source Files"
             Filters="*.c;*.C;*.cc;*.cpp;*.cp;*.cxx;*.c++;*.prg;*.pas;*.dpr;*.asm;*.s;*.bas;*.java;*.cs;*.sc;*.e;*.cob;*.html;*.rc;*.tcl;*.py;*.pl;*.d;*.m;*.mm;*.go">
+            <F N="../../Sources/HAL/MCU/src/mcf5282_i2c_stmch.c"/>
             <F N="../../Sources/reserv/port/x86/src/rsrv_i2c.c"/>
             <F N="../../Sources/reserv/core/src/rsrv_mcumcu_protocol_func.c"/>
             <F N="../../Sources/reserv/core/src/rsrv_mcumcu_protocol_stmchn.c"/>
@@ -224,6 +225,7 @@
                 <F N="../../Sources/reserv/port/x86/inc/rsrv_os.h"/>
                 <F N="../../Sources/reserv/port/x86/inc/rsrv_uart.h"/>
             </Folder>
+            <F N="../../Sources/HAL/MCU/inc/mcf5282_i2c_stmch.h"/>
             <F N="../../Sources/reserv/core/inc/rsrv_mcumcu_protocol_stmchn.h"/>
             <F N="../../Sources/reserv/core/inc/rsrv_typedef.h"/>
         </Folder>

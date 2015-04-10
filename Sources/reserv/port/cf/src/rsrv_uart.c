@@ -13,7 +13,7 @@
 
 /*=============================================================================================================*/
 
-unsigned int    rsrv_uart_send_callback( unsigned int * p, const unsigned int len_max );
+unsigned int    rsrv_uart_send_callback( unsigned int *p, const unsigned int len_max );
 void            rsrv_uart_rcv_callback( const unsigned int ch );
 
 /*=============================================================================================================*/
@@ -64,7 +64,7 @@ unsigned int rsrv_uart_send_callback( unsigned int * p, const unsigned int len_m
 /*=============================================================================================================*/
 void rsrv_uart_rcv_callback( const unsigned int ch )
 {  
-    CircBuffer_push_one_erasingdata( &rsrv_uart_rcv_buff, (u8)(ch & 0xFF) );
+    circbuffer_push_byte( &rsrv_uart_rcv_buff, (u8)(ch & 0xFF) );
 }
 
 
