@@ -1,7 +1,7 @@
 s8  val_Header2[23] = "3.0;dnepr1;dnepra;2;5";
 s8  val_CMHwNumber[33] = "1.4";
 s8  val_SwNumber[33] = "0";
-s8  val_CMSwNumber[33] = "3.3.21";
+s8  val_CMSwNumber[33] = "3.3.22";
 s8  val_CMSrNumber[33] = " ";
 s8  val_CMPtNumber[33] = " ";
 s8  val_Destination[65] = " ";
@@ -49,6 +49,7 @@ u8  col_CMSFP2Pin[3] = {7,5,3};
 u8  col_CMSFP2Pout[3] = {7,5,3};
 u8  col_CMSFP2ThrMode[3] = {7,5,3};
 u8  col_CMTime[3] = {0,0,3};
+u8  col_CMOSCAlarm[3] = {7,5,3};
 u8  col_UpTime[3] = {7,5,3};
 u8  col_CMI33V[3] = {7,5,3};
 u8  col_CMI12V[3] = {7,5,3};

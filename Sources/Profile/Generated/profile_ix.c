@@ -407,5 +407,7 @@ PARAM_INDEX param_ix[] = {
 	{&pT400,NULL},
 	{&pT401,NULL},
 	{&pT402,NULL},
+	{&pT403,NULL},
+	{&pT404,NULL},
 	{NULL}
 };

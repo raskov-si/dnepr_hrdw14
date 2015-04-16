@@ -83,6 +83,10 @@ static _BOOL __sfp_1_on ; //!< включен лазер 1й sfp
 static _BOOL __sfp_2_on ; //!< включен лазер 2й sfp
 static _BOOL __sfp_on_changed = FALSE ; //!< TRUE, когда поменяли __sfp_*_on, но ещё не вызвали I2C_Dnepr_SFP_OnOff
 
+static u32 sfp1_pin_color = SYS_NO_COLOR;
+static u32 sfp2_pin_color = SYS_NO_COLOR;
+
+
 static struct
 {
   _BOOL    state;               /*!< включен или нет режим auto-negotiation */
@@ -1033,6 +1037,7 @@ u32 cmsfppres_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar) {
 
 MEDFILT_CREATE( sfpin1_medfilt );
 MEDFILT_CREATE( sfpin2_medfilt );
+
 u32 cmsfppin_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar) {
 	const u32 sfp_num = p_ix->parent->owner; // Lower -- 1, Upper -- 2
 
@@ -1040,12 +1045,12 @@ u32 cmsfppin_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar) {
 	if((sfp_num == 0) && 
 		(_pDev_presents->bSfpPresent[I2C_DNEPR_SFP_L_INDEX])){
 		pPar->value.F32 = t8_medfilt_f32( &sfpin1_medfilt, _sfp_l_params.rx_pwr );
-		pPar->par_color = SYSGetParamZone( SYSGetParamID(p_ix) );
+		sfp1_pin_color = pPar->par_color = SYSGetParamZone( SYSGetParamID(p_ix) );
 		pPar->ready = 1;
 	} else if((sfp_num == 1) && 
 		(_pDev_presents->bSfpPresent[I2C_DNEPR_SFP_U_INDEX])){
 		pPar->value.F32 = t8_medfilt_f32( &sfpin2_medfilt, _sfp_u_params.rx_pwr );
-		pPar->par_color = SYSGetParamZone( SYSGetParamID(p_ix) );
+		sfp2_pin_color = pPar->par_color = SYSGetParamZone( SYSGetParamID(p_ix) );
 		pPar->ready = 1;
 	} else {
 		// отсутствует
@@ -1058,10 +1063,41 @@ u32 cmsfppin_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar) {
 		pPar->value.F32 = 0 ;
 		pPar->par_color = STR_NO_TRAP_COLOR ;
 		pPar->ready = 0;
+                
+                if ( sfp_num == 0 ) {
+                  sfp1_pin_color = pPar->par_color;
+                } else if ( sfp_num == 1 ) {
+                  sfp2_pin_color = pPar->par_color;
+                }
 	}
 
 	return OK ;
 }
+
+
+u32 cmoscalarm_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar) 
+{
+  
+//  CMOSCAlarm;Norm@0|Warning@1|Failure@2
+    if ( (sfp1_pin_color == SYS_NORMAL_COLOR) && (sfp2_pin_color == SYS_NORMAL_COLOR) )
+    {
+          pPar->value.U32 = 0;
+          pPar->par_color = SYS_NORMAL_COLOR ;        
+    } else if ( (sfp1_pin_color == SYS_NORMAL_COLOR) || (sfp2_pin_color == SYS_NORMAL_COLOR) ) {
+          pPar->value.U32 = 1;
+          pPar->par_color = SYS_MINOR_COLOR ;        
+    } else { 
+          pPar->value.U32 = 2;
+          pPar->par_color = SYS_CRITICAL_COLOR;      
+    }
+      
+      pPar->ready = 1;
+      
+      return OK ;
+}
+
+
+
 
 MEDFILT_CREATE( sfpout1_medfilt );
 MEDFILT_CREATE( sfpout2_medfilt );

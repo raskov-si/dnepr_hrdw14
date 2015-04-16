@@ -1,4 +1,4 @@
-************** GENERATED 24.02.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
+************** GENERATED 03.04.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
 *********************************
 *********************************
 #PARAM_NAME
@@ -119,7 +119,7 @@ CHARLINE
 #MFLAG
 PR_ONLY
 #VALUE
-3.3.21
+3.3.22
 #DATA_LENGTH
 32
 #LANGPACK
@@ -1586,6 +1586,25 @@ NONMETER
 sec
 #LANGPACK
 CMTime;сек;Время с момента включения блока
+#END
+*********************************
+*********************************
+#PARAM_NAME
+CMOSCAlarm
+#COMMENT
+Service channel state (OSC)  
+#SEC_LEVEL
+SL(r,r,r,r)
+#OWNER
+1024
+#TYPE
+PR_DYNAMIC_PARAM
+#DATA_TYPE
+ENUM
+#MFLAG
+GRP_ACCESS
+#LANGPACK
+CMOSCAlarm;;Состояние служебного канала (OSC)
 #END
 *********************************
 *********************************
@@ -6538,7 +6557,7 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-1;Comand module;ALARM1|ALARM2|BlockColor|TCase|CPUUsage|MemLoad|DiskSpace|LocalTime|LocalDate|CMSFP1Pres|CMSFP1Pin|CMSFP1Pout|CMSFP1ThrMode|CMSFP2Pres|CMSFP2Pin|CMSFP2Pout|CMSFP2ThrMode|CMTime|UpTime|CMI33V|CMI12V|Slot1PowerStatus|Slot1Name|Slot1Power|Slot2PowerStatus|Slot2Name|Slot2Power|Slot3PowerStatus|Slot3Name|Slot3Power|Slot4PowerStatus|Slot4Name|Slot4Power|Slot5PowerStatus|Slot5Name|Slot5Power|Slot6PowerStatus|Slot6Name|Slot6Power|Slot7PowerStatus|Slot7Name|Slot7Power|Slot8PowerStatus|Slot8Name|Slot8Power|Slot9PowerStatus|Slot9Name|Slot9Power|Slot10PowerStatus|Slot10Name|Slot10Power|Slot11PowerStatus|Slot11Name|Slot11Power|Slot12PowerStatus|Slot12Name|Slot12Power|Slot13PowerStatus|Slot13Name|Slot13Power|FUPowerStatus|FUName|FUPower
+1;Comand module;ALARM1|ALARM2|BlockColor|TCase|CPUUsage|MemLoad|DiskSpace|LocalTime|LocalDate|CMSFP1Pres|CMSFP1Pin|CMSFP1Pout|CMSFP1ThrMode|CMSFP2Pres|CMSFP2Pin|CMSFP2Pout|CMSFP2ThrMode|CMTime|CMOSCAlarm|UpTime|CMI33V|CMI12V|Slot1PowerStatus|Slot1Name|Slot1Power|Slot2PowerStatus|Slot2Name|Slot2Power|Slot3PowerStatus|Slot3Name|Slot3Power|Slot4PowerStatus|Slot4Name|Slot4Power|Slot5PowerStatus|Slot5Name|Slot5Power|Slot6PowerStatus|Slot6Name|Slot6Power|Slot7PowerStatus|Slot7Name|Slot7Power|Slot8PowerStatus|Slot8Name|Slot8Power|Slot9PowerStatus|Slot9Name|Slot9Power|Slot10PowerStatus|Slot10Name|Slot10Power|Slot11PowerStatus|Slot11Name|Slot11Power|Slot12PowerStatus|Slot12Name|Slot12Power|Slot13PowerStatus|Slot13Name|Slot13Power|FUPowerStatus|FUName|FUPower
 #LANGPACK
 1;Блок управления
 #END
@@ -6883,6 +6902,25 @@ CHARLINE
 CMSFP2TxEnable;Disable@0|Enable@1
 #LANGPACK
 CMSFP2TxEnable;Выкл@0|Вкл@1
+#END
+*********************************
+*********************************
+#PARAM_NAME
+CMOSCAlarm
+#SEC_LEVEL
+NOT_ACCESSIBLE
+#OWNER
+1024
+#TYPE
+PR_ENUMPARAM
+#DATA_TYPE
+CHARLINE
+#MFLAG
+0
+#VALUE
+CMOSCAlarm;Norm@0|Warning@1|Failure@2
+#LANGPACK
+CMOSCAlarm;Норма@0|Предупреждение@1|Авария@2
 #END
 *********************************
 *********************************
