@@ -330,10 +330,10 @@ static void resrv_protocol_mcu_view_to_buf
 {
 #if BIG_ENDIAN_CPU
 
-    buf[0] = _BYTE(mcu_view->Address, 0);
-    buf[1] = _BYTE(mcu_view->Address, 1);
-    buf[2] = _BYTE(mcu_view->Address, 2);
-    buf[3] = _BYTE(mcu_view->Address, 3);
+    buf[0] = _BYTE(mcu_view->Adr, 0);
+    buf[1] = _BYTE(mcu_view->Adr, 1);
+    buf[2] = _BYTE(mcu_view->Adr, 2);
+    buf[3] = _BYTE(mcu_view->Adr, 3);
 
     memcpy(&buf[4], &mcu_view->Role, 9);
 
@@ -392,7 +392,7 @@ static void resrv_protocol_mcu_buf_to_view
     )
 {
 #if BIG_ENDIAN_CPU
-    mcu_view->Address = _DWORD(buf[3], buf[2], buf[1], buf[0]);
+    mcu_view->Adr = _DWORD(buf[3], buf[2], buf[1], buf[0]);
 
     memcpy(&mcu_view->Role, &buf[4], 9);
 

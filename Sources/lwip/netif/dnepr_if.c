@@ -132,7 +132,7 @@ err_t dnepr_if_init(struct netif *netif)
 //    netif->mtu = FEC_MTU;  (1518)
     netif->mtu = MAX_ETH_BUFF_SIZE - 18;  //(1518)
       
-    netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHERNET | NETIF_FLAG_UP;  /* broadcast capability */
+    netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHERNET | NETIF_FLAG_ETHARP| NETIF_FLAG_UP;  /* broadcast capability */
        
    /* We directly use etharp_output() here to save a function call.
    * You can instead declare your own function an call etharp_output()

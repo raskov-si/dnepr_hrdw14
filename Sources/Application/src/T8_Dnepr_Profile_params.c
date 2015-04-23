@@ -987,6 +987,111 @@ u32 ps2srnumber_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len) {
 #undef PSU_SRLEN_NUM
 }
 
+/*! \todo доделать доступ к  */
+u32 ps3vendor_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+    const PSU_UnitInfoTypedef* pPSUInfo = Dnepr_Backplane_GetPSU_Info(0) ;
+    if( pPSUInfo ){
+	  __copy_str_2_buff( pPSUInfo->sManufacturer, buff, PSU_MFR_MAXLEN );
+        return OK ;
+    } else {
+	return ERROR ;
+    }  
+}
+
+
+u32 ps3ptnumber_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+  const PSU_UnitInfoTypedef* pPSUInfo = Dnepr_Backplane_GetPSU_Info(0) ;
+  if( pPSUInfo ){
+	__copy_str_2_buff( pPSUInfo->sModel, buff, PSU_MODEL_MAXLEN );
+	return OK ;
+  } else {
+	return ERROR ;
+  }  
+}
+
+
+u32 ps3power_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+	const PSU_UnitInfoTypedef* pPSUInfo = Dnepr_Backplane_GetPSU_Info(0) ;
+	if( pPSUInfo ){
+		*((u32*)buff) = (u32)pPSUInfo->fPower ;
+		return OK ;
+	} else {
+		return ERROR ;
+	}    
+}
+
+u32 ps3srnumber_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+#define PSU_SRLEN_NUM 32
+
+	const PSU_UnitInfoTypedef* pPSUInfo = Dnepr_Backplane_GetPSU_Info(0) ;
+
+	if( pPSUInfo ){
+		__copy_str_2_buff( Dnepr_Backplane_GetPSU_Info(0)->sUniqueSerial, buff, PSU_SRLEN_NUM );
+		return OK ;
+	} else {
+		return ERROR ;
+	}
+#undef PSU_SRLEN_NUM
+}
+
+u32 ps4vendor_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+    const PSU_UnitInfoTypedef* pPSUInfo = Dnepr_Backplane_GetPSU_Info(1) ;
+    if( pPSUInfo ){
+	  __copy_str_2_buff( pPSUInfo->sManufacturer, buff, PSU_MFR_MAXLEN );
+        return OK ;
+    } else {
+	return ERROR ;
+    }    
+}
+
+u32 ps4ptnumber_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+  const PSU_UnitInfoTypedef* pPSUInfo = Dnepr_Backplane_GetPSU_Info(1) ;
+  if( pPSUInfo ){
+	__copy_str_2_buff( pPSUInfo->sModel, buff, PSU_MODEL_MAXLEN );
+	return OK ;
+  } else {
+	return ERROR ;
+  }  
+}
+
+u32 ps4power_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+	const PSU_UnitInfoTypedef* pPSUInfo = Dnepr_Backplane_GetPSU_Info(1) ;
+	if( pPSUInfo ){
+		*((u32*)buff) = (u32)pPSUInfo->fPower ;
+		return OK ;
+	} else {
+		return ERROR ;
+	}      
+}
+
+u32 ps4srnumber_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+#define PSU_SRLEN_NUM 32
+
+	const PSU_UnitInfoTypedef* pPSUInfo = Dnepr_Backplane_GetPSU_Info(1) ;
+
+	if( pPSUInfo ){
+		__copy_str_2_buff( Dnepr_Backplane_GetPSU_Info(1)->sUniqueSerial, buff, PSU_SRLEN_NUM );
+		return OK ;
+	} else {
+		return ERROR ;
+	}
+#undef PSU_SRLEN_NUM  
+}
+
+
+
+
+
+
+
 u32 pswreeprom_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
 {
 	*((u32*)buff) = 0 ;

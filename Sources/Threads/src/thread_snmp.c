@@ -6,6 +6,8 @@
 /*=============================================================================================================*/
 
 #include <time.h>
+#include <string.h>
+#include <stdlib.h>
 #include "OS_CPU.H"
 #include "OS_CFG.H"
 #include "uCOS_II.H"
@@ -15,6 +17,10 @@
 
 //#include "HAL/MCU/inc/T8_5282_FEC.h"
 #include "HAL/BSP/inc/T8_Dnepr_Ethernet.h"
+#include "reserv/core/inc/rsrv_meraprot.h"
+#include "Application/inc/t8_dnepr_time_date.h"
+
+
 
 #include "Threads/inc/thread_snmp.h"
 
@@ -31,17 +37,20 @@
 #include "lwip/tcpip.h"
 
 #ifdef DEBUG_I2C
-    #include <string.h>
     #include <stdio.h>
-    #include <stdlib.h>
     #include "Threads/inc/threadTerminal.h"
 #endif
 
+#define   CPU_MERA_HOST         "192.168.1.100"
+#define   CPU_MERA_PORT         (0x7777u)
+#define   CPU_MERA_RCV_TIMEO        500
+
+
 
 /** ping receive timeout - in milliseconds */
-#define PING_RCV_TIMEO 2000
+#define PING_RCV_TIMEO 1000
 /** ping delay - in milliseconds */
-#define PING_DELAY     1000 
+#define PING_DELAY     5000 
 /** ping additional data size to include in the packet */
 #define PING_DATA_SIZE 32
 /** ping identifier - must fit on a u16_t */
@@ -51,7 +60,8 @@
 #define PING_THREAD_PRIO        (36)
 #define PING_RESULT(ping_ok)
 //#define PING_TARGET             (netif_default?netif_default->gw:ip_addr_any)
-#define PING_TARGET(addr)             IP4_ADDR(&addr, 192,168,1,100);
+#define SET_TARGET(addr)             IP4_ADDR(&addr, 192,168,1,100);
+
 
 
 /*=============================================================================================================*/
@@ -61,10 +71,15 @@
     int         debug_netlog_term(const char* in, char* out, size_t out_len_max, t_log_cmd *sendlog);
 #endif
     extern  err_t   dnepr_if_init(struct netif *netif);
+    extern  TRoles  rsrv_main_get_cpu_role(void);
+
     
     static void     ping_prepare_echo( struct icmp_echo_hdr *iecho, u16_t len);
     static void     ping_recv(int s);
     static err_t    ping_send(int s, ip_addr_t *addr);
+    
+    
+    
 
 /*=============================================================================================================*/
 /* ping variables */
@@ -72,6 +87,9 @@
 static struct netif     eth0_netif;
 static u16              ping_seq_num;
 //static u32 ping_time; 
+extern    s8  val_CUNetCPUIPAddress[18];
+extern    s8  val_CUNetMCUIPAddress[18];
+extern    s8  val_CUNetIPMask[18];
 
 #ifdef DEBUG_NET
 
@@ -153,6 +171,7 @@ void tcpip_init_done(void *arg)
 }
 
 
+
 /*=============================================================================================================*/
 /*!  \brief 
 
@@ -180,9 +199,14 @@ void task_eth_init (void)
        
 /* Стартуем LwIP */  
  /* Set network address variables */
-    IP4_ADDR(&gw,          192,168,1,100);
-    IP4_ADDR(&ipaddr,      192,168,1,7);
-    IP4_ADDR(&netmask,     255,255,255,0);
+//    IP4_ADDR(&gw,          192,168,1,100);
+//    IP4_ADDR(&ipaddr,      192,168,1,3);
+//    IP4_ADDR(&netmask,     255,255,255,0);        
+    
+    ipaddr_aton("0.0.0.0", &gw);
+    ipaddr_aton("192.168.1.3", &ipaddr);
+//    ipaddr_aton(val_CUNetMCUIPAddress, &ipaddr);
+    ipaddr_aton(val_CUNetIPMask, &netmask);
  
 // Start the TCP/IP thread & init stuff  
     sys_sem_new(&sem, 0);
@@ -193,11 +217,13 @@ void task_eth_init (void)
 // WARNING: This must only be run after the OS has been started.  
     // Typically this is the case, however, if not, you must place this  
     // in a post-OS initialization  
-    netifapi_netif_add(&eth0_netif, &ipaddr, &netmask, &gw, NULL, dnepr_if_init, tcpip_input);            
+    netifapi_netif_add(&eth0_netif, &ipaddr, &netmask, &gw, NULL, dnepr_if_init, tcpip_input);
     netif_set_default(&eth0_netif);
-    netif_set_up(&eth0_netif);        
-
+    netif_set_up(&eth0_netif);
 }
+
+
+
 
 
 /*=============================================================================================================*/
@@ -209,42 +235,58 @@ void task_eth_init (void)
 void task_eth( void *pdata )
 {
     int         sock_desc;
-    ip_addr_t   ping_target;
-    int         timeout         = PING_RCV_TIMEO;
     int         retsock;
+    int         timeout     = CPU_MERA_RCV_TIMEO;
+    u32         answ_timer  = OSTimeGet();
+    u32         now_time    = OSTimeGet();
+    
+    struct sockaddr_in  addr;
+    u8                  buf[64];
+    u8                  len;
   
     LWIP_UNUSED_ARG(pdata);
 
     task_eth_init();
-
-    sock_desc = socket(AF_INET, SOCK_RAW, IP_PROTO_ICMP);
+    
+    sock_desc = socket(AF_INET, SOCK_DGRAM, IP_PROTO_UDP);
     assert(sock_desc >= 0);
 
     retsock = setsockopt(sock_desc, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));    
     assert(retsock == 0);
+    
+    
+    /* set up address to connect to */  
+    memset(&addr, 0, sizeof(addr));
+  
+    addr.sin_len = sizeof(addr);
+    addr.sin_family = AF_INET;  
+    addr.sin_port = PP_HTONS(CPU_MERA_PORT);
+    addr.sin_addr.s_addr = inet_addr(CPU_MERA_HOST);        
+    retsock = connect(sock_desc, (struct sockaddr*)&addr, sizeof(addr)); 
+    assert(retsock == 0);       
 
     while ( TRUE )    {
-        /* ping */          
-      PING_TARGET(ping_target);
+      memset(buf, 0, 64);
+      len = meraprot_setrole_cmd(buf, rsrv_main_get_cpu_role());
+      retsock = write(sock_desc, buf, len);            
       
-    if (ping_send(sock_desc, &ping_target) == ERR_OK) {
-      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
-      ip_addr_debug_print(PING_DEBUG, &ping_target);
-      LWIP_DEBUGF( PING_DEBUG, ("\n"));
-
-//      ping_time = time(NULL);
-      
-      ping_recv(sock_desc);
-    } else {
-      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
-      ip_addr_debug_print(PING_DEBUG, &ping_target);
-      LWIP_DEBUGF( PING_DEBUG, (" - error\n"));
+      memset(buf, 0, 64);
+      retsock = read(sock_desc, buf, MERAPROT_ROLECFM_LEN);
+      now_time = OSTimeGet();
+      if (retsock == MERAPROT_ROLECFM_LEN) {
+          meraprot_setrole_cfm(buf, rsrv_main_get_cpu_role());
+          answ_timer  = OSTimeGet();
+          sys_msleep(1000);      
+      } else if ( (answ_timer + 3000) < now_time ) {                              
+          rsrv_main_set_cpu_udp_error();
+      }
+            
     }
-      
-      sys_msleep(PING_DELAY);                    
-    }      
-      
+    
+    retsock = close(sock_desc);
+    assert(retsock == 0);    
 }
+
 
 
 /*=============================================================================================================*/
@@ -255,12 +297,67 @@ void task_eth( void *pdata )
 /*=============================================================================================================*/
 void task_snmp( void *pdata )
 {
-   while ( TRUE )    {
+    while ( TRUE )    {
         OSTimeDly(1 * OS_TICKS_PER_SEC);
     }      
 }
 
 
+
+
+
+
+
+
+/*=============================================================================================================*/
+/*=============================================================================================================*/
+
+
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+//void task_eth( void *pdata )
+//{
+//    int         sock_desc;
+//    ip_addr_t   ping_target;
+//    int         timeout         = PING_RCV_TIMEO;
+//    int         retsock;
+//  
+//    LWIP_UNUSED_ARG(pdata);
+//
+//    task_eth_init();
+//
+//    sock_desc = socket(AF_INET, SOCK_RAW, IP_PROTO_ICMP);
+//    assert(sock_desc >= 0);
+//
+//    retsock = setsockopt(sock_desc, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));    
+//    assert(retsock == 0);
+//
+//    while ( TRUE )    {
+//        /* ping */          
+//      SET_TARGET(ping_target);
+//      
+//    if (ping_send(sock_desc, &ping_target) == ERR_OK) {
+//      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
+//      ip_addr_debug_print(PING_DEBUG, &ping_target);
+//      LWIP_DEBUGF( PING_DEBUG, ("\n"));
+//
+//      ping_recv(sock_desc);
+//    } else {
+//      LWIP_DEBUGF( PING_DEBUG, ("ping: send "));
+//      ip_addr_debug_print(PING_DEBUG, &ping_target);
+//      LWIP_DEBUGF( PING_DEBUG, (" - error\n"));
+//    }
+//      
+//      sys_msleep(PING_DELAY);                    
+//    }      
+//      
+//}
 
 
 
@@ -354,3 +451,73 @@ ping_recv(int s)
   PING_RESULT(0);
 } 
 /*=============================================================================================================*/
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+static int eth_get_ipv4addr_from_str
+(
+  ip_addr_t   *addr,
+  s8          *addr_string         
+)
+{
+  u8          one,two,three,four;
+  char        *beg;
+  char        *end;
+  char        buf[4];
+  u8          len;
+  
+  assert (addr != NULL);
+  assert (addr_string != NULL);
+    
+  beg =  addr_string;
+  if ( (*beg == '\0') || ( (end = strstr(beg, ".")) == NULL ) ) {
+    return -1;
+  }
+  len = end-beg;        
+        if (len > 3) {
+          return -1;
+        }
+  strncpy(buf, beg, len);        
+  buf[3] = '\0';
+  one = atoi(buf);     
+  
+  beg =  end+1;
+  if ( (*beg == '\0') || ( (end = strstr(beg, ".")) == NULL ) ) {
+    return -1;
+  }
+  len = end-beg;        
+        if (len > 3) {
+          return -1;
+        }
+  strncpy(buf, beg, len);        
+  buf[3] = '\0';
+  two = atoi(buf);     
+
+  beg =  end+1;
+  if ( (*beg == '\0') || ( (end = strstr(beg, ".")) == NULL ) ) {
+    return -1;
+  }
+  len = end-beg;
+        if (len > 3) {
+          return -1;
+        }
+  strncpy(buf, beg, len);        
+  buf[3] = '\0';
+  three = atoi(buf);     
+
+  beg =  end+1;
+  if ( *beg == '\0' ) {
+    return -1;
+  }
+  strncpy(buf, beg, 3);        
+  buf[3] = '\0';
+  four = atoi(buf);     
+
+  IP4_ADDR(addr,one,two,three,four);  
+  return 0;
+}

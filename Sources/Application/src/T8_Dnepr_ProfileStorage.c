@@ -28,7 +28,7 @@
 
 static void   ProfileStorage_SyncParam_thread( void *pdata );
 static _BOOL  Dnepr_ProfileStorage_FS_Sync() ;
-static _BOOL  Dnepr_ProfileStorage_eeprom_sync() ;
+//static _BOOL  Dnepr_ProfileStorage_eeprom_sync() ;
 static _BOOL  write_colors( const u8* param_name, u8 failure_color, u8 degrade_color, u8 normal_color);
 static _BOOL  read_colors( const u8* param_name, u8* failure_color, u8* degrade_color, u8* normal_color );
 
@@ -92,7 +92,7 @@ void Dnepr_ProfileStorage_Init()
 	// инициализируем файловую систему в флеш
 	Dnepr_filesystem_Init() ;
 	// читаем из EEPROM настройки
-	Dnepr_BPEEPROM_Init() ;
+//	Dnepr_BPEEPROM_Init() ;
 
 	// Инициализация буферов динамических параметров и sfp по памяти под батереей.
 	Dnepr_params_Init() ;
@@ -101,7 +101,7 @@ void Dnepr_ProfileStorage_Init()
     // Синхронизация параметров со значениями из флеш.
     Dnepr_ProfileStorage_FS_Sync() ;
 	// Синхронизация параметров со значениями из EEPROM Backplane'а.
-    Dnepr_ProfileStorage_eeprom_sync() ;
+//    Dnepr_ProfileStorage_eeprom_sync() ;
 	// Настраиваем видимость параметров в соответствии с типом крейта.
 	Dnepr_params_Init2_after_EEPROM();
     
@@ -148,6 +148,17 @@ static void Dnepr_ProfileStorage_SyncColor( PARAM_INDEX *p_ix )
 			threadPSync_message_cur_num = 0 ;
 		}
 	}
+}
+
+
+static _BOOL    access_flag;
+
+void denpr_eeprom_backplane_accessflag
+(
+  _BOOL   flag
+)
+{
+    access_flag = flag;
 }
 
 static void ProfileStorage_SyncParam_thread(void *pdata)
@@ -231,9 +242,11 @@ static void ProfileStorage_SyncParam_thread(void *pdata)
 			if( iter_result == OK ){
 				// если надо -- пишем в EEPROM На backplane
 				param_flag = SYSGetParamFlag( SYSGetParamID( qCurMessage->p_ix ) );
-				if( (param_flag & EEPROM_PARAM) && (param_flag != ERROR) ){
-					Dnepr_BPEEPROM_Write( par_name, buff, param_len ) ;
-				}
+                                if ( access_flag == TRUE ) {
+    				  if( (param_flag & EEPROM_PARAM) && (param_flag != ERROR) ){
+					  Dnepr_BPEEPROM_Write( par_name, buff, param_len ) ;
+				  }
+                                }
 				// пишем в фс во флеш
 				Dnepr_filesystem_Write( par_name, buff, param_len );
 			}
@@ -312,7 +325,7 @@ static _BOOL Dnepr_ProfileStorage_FS_Sync()
 //! \brief Проходит по всем параметрам, ищет те, которые сохраняются
 //! в eeprom на backplane (есть флаг EEPROM_PARAM) и синхронизирует
 //! локальное значение с eeprom. Вызывается из потока.
-static _BOOL Dnepr_ProfileStorage_eeprom_sync()
+_BOOL Dnepr_ProfileStorage_eeprom_sync(void)
 {
 	_BOOL eeprom_success = FALSE ;
 	PARAM_INDEX *p_ix = param_ix;

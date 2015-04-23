@@ -37,6 +37,8 @@
 #define TASK_ETH_PRIORITY      (TCPIP_THREAD_PRIO+1)
 #define TASK_SNMP_PRIORITY     (TCPIP_THREAD_PRIO+2)
 
+#define TASK_RSRV_PRIORITY     (21)
+
 
 #define taskMeasure_PRIO    	50	//!< приоритет задачи измерения динамических параметров
 #define SyncParam_prio          51	//!< приоритет задачи измерения динамических параметров

@@ -203,6 +203,7 @@ _BOOL Dnepr_Refresh_Presents()
 }
 
 
+
 //! \brief перечитывает present'ы SFP
 _BOOL Dnepr_Refresh_SFP_Presents()
 {
@@ -354,5 +355,16 @@ static _BOOL SPI_BPEEPROM_ByteTransaction( 	u8* anDataToSend, u32 tx_len,
 
 I2C_PeriphInterfaceTypedef *Dnepr_Internal_DS28CM00_I2C_handle()
 {
-	return Dnepr_I2C_Get_I2C_INT_Driver() ;
+  return Dnepr_I2C_Get_I2C_INT_Driver();
 }
+
+
+_BOOL dnepr_neighbor_present_read(int slot_num)
+{
+    if ( Dnepr_Refresh_Presents() == TRUE )  {
+      return I2C_DNEPR_GetPresentDevices()->bSlotPresent[slot_num];         
+    }
+        
+    return FALSE;
+}
+

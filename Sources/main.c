@@ -35,6 +35,9 @@
 #include "Threads/inc/threadDeviceController.h"
 #include "Threads/inc/thread_snmp.h"
 
+#include "reserv/core/inc/rsrv_main_stmch.h"
+
+
 #include <string.h> /* strlen() */
 
 #include "T8_Atomiccode.h"
@@ -58,10 +61,13 @@ static OS_STK  task_terminal_stack[512];
 static OS_STK  task_eth_stk[512];
 //#pragma data_alignment=4
 //static OS_STK  task_snmp_stk[512];
+#pragma data_alignment=4
+static OS_STK  task_rsrv_stk[512];
 
 static void taskInit(void *pdata);
 void taskMeasure(void *pdata);
 void taskWatchdog(void *pdata);
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -173,7 +179,13 @@ static void taskInit(void *pdata)
 //        OSTaskNameSet( taskNet_PRIO, "task_vlan_rstp", &return_code ) ;
 //        assert( return_code == OS_ERR_NONE ) ;
     }
-
+    
+    {
+        assert(OSTaskCreateExt(task_reserv, (void *)0, (void *)&task_rsrv_stk[511], TASK_RSRV_PRIORITY, TASK_RSRV_PRIORITY, (void *)&task_rsrv_stk, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+        OSTaskNameSet( TASK_RSRV_PRIORITY, "task_reserv", &return_code ) ;
+        assert( return_code == OS_ERR_NONE ) ;
+    }
+    
 #ifdef DEBUG_TERMINAL
     assert(OSTaskCreateExt(task_terminal, (void *)0, (void *)&task_terminal_stack[511], TASKTERM_COMM_PRIO, TASKTERM_COMM_PRIO, (void *)&task_terminal_stack, 512, NULL, OS_TASK_OPT_STK_CHK) == OS_ERR_NONE);
     OSTaskNameSet(TASKTERM_COMM_PRIO, "task_terminal", &return_code);

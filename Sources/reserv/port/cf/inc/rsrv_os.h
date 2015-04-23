@@ -16,12 +16,18 @@
 typedef  void       TrsrvOsThreadArg;
 typedef  OS_EVENT   TrsrvOsSem;
 typedef  OS_EVENT   TrsrvOsMtx;
+typedef  OS_EVENT   *TrsrvOsMbox;
+
       
 /*=============================================================================================================*/
 
-int rsrv_os_lock_create (TrsrvOsSem  *sem);
-int rsrv_os_lock        (TrsrvOsSem  *sem);
-int rsrv_os_unlock      (TrsrvOsSem  *sem);
+int   rsrv_os_lock_create (TrsrvOsSem  *sem);
+int   rsrv_os_lock        (TrsrvOsSem  *sem);
+int   rsrv_os_unlock      (TrsrvOsSem  *sem);
+int   rsrv_os_mbox_new    (TrsrvOsMbox *mbox, void *msg);
+int   rsrv_os_mbox_post   (TrsrvOsMbox *mbox, void *msg);
+int   rsrv_os_mbox_fetch  (TrsrvOsMbox *mbox, void **msg, uint32_t timeout);
+
 
 /*=============================================================================================================*/
 

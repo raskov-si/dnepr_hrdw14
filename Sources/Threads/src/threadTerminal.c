@@ -140,7 +140,7 @@ unsigned int terminal_uart_send_callback( unsigned int * p, const unsigned int l
     size_t actual_sz ;
     
 //    CircBuffer_read( &terminal_snd_buff, (u8*)&circle_byte, len_max, &actual_sz );
-    circbuffer_read_block( &terminal_snd_buff, (u8*)&circle_byte, len_max, &actual_sz );
+    circbuffer_pop_block( &terminal_snd_buff, (u8*)&circle_byte, len_max, &actual_sz );
     *p = (unsigned int )circle_byte ;
     
     if ( len_max > 1 )  {

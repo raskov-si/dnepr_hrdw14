@@ -114,5 +114,8 @@ _BOOL I2C_Dnepr_CheckDneprHotSwapSelection();
 //! производит чтение серийного номера на плате днепра
 _BOOL Dnepr_ReadDS28CM00_Internal(MAX_DS28CM00_ContentsTypedef* tContents);
 
+_BOOL dnepr_neighbor_present_read(int slot_num);
+
+
 
 #endif //__I2C_BOARD_DRIVER_H

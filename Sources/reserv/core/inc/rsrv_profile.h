@@ -1,17 +1,13 @@
-#ifndef _RESERV_H_
-#define _RESERV_H_
+#ifndef _RSRV_PROFILE_H_
+#define _RSRV_PROFILE_H_
 
 #ifdef	__cplusplus
     extern "C" {
 #endif
-
-/*=============================================================================================================*/
-
-  #include "rsrv_os.h"
       
 /*=============================================================================================================*/
 
-  void task_reserv(TrsrvOsThreadArg   *arg);
+#include "reserv/core/inc/rsrv_typedef.h"
 
 /*=============================================================================================================*/
 
@@ -19,4 +15,6 @@
     }
 #endif
 
-#endif  /* _RESERV_H_ */
+#endif  /* _RSRV_PROFILE_H_ */
+
+      

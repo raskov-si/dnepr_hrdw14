@@ -1193,6 +1193,28 @@ u32 pspres_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 			pPar->par_color = SYS_MINOR_COLOR ;
 		return OK ;
 	}
+
+
+	else if( p_ix->parent->owner == 2 ){
+		pPar->value.U32 = t8_medfilt_u32( &ps1pres_medfilt,
+										Dnepr_Backplane_PS1_Present() );
+		pPar->ready = 1 ;
+		if(pPar->value.U32)
+			pPar->par_color = SYS_NORMAL_COLOR ;
+		else
+			pPar->par_color = SYS_MINOR_COLOR ;
+		return OK ;
+	} else if( p_ix->parent->owner == 3 ){
+		pPar->value.U32 = t8_medfilt_u32( &ps2pres_medfilt, 
+											Dnepr_Backplane_PS2_Present() );
+		pPar->ready = 1 ;
+		if(pPar->value.U32)
+			pPar->par_color = SYS_NORMAL_COLOR ;
+		else
+			pPar->par_color = SYS_MINOR_COLOR ;
+		return OK ;
+	}
+
 	return ERROR ;
 }
 
@@ -1206,6 +1228,22 @@ u32 psinpwrstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 			return ERROR ;
 		}
 	} else if( p_ix->parent->owner == 1 ){
+		if( Dnepr_Backplane_PS2_Present() ){
+			pPar->value.U32 = Dnepr_Backplane_GetPSU_Status()->tPs2.bInOk ;
+		} else {
+			pPar->ready = 0 ;
+			return ERROR ;
+		}                
+                
+                
+	} else if( p_ix->parent->owner == 2 ){
+		if( Dnepr_Backplane_PS1_Present() ){
+			pPar->value.U32 = Dnepr_Backplane_GetPSU_Status()->tPs1.bInOk ;
+		} else {
+			pPar->ready = 0 ;
+			return ERROR ;
+		}
+	} else if( p_ix->parent->owner == 3 ){
 		if( Dnepr_Backplane_PS2_Present() ){
 			pPar->value.U32 = Dnepr_Backplane_GetPSU_Status()->tPs2.bInOk ;
 		} else {
@@ -1251,6 +1289,30 @@ u32 psoutpwrstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 			pPar->par_color = STR_NO_TRAP_COLOR ;
 			return ERROR ;
 		}
+                
+	} else if( p_ix->parent->owner == 2 ){
+		if( Dnepr_Backplane_PS1_Present() ){
+			pPar->value.U32 = t8_medfilt_u32( &ps1outpwr_medfilt, Dnepr_Backplane_GetPSU_Status()->tPs1.bPowerGood );
+			pPar->par_color = pPar->value.U32 == 1 ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
+			pPar->ready = 1 ;
+			return OK ;
+		} else {
+			pPar->ready = 0 ;
+			pPar->par_color = STR_NO_TRAP_COLOR ;
+			return ERROR ;
+		}
+	} else if( p_ix->parent->owner == 3 ){
+		if( Dnepr_Backplane_PS2_Present() ){
+			pPar->value.U32 = t8_medfilt_u32( &ps2outpwr_medfilt, Dnepr_Backplane_GetPSU_Status()->tPs2.bPowerGood );
+			pPar->par_color = pPar->value.U32 == 1 ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
+			pPar->ready = 1 ;
+			return OK ;
+		} else {
+			pPar->ready = 0 ;
+			pPar->par_color = STR_NO_TRAP_COLOR ;
+			return ERROR ;
+		}
+                
 	} else {
 		return ERROR ;
 	}
@@ -1283,6 +1345,28 @@ u32 ps2outcurrent_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 	pPar->ready = 1 ;
 	return OK ;
 }
+
+u32 ps3outcurrent_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	Dnepr_BP_Current_Measure( &_ps1_curr, val_PS1CurrentK, val_PS1CurrentB,
+										&_ps2_curr, val_PS2CurrentK, val_PS2CurrentB );
+	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;  
+}
+
+u32 ps4outcurrent_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	// измерение обоих каналок делаем в ps1outcurrent_getvalue
+	
+	pPar->value.F32 = t8_medfilt_f32( &ps2outcurr_medfilt, _ps2_curr );
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;  
+}
+
+
 
 u32 psvout_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 {		__PSU_MEASUREMENTS_(p_ix->parent->owner,fVout) }

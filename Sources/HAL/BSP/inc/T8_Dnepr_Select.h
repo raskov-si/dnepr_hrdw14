@@ -30,9 +30,17 @@ typedef enum {
 	SELECT_SLOT_NONE
 } Dnepr_Select_t ;
 
+
+
 //! Инициализирует расширители портов и внешнее прерывание.
 void Dnepr_InitSelect();
 //! Выбирает заданный порт, возвращает успешность транзакции по I2C.
 _BOOL Dnepr_Select( const Dnepr_Select_t select, _BOOL *swtchd );
+
+_BOOL dnepr_select_slot_read
+(
+  const Dnepr_Select_t signal_index
+);
+
 
 #endif

@@ -179,9 +179,11 @@ void  taskCU (void *pdata)
 
         // если вышли по таймауту -- контрона точно нет, гасим светодиод
         if(return_code == OS_ERR_TIMEOUT){
+//            cpu_profile_flag = FALSE;
             Dnepr_Measure_SetCPULed( (T8_Dnepr_LedTypedef){NONE, FALSE} );
 			continue ;
         }
+//        cpu_profile_flag = TRUE;
 
         // если пришла команда, о том что нужно перечитать параметры sfp
         if(qCurMessage->message_type == RENEW_SFP_PARAMS){

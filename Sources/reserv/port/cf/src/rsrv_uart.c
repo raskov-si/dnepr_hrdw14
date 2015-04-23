@@ -4,8 +4,6 @@
 #include "common_lib/T8_CircBuffer.h"
 #include "Application/inc/t8_dnepr_time_date.h"
 
-
-
 /*=============================================================================================================*/
 
 #define MAX_BUFF_LEN        256
@@ -45,7 +43,7 @@ unsigned int rsrv_uart_send_callback( unsigned int * p, const unsigned int len_m
 {
     size_t  actual_sz ;
     
-    circbuffer_read_block( &rsrv_uart_snd_buff, (u8*)&p, len_max, &actual_sz );
+    circbuffer_pop_block( &rsrv_uart_snd_buff, (u8*)&p, len_max, &actual_sz );
 
     if( circbuffer_get_storage_data_size(&rsrv_uart_snd_buff) == 0 )  {
         rsrv_uart_stop_tx(&uart0_desc);
@@ -64,7 +62,7 @@ unsigned int rsrv_uart_send_callback( unsigned int * p, const unsigned int len_m
 /*=============================================================================================================*/
 void rsrv_uart_rcv_callback( const unsigned int ch )
 {  
-    circbuffer_push_byte( &rsrv_uart_rcv_buff, (u8)(ch & 0xFF) );
+    circbuffer_push_byte_erasing( &rsrv_uart_rcv_buff, (u8)(ch & 0xFF) );
 }
 
 
@@ -113,7 +111,7 @@ int rsrv_mcumcu_uart_send    (uint8_t* buf, uint16_t len, clock_t timeout)
     clock_t timeout_timer;
     int     val_ret = RSRV_OK;
 
-    timer_set(&timeout_timer);
+    timer_reset(&timeout_timer);
 
     circbuffer_write_block( &rsrv_uart_snd_buff, &actual_sz, buf, len );
     uart_terminal_start_tx(&uart0_desc);
@@ -154,10 +152,10 @@ int rsrv_mcumcu_uart_receive
     clock_t timeout_timer;
     int     val_ret = RSRV_OK;
 
-    timer_set(&timeout_timer);
+    timer_reset(&timeout_timer);
 
     do {
-       circbuffer_read_block(&rsrv_uart_rcv_buff, out_buf, len, &actual_sz); 
+       circbuffer_pop_block(&rsrv_uart_rcv_buff, out_buf, len, &actual_sz); 
     } while ( (actual_sz != len) && !timer_is_expired(&timeout_timer, timeout) );
 
     return val_ret;

@@ -279,9 +279,6 @@
           <state>CONFIG_YAFFS_SHORT_NAMES_IN_RAM</state>
           <state>CONFIG_YAFFS_YAFFS2</state>
           <state>CONFIG_YAFFS_PROVIDE_DEFS</state>
-          <state>DEBUG_TERMINAL</state>
-          <state>DEBUG_I2C</state>
-          <state>DEBUG_NET</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -1242,6 +1239,7 @@
           <state>$PROJ_DIR$/Sources/lwip/include</state>
           <state>$PROJ_DIR$/Sources\lwip\include\ipv4\</state>
           <state>$PROJ_DIR$/Sources\lwip\include\ipv6\</state>
+          <state>$PROJ_DIR$\Sources\reserv\port\cf\inc</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
@@ -1974,7 +1972,8 @@
           <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_SlotEEPROM.h</name>
         </file>
         <file>
-          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_SMI.h</name>          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_UART_Profile.h</name>        </file>
+          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_SMI.h</name>
+        </file>
         <file>
           <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_Uart_Profile.h</name>
         </file>
@@ -2439,9 +2438,6 @@
         <name>$PROJ_DIR$\Sources\lwip\netif\etharp.c</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\Sources\lwip\netif\ethernetif.c</name>
-      </file>
-      <file>
         <name>$PROJ_DIR$\Sources\lwip\netif\slipif.c</name>
       </file>
     </group>
@@ -2502,6 +2498,15 @@
     <group>
       <name>inc</name>
       <file>
+        <name>$PROJ_DIR$\Sources\reserv\port\cf\inc\rsrv_backplane.h</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\Sources\reserv\core\inc\rsrv_decision.h</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\Sources\reserv\port\cf\inc\rsrv_discr.h</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\Sources\reserv\port\cf\inc\rsrv_i2c.h</name>
       </file>
       <file>
@@ -2512,6 +2517,9 @@
       </file>
       <file>
         <name>$PROJ_DIR$\Sources\reserv\core\inc\rsrv_mcumcu_protocol_stmchn.h</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\Sources\reserv\core\inc\rsrv_meraprot.h</name>
       </file>
       <file>
         <name>$PROJ_DIR$\Sources\reserv\port\cf\inc\rsrv_os.h</name>
@@ -2529,6 +2537,15 @@
     <group>
       <name>src</name>
       <file>
+        <name>$PROJ_DIR$\Sources\reserv\port\cf\src\rsrv_backplane.c</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\Sources\reserv\core\src\rsrv_decision.c</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\Sources\reserv\port\cf\src\rsrv_discr.c</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\Sources\reserv\port\cf\src\rsrv_i2c.c</name>
       </file>
       <file>
@@ -2541,7 +2558,13 @@
         <name>$PROJ_DIR$\Sources\reserv\core\src\rsrv_mcumcu_protocol_stmchn.c</name>
       </file>
       <file>
+        <name>$PROJ_DIR$\Sources\reserv\core\src\rsrv_meraprot.c</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\Sources\reserv\port\cf\src\rsrv_os.c</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\Sources\reserv\core\src\rsrv_profile.c</name>
       </file>
       <file>
         <name>$PROJ_DIR$\Sources\reserv\port\cf\src\rsrv_uart.c</name>

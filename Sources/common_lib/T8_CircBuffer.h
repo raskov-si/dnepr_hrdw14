@@ -80,7 +80,7 @@ ReturnStatus circbuffer_pop_byte
     CircBuffer_datatype     *dest
 );
 
-ReturnStatus circbuffer_push_byte
+ReturnStatus circbuffer_push_byte_erasing
 (
 	T8_CircBuffer           *const circbuf_desc,
 	CircBuffer_datatype     source

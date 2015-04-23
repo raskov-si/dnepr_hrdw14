@@ -1,17 +1,16 @@
-#ifndef _RESERV_H_
-#define _RESERV_H_
+#ifndef _RSRV_BACKPLANE_H_
+#define _RSRV_BACKPLANE_H_
 
 #ifdef	__cplusplus
     extern "C" {
 #endif
 
+
 /*=============================================================================================================*/
 
-  #include "rsrv_os.h"
-      
-/*=============================================================================================================*/
-
-  void task_reserv(TrsrvOsThreadArg   *arg);
+void  rsrv_backplane_sync(void);
+void  rsrv_backplane_start_access(void);
+void  rsrv_backplane_stop_access(void);
 
 /*=============================================================================================================*/
 
@@ -19,4 +18,5 @@
     }
 #endif
 
-#endif  /* _RESERV_H_ */
+#endif  /* _RSRV_OS_H_ */
+      

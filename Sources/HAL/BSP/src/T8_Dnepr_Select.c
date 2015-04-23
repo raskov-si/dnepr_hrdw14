@@ -99,3 +99,115 @@ _BOOL Dnepr_Select( const Dnepr_Select_t select, _BOOL *swtchd )
 	}
 	return ret ;
 }
+
+
+_BOOL dnepr_select_slot_read
+(
+   const Dnepr_Select_t signal_index
+)
+{
+    u16     value;
+    _BOOL   ret = FALSE;
+          
+    switch (signal_index) {
+		case SELECT_SLOT_0 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x0004 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x0004) ? TRUE : FALSE;
+                        }
+		break;
+		case SELECT_SLOT_1 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x0008 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x0008) ? TRUE : FALSE;
+                        }
+		break;
+		case SELECT_SLOT_2 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x0010 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x0010) ? TRUE : FALSE;
+                        }
+		break;
+		case SELECT_SLOT_3 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x0020 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x0020) ? TRUE : FALSE;
+                        }
+		break;
+		case SELECT_SLOT_4 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x0040 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x0040) ? TRUE : FALSE;
+                        }
+		break;
+		case SELECT_SLOT_5 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x0080 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x0080) ? TRUE : FALSE;
+                        }
+		break;
+		case SELECT_SLOT_6 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x0100 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x0100) ? TRUE : FALSE;
+                        }
+		break;
+		case SELECT_SLOT_7 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x0200 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x0200) ? TRUE : FALSE;
+                        }                  
+		break;
+		case SELECT_SLOT_8 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0xC000 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0xC000) ? TRUE : FALSE;
+                        }                  
+		break;
+		case SELECT_SLOT_9 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0xA000 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0xA000) ? TRUE : FALSE;
+                        }                  
+		break;
+		case SELECT_SLOT_10 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x9000 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x9000) ? TRUE : FALSE;
+                        }                  
+		break;
+		case SELECT_SLOT_11 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x0800 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x0800) ? TRUE : FALSE;
+                        }                  
+		break;
+		case SELECT_SLOT_12 :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x0400 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x0400) ? TRUE : FALSE;
+                        }                  
+		break;
+		case SELECT_SLOT_FAN :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x0000 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x0000) ? TRUE : FALSE;
+                        }                  
+		break;
+		case SELECT_SLOT_ALL :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x7FFC );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x7FFC) ? TRUE : FALSE;
+                        }                  
+		break;
+		case SELECT_SLOT_NONE :
+                	TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x8000 );
+                        if ( TCA9539_ReadGPIO( Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver(), TCA9539_SELECT_ADDR,  &value ) == TRUE ) {                          
+                            ret = (value & 0x8000) ? TRUE : FALSE;
+                        }                  
+		break;
+	}
+    
+    TCA9539_SetDirectionRead( Dnepr_I2C_Get_PMBUS_INT_Driver(), TCA9539_SELECT_ADDR, 0x0000 );  
+    return ret;
+}

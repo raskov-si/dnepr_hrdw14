@@ -494,7 +494,7 @@
  * packet in a row to an IP address that is not in the ARP cache.
  */
 #ifndef ARP_QUEUEING
-#define ARP_QUEUEING                    0
+#define ARP_QUEUEING                    1
 #endif
 
 /** The maximum number of packets which may be queued for each
@@ -516,7 +516,7 @@
  * Also notice that this slows down input processing of every IP packet!
  */
 #ifndef ETHARP_TRUST_IP_MAC
-#define ETHARP_TRUST_IP_MAC             0
+#define ETHARP_TRUST_IP_MAC             1
 #endif
 
 /**

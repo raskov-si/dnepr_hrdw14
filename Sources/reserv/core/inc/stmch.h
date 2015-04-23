@@ -25,8 +25,8 @@ struct STM_TRANSITION
 #endif
 
 /*=============================================================================================================*/
-#define  DO_STATE_MACHINE_TABLE(func_ptr_state, func_get_signal, table) { \
-                                                        int                         *cur_state;\
+#define  DO_STATE_MACHINE_TABLE(state_type, func_ptr_state, func_get_signal, table) { \
+                                                        state_type                 *cur_state;\
                                                         int                         cur_signal;\
                                                         transition_worker           worker; \
                                                         \
@@ -35,11 +35,11 @@ struct STM_TRANSITION
                                                         cur_state  = func_ptr_state();\
                                                         cur_signal = func_get_signal();\
                                                         assert(cur_state != NULL);\
-                                                        worker = table[*cur_state][cur_signal].worker; \
+                                                        worker = table[(int)*cur_state][cur_signal].worker; \
                                                         if (worker != NULL) { \
-                                                            worker(*cur_state, cur_signal); \
+                                                            worker((int)*cur_state, cur_signal); \
                                                         } \
-                                                        *cur_state = table[*cur_state][cur_signal].new_state; \
+                                                        *cur_state = (state_type)table[(int)*cur_state][cur_signal].new_state; \
                                                       }
 
 /*=============================================================================================================*/
