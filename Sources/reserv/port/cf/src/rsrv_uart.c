@@ -6,7 +6,7 @@
 
 /*=============================================================================================================*/
 
-#define MAX_BUFF_LEN        256
+#define MAX_BUFF_LEN        512
 #define UART0_MCUMCU_SPEED  115200
 
 /*=============================================================================================================*/
@@ -33,6 +33,19 @@ static uart_desc_t uart0_desc =
 static uint8_t   stop_tx_flag;
 /*=============================================================================================================*/
 
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+void UART0_Handler(void) 
+{
+    uart_isr( &uart0_desc );
+}
+
 /*=============================================================================================================*/
 /*!  \brief 
 
@@ -41,16 +54,29 @@ static uint8_t   stop_tx_flag;
 /*=============================================================================================================*/
 unsigned int rsrv_uart_send_callback( unsigned int * p, const unsigned int len_max )
 {
-    size_t  actual_sz ;
+  
+   u8            circle_byte;
     
-    circbuffer_pop_block( &rsrv_uart_snd_buff, (u8*)&p, len_max, &actual_sz );
-
-    if( circbuffer_get_storage_data_size(&rsrv_uart_snd_buff) == 0 )  {
+    circbuffer_pop_byte(&rsrv_uart_snd_buff,  &circle_byte);
+    *p = (unsigned int )circle_byte ;
+      
+    if( circbuffer_get_storage_data_size ( &rsrv_uart_snd_buff ) == 0)  {
         rsrv_uart_stop_tx(&uart0_desc);
         stop_tx_flag = 1;
     }
     
-    return  actual_sz;
+    return 1;
+   
+//    size_t  actual_sz ;
+//    
+//    circbuffer_pop_block( &rsrv_uart_snd_buff, (u8*)p, len_max, &actual_sz );
+//
+//    if( circbuffer_get_storage_data_size(&rsrv_uart_snd_buff) == 0 )  {
+//        rsrv_uart_stop_tx(&uart0_desc);
+//        stop_tx_flag = 1;
+//    }
+//    
+//    return  actual_sz;
 }
 
 
@@ -113,14 +139,11 @@ int rsrv_mcumcu_uart_send    (uint8_t* buf, uint16_t len, clock_t timeout)
 
     timer_reset(&timeout_timer);
 
-    circbuffer_write_block( &rsrv_uart_snd_buff, &actual_sz, buf, len );
+    circbuffer_push_block_erasing( &rsrv_uart_snd_buff, &actual_sz, buf, len );    
+    stop_tx_flag = 0;
     uart_terminal_start_tx(&uart0_desc);
 
-    while ( (actual_sz != len) && !timer_is_expired(&timeout_timer, timeout) ) {
-        circbuffer_write_block( &rsrv_uart_snd_buff, &actual_sz, buf, len );
-    }
-
-    while ( (stop_tx_flag == 0) && !timer_is_expired(&timeout_timer, timeout) ) {
+    while ( (stop_tx_flag == 0) && !timer_is_expired(&timeout_timer, timeout*1000) ) {
         continue;
     }
 
@@ -148,16 +171,28 @@ int rsrv_mcumcu_uart_receive
     clock_t     timeout
 )
 {
-    size_t  actual_sz ;
-    clock_t timeout_timer;
-    int     val_ret = RSRV_OK;
+    clock_t   timeout_timer;
+    int       val_ret = RSRV_OK;
+    size_t    left_len      = len;
+    size_t    indx          = 0;
 
     timer_reset(&timeout_timer);
-
     do {
-       circbuffer_pop_block(&rsrv_uart_rcv_buff, out_buf, len, &actual_sz); 
-    } while ( (actual_sz != len) && !timer_is_expired(&timeout_timer, timeout) );
-
+        size_t    actual_sz ;
+        circbuffer_pop_block(&rsrv_uart_rcv_buff, &out_buf[indx], left_len, &actual_sz); 
+        left_len     -= actual_sz;
+        indx         += actual_sz;                                  
+//    } while ( ( indx < len ) && !timer_is_expired(&timeout_timer, timeout*1000) );
+    } while ( ( indx < len ) && !timer_is_expired(&timeout_timer, 1000*1000) );
+    
+    if ( readed_len != NULL ) {
+      *readed_len = indx;
+    }
+            
+    if ( indx < len ) {
+      val_ret = RSRV_TIMEOUT;
+    }
+            
     return val_ret;
 }
 

@@ -91,10 +91,12 @@ uart_desc_t uart0_desc =
 };
 
 /*=============================================================================================================*/
+#ifdef DEBUG_TERMINAL
 void UART0_Handler(void) 
 {
     uart_isr( &uart0_desc );
 }
+#endif
 
 
 void terminal_uart_rcv_callback( const unsigned int ch )
@@ -105,13 +107,13 @@ void terminal_uart_rcv_callback( const unsigned int ch )
     
   // askTerm_message[taskTerm_message_cur_num].message_type =  UART_SND_LOG_BREAK          /* прерываем отсылку лога (cntrl С) */                                                                            /* отсылаем эхо если начали получать команду */
 
-  CircBuffer_push_one_erasingdata( &terminal_snd_buff, (u8)(ch & 0xFF) );
+  circbuffer_push_byte_erasing( &terminal_snd_buff, (u8)(ch & 0xFF) ) ;        
   uart_terminal_start_tx(&uart0_desc);
   
   
   if (ch == ENDLINE_SYM)                                                    /* приняли конец строки, отсылаем в поток обработки сообщение */
   {     
-        CircBuffer_push_one_erasingdata( &terminal_rcv_buff, (u8)('\0') ) ;        
+        circbuffer_push_byte_erasing( &terminal_rcv_buff, (u8)('\0') ) ;        
         ++uart_rcvmsg_len;
         taskTerm_message[taskTerm_message_cur_num].message_type = UART_RCV_STRING ;
         taskTerm_message[taskTerm_message_cur_num].rcvmsg_len = uart_rcvmsg_len ;
@@ -126,8 +128,7 @@ void terminal_uart_rcv_callback( const unsigned int ch )
         return;
   }
        
-  
-  CircBuffer_push_one_erasingdata( &terminal_rcv_buff, (u8)(ch & 0xFF) ) ;         /* помещаем символ в кольцевой буфер */
+  circbuffer_push_byte_erasing( &terminal_rcv_buff, (u8)(ch & 0xFF) );
   ++uart_rcvmsg_len;
   
   {;}     // else if ( message_type_current == UART_RCV_STRING && !isalnum(ch) )   /* при непечатном символе */
@@ -136,29 +137,16 @@ void terminal_uart_rcv_callback( const unsigned int ch )
 
 unsigned int terminal_uart_send_callback( unsigned int * p, const unsigned int len_max )
 {
-    u8      circle_byte;
-    size_t actual_sz ;
+    u8            circle_byte;
     
-//    CircBuffer_read( &terminal_snd_buff, (u8*)&circle_byte, len_max, &actual_sz );
-    circbuffer_pop_block( &terminal_snd_buff, (u8*)&circle_byte, len_max, &actual_sz );
+    circbuffer_pop_byte(&terminal_snd_buff,  &circle_byte);
     *p = (unsigned int )circle_byte ;
-    
-    if ( len_max > 1 )  {
-        circle_byte = *p ;
-    }
-
-  
+      
     if( circbuffer_get_storage_data_size ( &terminal_snd_buff ) == 0)  {
-//    if( CircBuffer_actual_size( &terminal_snd_buff ) == 0 ){
-//	if( terminal_snd_buff.iHead != terminal_snd_buff.iTail )  {
-//		circle_byte = *p ;
-//	}
-        // данные кончились -- выключаем передачу
         uart_terminal_stop_tx(&uart0_desc);
     }
     
-//    return len_max ;
-    return actual_sz;
+    return 1;
 }
 
 
@@ -180,6 +168,7 @@ void task_terminal (void *pdata)
     term_command_definition *last_cmd;
     t_log_cmd               snd_log_flag = TERMINAL_NOTHING;
     taskTerm_message_t       *qCurMessage ;
+    size_t                  act_write;
     
     pdata = pdata;      // чтобы не было warning'а о неиспользовании    
     task_terminal_init();    
@@ -187,10 +176,8 @@ void task_terminal (void *pdata)
     while( TRUE ) {
       
         if ( snd_log_flag == TERMINAL_NOTHING )     {
-            OSTimeDly( 500 );      
-            CircBuffer_push_one_erasingdata( &terminal_snd_buff, '\r' );                         /* отсылаем приглашение на ввод */ 
-            CircBuffer_push_one_erasingdata( &terminal_snd_buff, '\n' );
-            CircBuffer_push_one_erasingdata( &terminal_snd_buff, '>' );
+            OSTimeDly( 500 );
+            circbuffer_push_block_erasing(&terminal_snd_buff, &act_write, "\r\n>", 3);          /* отсылаем приглашение на ввод */
             uart_terminal_start_tx(&uart0_desc) ;
             
     	    qCurMessage = (taskTerm_message_t*)OSQPend( termRcvQueue, 0, &return_code );         /* дожидаемся приема сообщения (символа окончания ввода) */
@@ -210,7 +197,7 @@ void task_terminal (void *pdata)
 }
 
 
-static    char send_buff[ 64 ];
+static    char send_buff[ 128 ];
 static    char rcv_buff[ 64 ];
 
 
@@ -261,17 +248,25 @@ static void terminal_send_log
                 }
               
                 if ( cur_cmd->get_log_message_num() > 0 )  {
-                   int i;
-                   int  answ_len = cur_cmd->get_log_message(send_buff, 64);
-                   while ( circbuffer_get_space_size (p_answ_buff) <  answ_len)  { 
-                        continue;
-                   }
+                   int      answ_len = cur_cmd->get_log_message(send_buff, 128);
+                   size_t   left_len      = answ_len;
+                   size_t   indx          = 0;
+                   
+//                   while ( circbuffer_get_space_size (p_answ_buff) <  answ_len)  { 
+//                        continue;
+//                   }
                    if ( answ_len > 0 ) {                     
-        
-                        for( i = 0; i < answ_len; ++i ){
-                            CircBuffer_push_one_erasingdata( p_answ_buff, (u8)send_buff[i] );
-                        }                     
-                        uart_terminal_start_tx(uart_desc) ;
+                      do {
+                          size_t   act_write;
+//                          if ( indx > 128 ) { 
+//                            break; 
+//                          }
+                          circbuffer_push_block(p_answ_buff, &act_write, (u8*)&send_buff[indx], left_len);          /* отсылаем приглашение на ввод */
+                          left_len     -= act_write;
+                          indx         += act_write;                          
+                      } while ( indx < answ_len);
+                        
+                      uart_terminal_start_tx(uart_desc) ;
                    }
                 } else {
                     *snd_log_cmd = TERMINAL_SND_LOG_BREAK; 
@@ -349,7 +344,7 @@ static void terminal_command
     
     rcv_len =  message_desc->rcvmsg_len;                                                    /* читаем сообщение из циклического буфера */
     
-    if( CircBuffer_read( p_rcv_buff, (u8*)rcv_buff, rcv_len, &recv_buff_len ) == ERROR ) {
+    if( circbuffer_pop_block( p_rcv_buff, (u8*)rcv_buff, rcv_len, &recv_buff_len ) == ERROR ) {    
         return;
     }
     
@@ -361,17 +356,19 @@ static void terminal_command
             *find_cmd = ptr_cmd;
             
             if ( answ_len ) {
-                CircBuffer_push_one_erasingdata( &terminal_snd_buff, '\r' );
-                CircBuffer_push_one_erasingdata( &terminal_snd_buff, '\n' );
-        
+                circbuffer_push_byte_erasing( &terminal_snd_buff, '\r' );
+                circbuffer_push_byte_erasing( &terminal_snd_buff, '\n' );
+
+//                circbuffer_push_block_erasing(&terminal_snd_buff, &act_write, "\r\n>", 3);          /* отсылаем приглашение на ввод */
+
                 for( i = 0; i < answ_len; ++i ){
-                    CircBuffer_push_one_erasingdata( p_answ_buff, (u8)send_buff[i] );
+                    circbuffer_push_byte_erasing( p_answ_buff, (u8)send_buff[i] );
                 }
                 uart_terminal_start_tx(uart_desc);
                 return;
             } else if ( *snd_log_cmd != TERMINAL_NOTHING )  {
-                CircBuffer_push_one_erasingdata( &terminal_snd_buff, '\r' );
-                CircBuffer_push_one_erasingdata( &terminal_snd_buff, '\n' );
+                circbuffer_push_byte_erasing( &terminal_snd_buff, '\r' );
+                circbuffer_push_byte_erasing( &terminal_snd_buff, '\n' );
                 uart_terminal_start_tx(uart_desc);
             }
             

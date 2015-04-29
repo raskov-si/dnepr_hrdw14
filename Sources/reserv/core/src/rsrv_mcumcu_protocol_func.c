@@ -7,6 +7,8 @@
 #include "rsrv_i2c.h"
 #include "reserv/core/inc/rsrv_mcumcu_protocol_func.h"
 #include "reserv/core/inc/rsrv_typedef.h"
+#include "common_lib/crc.h"
+
 
 /*=============================================================================================================*/
 
@@ -26,15 +28,18 @@
 
 /*=============================================================================================================*/
 
-//static void resrv_protocol_mcu_view_to_buf(uint8_t*, TmcuView*);
 //static void reserv_protocol_crc           (uint8_t*, uint8_t*, uint32_t);
-static int rsrv_mcumcu_collect_pocket     (uint8_t, uint8_t);
+static void                       resrv_protocol_mcu_buf_to_view (TmcuView*, uint8_t*);
+static int                        rsrv_mcumcu_collect_pocket     (uint8_t, uint8_t);
+int                               resrv_protocol_char_to_binary  (uint8_t *, char*, size_t);
+int                               rsrv_get_info_from_packet      (enum RESRV_PROTOCOL_EVENT *evnt, struct _MCU_VIEW_PAIR *McuViewPairReceive);
 
 
 
 /* STX  [POCKET_NUM  COMMAND   LOCAL    REMOTE  CRC16]  ETX */
 /*=============================================================================================================*/
-extern  struct _MCU_VIEW_PAIR   McuViewPair;
+static struct _MCU_VIEW_PAIR    McuViewReceive;
+extern struct _MCU_VIEW_PAIR    McuViewPair;
 static uint8_t                  charbuf_output[(sizeof McuViewPair.Local + sizeof McuViewPair.Remote + 2 + 1 + 1)*2 + 2 + 1];
 static uint8_t                  charbuf_input [(sizeof McuViewPair.Local + sizeof McuViewPair.Remote + 2 + 1 + 1)*2 + 2 + 1];
 static uint8_t                  bin_buf[sizeof McuViewPair.Local + sizeof McuViewPair.Remote + 2 + 1 + 1];
@@ -49,10 +54,55 @@ static uint8_t                  recv_pocket_num = 0;
      \sa 
 */
 /*=============================================================================================================*/
+struct _MCU_VIEW_PAIR *rsrv_get_recevied_mcupair(void)
+{
+   return &McuViewReceive;
+}
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+int  rsrv_get_info_from_packet
+(
+  enum RESRV_PROTOCOL_EVENT   *evnt, 
+  struct _MCU_VIEW_PAIR       *McuViewPairReceive
+)
+{
+  
+    recv_pocket_num =  bin_buf[0];
+    switch ( bin_buf[1] )
+    {
+    case PING_UART:   *evnt = RESRV_PROTOCOL_PING_UART; break;
+    case PONG_UART:   *evnt = RESRV_PROTOCOL_PONG_UART; break;
+    case PING_I2C:    *evnt = RESRV_PROTOCOL_PING_I2C;  break;
+    case PONG_I2C:    *evnt = RESRV_PROTOCOL_PONG_I2C;  break;
+    case VOTE:        *evnt = RESRV_PROTOCOL_VOTE;      break;
+    case AGREED:      *evnt = RESRV_PROTOCOL_AGREED;    break;
+    }
+
+    /* принятый local - пришедший в пакете remote */
+    resrv_protocol_mcu_buf_to_view(&(McuViewPairReceive->Local), &bin_buf[2 + sizeof (McuViewPairReceive->Local)] );
+    /* принятый remote - пришедший в пакете local */
+    resrv_protocol_mcu_buf_to_view(&McuViewPairReceive->Remote, &bin_buf[2]);
+    
+    return 0;    
+}
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
 int rsrv_mcumcu_protocol_init_tx(void)
 {
     int ret;
-
+   
     ret = rsrv_mcumcu_uart_tx_init();
 //    rsrv_i2c_tx_init();
 
@@ -70,8 +120,13 @@ int rsrv_mcumcu_protocol_init_rx(void)
 {
     int ret;
 
+    rsrv_os_lock(&McuViewReceive.Sem);        
+    rsrv_mcuview_init(&McuViewReceive.Local);
+    rsrv_mcuview_init(&McuViewReceive.Remote);
+    rsrv_os_unlock(&McuViewReceive.Sem);
+    
     ret = rsrv_mcumcu_uart_rx_init();
-    ret = ret && rsrv_mcumcu_i2c_rx_init();
+//    ret = ret && rsrv_mcumcu_i2c_rx_init();
 
     return ret;
 }
@@ -196,14 +251,15 @@ static int rsrv_mcumcu_protocol_receive_from
     int         interface
 )
 {
-    int ret = RSRV_NOANSW;
+    int       ret   = RSRV_NOANSW;
+    uint16_t  ret_len = 0;
 
     if (interface == RESRV_UART_INTERFACE) {
-        ret = rsrv_mcumcu_uart_receive(out_buf, readed_len, len, timeout);
+        ret = rsrv_mcumcu_uart_receive(out_buf, &ret_len, len, timeout);
     } else if (interface == RESRV_I2C_INTERFACE) {
-        ret = rsrv_mcumcu_i2c_receive(out_buf, readed_len, len, timeout);
+        ret = rsrv_mcumcu_i2c_receive(out_buf, &ret_len, len, timeout);        
     }
-
+    *readed_len = ret_len;
     return ret;
 }
 
@@ -217,7 +273,8 @@ static int rsrv_mcumcu_protocol_receive_from
 static int rsrv_mcumcu_protocol_receive_frame
 (
     int             interface, 
-    clock_t         timeout
+    clock_t         timeout,
+    uint16_t        *readed_len
 )
 {
     int         ret                 = RSRV_NOANSW;
@@ -225,37 +282,35 @@ static int rsrv_mcumcu_protocol_receive_frame
     clock_t     now_time            = clock();
     clock_t     residuary_timeout   = timeout;
     uint16_t    real_len;
+    uint16_t    need_len = 206;
 
-
+//    memset(charbuf_input, 0, (sizeof McuViewPair.Local + sizeof McuViewPair.Remote + 2 + 1 + 1)*2 + 2 + 1);
     do {
         /* вычитываем один байтик, смотрим есть ли  BTX */
-        ret = rsrv_mcumcu_protocol_receive_from(charbuf_input, &real_len, 1, timeout, interface);
+        ret = rsrv_mcumcu_protocol_receive_from(charbuf_input, &real_len, 1, residuary_timeout, interface);
         if (ret == RSRV_TIMEOUT) {
-            break;
+            return  ret;
         }
         now_time = clock();
-        residuary_timeout = timeout - ( now_time - begin_time );
-    } while ( (residuary_timeout > 0) && (charbuf_input[0] != BTX) );
-
-   do {
-        uint16_t need_len = (sizeof McuViewPair.Local + sizeof McuViewPair.Remote + 2 + 1 + 1)*2 + 2;
-
+   } while ( (charbuf_input[0] != BTX) );
+   
+   residuary_timeout = timeout - (( now_time - begin_time ) / 1000 ) ;
+   need_len--;
         /* вычитываем до того момента пока не найдем ETX или не кончится буфер */
-        ret = rsrv_mcumcu_protocol_receive_from(&charbuf_input[1], &real_len, need_len, timeout, interface);
-        if (ret == RSRV_TIMEOUT) {
-            break;
-        }
-        if ( charbuf_input[real_len-1] != ETX) {
-            ret = RSRV_STRUCT_ERR;
-            break;
-        }
+   ret = rsrv_mcumcu_protocol_receive_from(&charbuf_input[1], &real_len, need_len, residuary_timeout, interface);
+   if (ret == RSRV_TIMEOUT) {
+      return  ret;
+   }
+      
+   if ( charbuf_input[real_len] != ETX) {
+      ret = RSRV_STRUCT_ERR;
+   }
 
-        now_time = clock();
-        residuary_timeout = timeout - ( now_time - begin_time );
-    } while ( (residuary_timeout > 0) && (ret != RSRV_OK) );
-
-
-    return ret;
+   if ( readed_len != NULL ) {
+      *readed_len = real_len + 1;
+   }
+     
+   return ret;
 }
 
 
@@ -273,38 +328,48 @@ int rsrv_mcumcu_protocol_receive_events
     TProtocolEvent  *evnt
 )
 {
-    int     ret                 = RSRV_NOANSW;
-    clock_t begin_time          = clock();
-    clock_t now_time            = clock();
-    clock_t residuary_timeout   = timeout;
+    int       ret                 = RSRV_NOANSW;
+    clock_t   begin_time          = clock();
+    clock_t   now_time            = clock();
+    clock_t   residuary_timeout   = timeout;
+    uint16_t  inp_len;
+    
+    *evnt = RESRV_PROTOCOL_DEFAULT;
 
     do {
         /* принимаем очередной кадр (с терминаторами) */
-        ret = rsrv_mcumcu_protocol_receive_frame(interface, residuary_timeout);
+        ret = rsrv_mcumcu_protocol_receive_frame(interface, residuary_timeout, &inp_len);
         if (ret == RSRV_TIMEOUT) {
             break;
         }
 
         if ( ret == RSRV_OK ) {
-                                                                    /* переводим в бинарный вид           */
-                                                                    /* проверяем целостность пакета CRC16 */
-            ret = RSRV_CRC_ERR;
-
+            uint16_t  crc16_calc;
+            uint16_t  crc16_recv;
+            int       bin_len;
+            
+            bin_len = resrv_protocol_char_to_binary(bin_buf, (char*)&charbuf_input[1], inp_len-1); /* переводим в бинарный вид           */
+            crc16_calc = Crc16(bin_buf, bin_len - 2 );                      /* проверяем целостность пакета CRC16 */
+            crc16_recv = _WORD(bin_buf[bin_len - 1],  bin_buf[bin_len - 2]);
+            
+            if ( crc16_calc != crc16_recv ) {
+                ret = RSRV_CRC_ERR;
+            }
+        } else {
+            memset (bin_buf, 0, sizeof McuViewPair.Local + sizeof McuViewPair.Remote + 2 + 1 + 1);
         }
 
-        if ( ret == RSRV_OK ) {
-                                                                     /* проверяем номер пакета             */
-            ret = RSRV_STRUCT_ERR;
-        }
-        now_time = clock();
-        residuary_timeout = timeout - ( now_time - begin_time );
+//        if ( ret == RSRV_OK ) {
+//                                                                     /* проверяем номер пакета             */
+//            ret = RSRV_STRUCT_ERR;
+//        }
+        now_time = clock() ;
+        residuary_timeout = timeout - (( now_time - begin_time )/ 1000);
     } while ( (residuary_timeout > 0) && (ret != RSRV_OK) );
 
     if ( ret == RSRV_OK ) {
-                                                                /* парсим пакет, определяем событие   */
-    *evnt = RESRV_PROTOCOL_PONG_UART;
-
-                                                                /* запоминаем пришедшие состояния     */
+        rsrv_get_info_from_packet(evnt, &McuViewReceive);         /* парсим пакет, определяем событие   */
+                                                                  /* запоминаем пришедшие состояния     */        
     }
 
     return  ret;
@@ -440,7 +505,7 @@ int     resrv_protocol_binary_to_char
         indx++;
     }
 
-    return indx;
+    return indx*2;
 }
 
 
@@ -457,7 +522,7 @@ int     resrv_protocol_char_to_binary
     size_t  len
     )
 {
-    uint8_t     temp_buf[3];
+    char     temp_buf[3];
     uint16_t    indx = 0;
 
     temp_buf[2] = 0;
@@ -466,7 +531,7 @@ int     resrv_protocol_char_to_binary
     while (len--) {
         temp_buf[0] =  char_buf_in[indx * 2];
         temp_buf[1] =  char_buf_in[indx * 2 + 1];
-        bin_buf[indx++] = atoi(temp_buf);
+        bin_buf[indx++] = (uint8_t)strtol(temp_buf, NULL, 16);
     }
     return indx;
 }
@@ -487,7 +552,7 @@ void reserv_protocol_crc
 {
     uint16_t    crc;
 
-//    crc = 
+    crc = Crc16(begin, len);
 
     outbuf[0] = _LSB(crc);
     outbuf[1] = _MSB(crc);
@@ -514,7 +579,7 @@ static int rsrv_mcumcu_collect_pocket
     resrv_protocol_mcu_view_to_buf(&bin_buf[2], &McuViewPair.Local);
     resrv_protocol_mcu_view_to_buf(&bin_buf[2 + mcview_size], &McuViewPair.Remote);
     reserv_protocol_crc(&bin_buf[2 + mcview_size*2], &bin_buf[0], 2 + mcview_size*2);
-    len = resrv_protocol_binary_to_char(&charbuf_output[1], bin_buf, 2 + mcview_size*2 + 2);
+    len = resrv_protocol_binary_to_char((char*)&charbuf_output[1], bin_buf, 2 + mcview_size*2 + 2);
     charbuf_output[0] = BTX;
     charbuf_output[1+len] = ETX;
 

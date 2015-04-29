@@ -13,8 +13,8 @@
 /*=============================================================================================================*/
 void rsrv_backplane_sync(void)
 {
-    Dnepr_BPEEPROM_Init() ;
-    Dnepr_ProfileStorage_eeprom_sync() ;
+//    Dnepr_BPEEPROM_Init() ;
+//    Dnepr_ProfileStorage_eeprom_sync() ;
 }
 
 /*=============================================================================================================*/
@@ -25,7 +25,8 @@ void rsrv_backplane_sync(void)
 /*=============================================================================================================*/
 void  rsrv_backplane_start_access(void)
 {
-    denpr_eeprom_backplane_accessflag(TRUE);  
+//    denpr_eeprom_backplane_accessflag(TRUE);
+    //i2c крейт
 }
 
 /*=============================================================================================================*/
@@ -36,5 +37,7 @@ void  rsrv_backplane_start_access(void)
 /*=============================================================================================================*/
 void  rsrv_backplane_stop_access(void)
 {
-    denpr_eeprom_backplane_accessflag(FALSE); 
+    denpr_eeprom_backplane_accessflag(FALSE);
+    //fan + power + slots
+    
 }

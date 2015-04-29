@@ -4,6 +4,7 @@
 #include "reserv/core/inc/rsrv_typedef.h"
 #include "reserv/core/inc/stmch.h"
 #include "reserv/core/inc/rsrv_mcumcu_protocol_stmchn.h"
+#include "reserv/core/inc/rsrv_mcumcu_protocol_func.h"
 #include "reserv/core/inc/rsrv_decision.h"
 #include "rsrv_backplane.h"
 
@@ -81,8 +82,13 @@ static enum _CU_SHOW_STM_SIGNALS           main_signal_transition        = SIG_S
 /*=============================================================================================================*/
 
 TrsrvOsMbox                     mcumcu_main_mbox;
+TrsrvIntertaskMessage           *mcumcu_main_mbox_message[1];
 TrsrvOsMbox                     ethernet_main_mbox;
+TrsrvIntertaskMessage           *ethernet_main_mbox_message[1];
 struct _MCU_VIEW_PAIR           McuViewPair;
+TRoles                         mcu_role = RESERV_ROLES_UNKNOWN;
+TRoles                         cpu_role = RESERV_ROLES_UNKNOWN;
+
 
 /*=============================================================================================================*/
 
@@ -96,10 +102,8 @@ static void rsrv_mcumcu_protocol_start(void)
 {
     TrsrvIntertaskMessage   msg;
     
-    msg.sender_task  = RESERV_TASKS_ADRESS_MAIN;
-    msg.recv_task    = RESERV_TASKS_ADRESS_MCUMCU;
-    msg.msg_code     = RESERV_INTERCODES_MCUMCU_START;    
-    rsrv_os_mbox_new(&mcumcu_main_mbox, &msg);  
+    msg = RESERV_INTERCODES_MCUMCU_START;    
+    rsrv_os_mbox_post(mcumcu_main_mbox, &msg);  
 }
 
 
@@ -113,10 +117,8 @@ static void rsrv_ethernet_protocol_start(void)
 {
     TrsrvIntertaskMessage   msg;
     
-    msg.sender_task  = RESERV_TASKS_ADRESS_MAIN;
-    msg.recv_task    = RESERV_TASKS_ADRESS_ETH;
-    msg.msg_code     = RESERV_INTERCODES_MCUCPU_START;    
-    rsrv_os_mbox_new(&ethernet_main_mbox, &msg);  
+    msg = RESERV_INTERCODES_MCUCPU_START;    
+    rsrv_os_mbox_post(ethernet_main_mbox, &msg);  
 }
 
 
@@ -131,16 +133,14 @@ static void resrv_wait_mcumcu_diag(void)
     TrsrvIntertaskMessage   *msg;    
     int                     retval;
     
-    do {
-        retval = rsrv_os_mbox_fetch(&mcumcu_main_mbox, (void*)&msg, RSRV_MCUMCU_START_TIMEOUT);          
-        if ( retval == 1 ) {
-            break;
-        } else if ( retval < 0 ) {
-            break;
-        }
-    } while (     (msg->sender_task != RESERV_TASKS_ADRESS_MCUMCU) 
-              ||  (msg->recv_task   != RESERV_TASKS_ADRESS_MAIN) 
-              ||  (msg->msg_code    != RESERV_INTERCODES_MCUMCU_ENDDIAG) );        
+//    do {
+        retval = rsrv_os_mbox_fetch(mcumcu_main_mbox, (void*)&msg, RSRV_MCUMCU_START_TIMEOUT);          
+//        if ( retval == 1 ) {
+//            break;
+//        } else if ( retval < 0 ) {
+//            break;
+//        }
+//    } while ( *msg != RESERV_INTERCODES_MCUMCU_ENDDIAG );        
 }
 
 /*=============================================================================================================*/
@@ -191,8 +191,13 @@ int mainstmch_recv_signal (void)
 /*=============================================================================================================*/
 static void stmch_init(int state, int signal)
 {  
+    /* подавляем любую активность на внешних шинах */
+    rsrv_backplane_stop_access();
+  
     /* узнаем номер слота (резервный или основной) */
+    rsrv_os_lock(&McuViewPair.Sem);                
     McuViewPair.Local.RackNum = rsrv_get_dneprslotnum() ;
+    rsrv_os_unlock(&McuViewPair.Sem);          
         
     if ( McuViewPair.Local.RackNum == RSRV_DNEPR_RESERVE_SLOT ) {
       McuViewPair.Remote.RackNum = RSRV_DNEPR_MAIN_SLOT;
@@ -201,14 +206,18 @@ static void stmch_init(int state, int signal)
     }        
     
     /* определение сигнала present соседнего MCU */
+    rsrv_os_lock(&McuViewPair.Sem);        
     McuViewPair.Local.RemotePresent = rsrv_get_dneprpresent();
+    rsrv_os_unlock(&McuViewPair.Sem);      
             
+      
     /* инициализируем VLAN */
 //    rsrv_vlan_config();
   
     /* инициализируем протоколы UART и ethernet */
     rsrv_mcumcu_protocol_start();
 //    rsrv_ethernet_protocol_start();
+    OSTaskSuspend(OS_PRIO_SELF);
     
     main_signal_transition = INIT_GOTO_DIAG;
 }
@@ -222,14 +231,18 @@ static void stmch_init(int state, int signal)
 /*=============================================================================================================*/
 static void stmch_diag(int state, int signal)
 {
-    TRoles                mcu_role;
-    TreservMCUDiagVector  mcu_diag_vector;
+    TreservMCUDiagVector    mcu_diag_vector;
       
     resrv_wait_mcumcu_diag();   /*  ждем сообщения от автомата протокола MCUMCU, что диагностика сигнальныхлиний завершена */
     
-    mcu_diag_vector.UARTTxRx = RESERV_TREESTATE_CHECKED;
+    mcu_diag_vector.UARTTxRx = (McuViewPair.Local.UARTTx == RESERV_TREESTATE_CHECKED && McuViewPair.Local.UARTRx == RESERV_TREESTATE_CHECKED)
+                               ? RESERV_TREESTATE_CHECKED : RESERV_TREESTATE_DAMAGED;
   
-    /* определяем состояние и роль соседнего CU, если он есть */  
+    /* определяем состояние и роль соседнего CU, если он есть */
+    rsrv_os_lock(&McuViewPair.Sem);                
+    McuViewPair.Remote = rsrv_get_recevied_mcupair()->Remote;     
+    rsrv_os_unlock(&McuViewPair.Sem);                      
+    
     mcu_diag_vector.NeighborPresent = McuViewPair.Local.RemotePresent;
     mcu_diag_vector.NeighborRole    = McuViewPair.Remote.Role; 
     
@@ -240,6 +253,7 @@ static void stmch_diag(int state, int signal)
     /* если пассивное переходим на passive state */
     if ( mcu_role != RESERV_ROLES_MASTER )  {
         main_signal_transition = DIAG_GOTO_PASSIVE;
+        return;
     }
 
     /* если активное переходим на diag_cpu */
@@ -255,14 +269,17 @@ static void stmch_diag(int state, int signal)
 /*=============================================================================================================*/
 static void stmch_diag_cpu(int state, int signal)
 {
+    rsrv_os_lock(&McuViewPair.Sem);        
+    McuViewPair.Local.Role = RESERV_ROLES_UNKNOWN;
+    rsrv_os_unlock(&McuViewPair.Sem);      
+  
     /* синхронизируем профиль в eeprom */
     rsrv_backplane_sync();
   
     /* выдаем на CPU роль стать активным */
+    cpu_role = RESERV_ROLES_MASTER;
     
-    
-  
-    /* выбираем роль в зависимости от ответа */
+    /* выбираем роль в зависимости от ответа (максимум через 3 сек)*/    
     main_signal_transition = DIAG_GOTO_ACTIVE;       
 }
 
@@ -275,21 +292,45 @@ static void stmch_diag_cpu(int state, int signal)
 /*=============================================================================================================*/
 static void stmch_passive(int state, int signal)
 {
+    /* выдаем на CPU роль стать пассивным */
+    cpu_role = RESERV_ROLES_SLAVE;
+  
+    rsrv_os_lock(&McuViewPair.Sem);        
+    McuViewPair.Local.Role = RESERV_ROLES_SLAVE;
+    rsrv_os_unlock(&McuViewPair.Sem);      
+    
     /* подавляем любую активность на внешних шинах */
     rsrv_backplane_stop_access();
     
     /* выдаем световую индикацию */
+    rsrv_leds_setstate(McuViewPair.Local.Role);
     
-
   
     /* принимаем пинги по UARTу, отсылаем понги */
-  
-    /* если принимаем пинг с соседним "пассивным", переходим на диагностику CPU */
+    while ( TRUE )
+    {
+        OSTimeDly( 1000 );                  /* время резервирования */
     
-    /* если теряем сигнал present от активного и сигнал по uart, переходим на диагностику CPU   */
-    
-  
-    return;
+        /* если теряем сигнал present от активного и сигнал по uart, переходим на диагностику CPU   */
+        rsrv_os_lock(&McuViewPair.Sem);        
+        McuViewPair.Local.RemotePresent = rsrv_get_dneprpresent();
+        rsrv_os_unlock(&McuViewPair.Sem);      
+            
+        if (  McuViewPair.Local.RemotePresent == RSRV_DNEPR_PRESSIGNAL_NONE ) {            
+            main_signal_transition = PASSIVE_GOTO_CPU_DIAG;               
+        }
+      
+        if ( McuViewPair.Local.UARTTx == RESERV_TREESTATE_DAMAGED || McuViewPair.Local.UARTRx == RESERV_TREESTATE_DAMAGED ) {
+            main_signal_transition = PASSIVE_GOTO_CPU_DIAG;               
+        }
+
+        
+        /* если принимаем пинг с соседним "пассивным" через некоторое время, переходим на диагностику CPU */
+        if (  rsrv_get_recevied_mcupair()->Remote.Role == RESERV_ROLES_SLAVE ) {
+            main_signal_transition = PASSIVE_GOTO_CPU_DIAG;                           
+        }          
+    }
+      
 }
 
 
@@ -301,25 +342,35 @@ static void stmch_passive(int state, int signal)
 /*=============================================================================================================*/
 static void stmch_active(int state, int signal)
 {
+    cpu_role = RESERV_ROLES_MASTER;
+  
+    rsrv_os_lock(&McuViewPair.Sem);        
+    McuViewPair.Local.Role = RESERV_ROLES_MASTER;
+    rsrv_os_unlock(&McuViewPair.Sem);      
+
     /* выдаем световую индикацию */
+    rsrv_leds_setstate(McuViewPair.Local.Role);
   
     /* работаем в обычном режиме, отсылаем пинги по уарту, принимаем понги */
-  
+    { ;  }
+    
     /* разрешаем работу всего шасси */
-     rsrv_backplane_start_access();
+    rsrv_backplane_start_access();
     
   
-    /* следим за работой CPU (ответами по uDP)если ответов нет в течении 3 сек меняем MCU на пассивное */
+    while ( TRUE )
     {
-        rsrv_backplane_stop_access();
+        OSTimeDly( 1000 );                  /* время резервирования */
+        
+      
+        /* следим за работой CPU (ответами по uDP)если ответов нет в течении 3 сек меняем MCU на пассивное */
     
-        /* отсылаем "пинг" с пассивным сосстоянием */
-    
-        main_signal_transition = ACTIVE_GOTO_PASSIVE;
+        /* отсылаем "пинг" с пассивным состоянием */
+        {;}    
+        //rsrv_backplane_stop_access();
+       // main_signal_transition = ACTIVE_GOTO_PASSIVE;
     }
-    
-  
-    return;
+      
 }
 
 
@@ -330,54 +381,14 @@ static void stmch_active(int state, int signal)
 /*=============================================================================================================*/
 
 
-static void rsrv_mcuview_init (TmcuView *mcu_view)
-{
-    mcu_view->Adr = 0;
-    mcu_view->COOLER  = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->CPUEth  = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->CPUrev  = 0;
-    mcu_view->CPUState = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->DegradedMode = 0;
-    mcu_view->EEPROM0 = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->EEPROM1 = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->ExtNetEth = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->I2CMCUComm = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->I2CShelfComm = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->IntNetEth = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->LARole = RESERV_ROLES_UNKNOWN;
-    mcu_view->MCUEth = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->MCUFlash = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->MCUrev = 0;
-    mcu_view->Phase = RESERV_MCU_NOT_STARTED;
-    mcu_view->PWR = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->RackNum = RSRV_DNEPR_RESERVE_SLOT;
-    mcu_view->RemotePresent = 0;
-    mcu_view->Role = RESERV_ROLES_UNKNOWN;
-    mcu_view->SwitchEth = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->SWITCHrev = 0;
-    mcu_view->SwitchState = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->SysNetEth = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->UARTRx = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->UARTTx = RESERV_TREESTATE_UNKNOWN;
-    mcu_view->UARTSwitchComm = RESERV_TREESTATE_UNKNOWN;
-}
-
 
 void  task_reserv_init(void)
 {
     unsigned int adress = 1, present = 0;
-    TrsrvIntertaskMessage   msg;
+    TrsrvIntertaskMessage   *msg;
     
-    msg.sender_task  = RESERV_TASKS_ADRESS_MAIN;
-    msg.recv_task    = RESERV_TASKS_ADRESS_MAIN;
-    msg.msg_code     = RESERV_INTERCODES_VOIDMSG;    
-    rsrv_os_mbox_new(&mcumcu_main_mbox, &msg);
-
-    msg.sender_task  = RESERV_TASKS_ADRESS_MAIN;
-    msg.recv_task    = RESERV_TASKS_ADRESS_MAIN;
-    msg.msg_code     = RESERV_INTERCODES_VOIDMSG;    
-    rsrv_os_mbox_new(&ethernet_main_mbox, &msg);
-    
+    rsrv_os_mbox_new(&mcumcu_main_mbox, mcumcu_main_mbox_message);
+    rsrv_os_mbox_new(&ethernet_main_mbox, ethernet_main_mbox_message);    
     
     rsrv_os_lock_create(&McuViewPair.Sem);
     
@@ -399,6 +410,16 @@ void task_reserv(TrsrvOsThreadArg   *arg)
 
     while (1) {
         DO_STATE_MACHINE_TABLE(enum CU_SHOW_STM_STATES, mainstmch_get_current_state, mainstmch_recv_signal, _cu_show_main_state_machine_tbl)      
+    }
+}
+
+
+
+void task_mcumcu(TrsrvOsThreadArg   *arg)
+{
+    UNUSED_ARG(arg);
+
+    while (1) {
         DO_STATE_MACHINE_TABLE(enum _STM_MCUMCU_STATES, rsrv_mcumcu_prtcl_get_currect_state, resrv_mcumcu_prtcl_recv_signal, rsrv_mcumcu_show_stchtbl)
     }
 }
@@ -406,15 +427,17 @@ void task_reserv(TrsrvOsThreadArg   *arg)
 
 
 
-
 TRoles rsrv_main_get_cpu_role(void)
 {
-  return  RESERV_ROLES_MASTER;
+  return  cpu_role;
 }
+
 
 void rsrv_main_set_cpu_udp_error (void)
 {
-  ;
+    rsrv_os_lock(&McuViewPair.Sem);            
+    McuViewPair.Local.CPUState = RESERV_TREESTATE_DAMAGED;
+    rsrv_os_unlock(&McuViewPair.Sem);    
 }
 
 /*=============================================================================================================*/

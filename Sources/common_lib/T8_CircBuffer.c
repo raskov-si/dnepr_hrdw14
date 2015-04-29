@@ -146,9 +146,94 @@ size_t	CircBuffer_lost_size(const T8_CircBuffer *const desc_)
 }
 
 
+/*=============================================================================================================*/
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+ReturnStatus circbuffer_push_byte_erasing
+(
+	T8_CircBuffer           *const circbuf_desc,
+	CircBuffer_datatype     source
+)
+{
+	STORAGE_ATOMIC();
+	size_t	tail_store, head_store;
+        uint8_t overflow_flag = 0;
+
+	tail_store = circbuf_desc->iTail;
+        head_store = circbuf_desc->iHead;
+
+	circbuf_desc->data[tail_store] = source;
+	tail_store++;
+	if (tail_store == circbuf_desc->szTotal) {
+		tail_store = 0;
+	}
+        if (tail_store == head_store) {
+          overflow_flag = 1;
+          head_store = tail_store + 1;
+          if (head_store == circbuf_desc->szTotal) {
+            head_store = 0;
+          }
+        }
+
+	START_ATOMIC();
+	circbuf_desc->iTail =  tail_store;
+        if (overflow_flag) {
+            circbuf_desc->iHead = head_store;
+        }
+	circbuf_desc->szActual = (overflow_flag) ? circbuf_desc->szTotal : circbuf_desc->szActual+1;
+	STOP_ATOMIC();
+
+	return OK;
+}
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+
+ReturnStatus circbuffer_pop_byte
+(
+	T8_CircBuffer           *const circbuf_desc,
+	CircBuffer_datatype     *dest
+	)
+{
+	STORAGE_ATOMIC();
+	size_t	head_store;
+
+	if ((circbuf_desc->szTotal == 0) || (dest == NULL)) {
+		return ERROR;
+	}
+
+	head_store = circbuf_desc->iHead;
+
+	*dest = circbuf_desc->data[head_store];
+	head_store++;
+	if (head_store == circbuf_desc->szTotal) {
+		head_store = 0;
+	}
+
+	START_ATOMIC();
+	circbuf_desc->iHead =  head_store;
+	circbuf_desc->szActual--;
+	STOP_ATOMIC();
+
+	return OK;
+}
 
 
+/*=============================================================================================================*/
+/*!  \brief 
 
+     \sa 
+*/
+/*=============================================================================================================*/
 ReturnStatus circbuffer_pop_block
 (
 	T8_CircBuffer                   *circbuf_desc,
@@ -169,7 +254,7 @@ ReturnStatus circbuffer_pop_block
 		if (actual_read_size != NULL)  {
 			*actual_read_size = 0;
 		}
-		return OK;
+		return ERROR;
 	}
 
 	head_store = circbuf_desc->iHead;
@@ -187,7 +272,7 @@ ReturnStatus circbuffer_pop_block
 	if (readed_from_buf_data > read_size) {readed_from_buf_data = 	read_size; }
 
 
-	t8_memcopy(dest, &(circbuf_desc->data[head_store]), readed_from_buf_data);
+	t8_memcopy(dest, &(circbuf_desc->data[head_store]), readed_from_buf_data * sizeof circbuf_desc->data[0]);
 	head_store += readed_from_buf_data;
 	readed_data_size = readed_from_buf_data;
 
@@ -204,7 +289,7 @@ ReturnStatus circbuffer_pop_block
 				readed_from_buf_data = 	(read_size - readed_data_size);
 			}
 
-			t8_memcopy(&dest[readed_data_size], circbuf_desc->data, readed_from_buf_data);
+			t8_memcopy(&dest[readed_data_size], circbuf_desc->data, readed_from_buf_data * sizeof circbuf_desc->data[0]);
 			readed_data_size += readed_from_buf_data;
 			head_store += readed_from_buf_data;
 		}
@@ -220,28 +305,32 @@ ReturnStatus circbuffer_pop_block
 	return OK;
 }
 
+/*=============================================================================================================*/
+/*!  \brief 
 
-
-ReturnStatus circbuffer_write_block_erasing
+     \sa 
+*/
+/*=============================================================================================================*/
+ReturnStatus circbuffer_push_block_erasing
 (
 	T8_CircBuffer                   *circbuf_desc,
 	size_t                          *actual_write_size,
 	CircBuffer_datatype             *source,
 	size_t                          write_size
-	)
+)
 {
 	STORAGE_ATOMIC();
 	size_t          head_store, tail_store;
 	size_t          index               = 0;
 	size_t          writed_to_buf_data  = write_size;
-    uint8_t         overflow_flag = 0;
+        uint8_t         overflow_flag = 0;
 
 
-	if ((circbuf_desc->szActual == 0) || (write_size == 0))  {
+	if ((circbuf_desc->szTotal == 0) || (write_size == 0))  {
 		if (actual_write_size != NULL)  {
 			*actual_write_size = 0;
 		}
-		return OK;
+		return ERROR;
 	}
 
 	head_store = circbuf_desc->iHead;
@@ -251,35 +340,35 @@ ReturnStatus circbuffer_write_block_erasing
 		writed_to_buf_data = write_size = circbuf_desc->szTotal;
 	}
 
+        if ( write_size > circbuffer_get_space_size(circbuf_desc) ) {
+           overflow_flag = 1;
+        }          
+        
 	if ((tail_store + write_size) >= circbuf_desc->szTotal) {
-        if (tail_store < head_store) {
-            overflow_flag = 1;
-            head_store = 1;
-        }
-        writed_to_buf_data = (circbuf_desc->szTotal - tail_store);
-		t8_memcopy(&circbuf_desc->data[tail_store], source, writed_to_buf_data);
-		tail_store = 0;
-		index += writed_to_buf_data;
-		writed_to_buf_data = write_size - writed_to_buf_data;
+            writed_to_buf_data = (circbuf_desc->szTotal - tail_store);
+            t8_memcopy(&circbuf_desc->data[tail_store], source, writed_to_buf_data * sizeof circbuf_desc->data[0]);
+	    tail_store = 0;
+	    index += writed_to_buf_data;
+	    writed_to_buf_data = write_size - writed_to_buf_data;
 	}
-
-	t8_memcopy(&circbuf_desc->data[tail_store], &source[index], writed_to_buf_data);
+        
+	t8_memcopy(&circbuf_desc->data[tail_store], &source[index], writed_to_buf_data * sizeof circbuf_desc->data[0]);
 	tail_store += writed_to_buf_data;
-    if (tail_store > head_store) {
-        overflow_flag = 1;
-        head_store = tail_store + 1;
-        if (head_store == circbuf_desc->szTotal) {
-            head_store = 0;
+        
+        if ( overflow_flag == 1 ) {          
+            head_store = tail_store + 1;
+            if (head_store == circbuf_desc->szTotal) {
+                head_store = 0;
+            }
         }
-    }
 
 	*actual_write_size = write_size;
 
 	START_ATOMIC();
 	circbuf_desc->iTail = tail_store;
-    if (overflow_flag) {
-        circbuf_desc->iHead = head_store;
-    }
+        if (overflow_flag) {
+          circbuf_desc->iHead = head_store;
+        }
 	circbuf_desc->szActual = (overflow_flag) ? circbuf_desc->szTotal : (circbuf_desc->szActual + write_size) ;
 	STOP_ATOMIC();
 
@@ -287,8 +376,13 @@ ReturnStatus circbuffer_write_block_erasing
 }
 
 
+/*=============================================================================================================*/
+/*!  \brief 
 
-ReturnStatus circbuffer_write_block
+     \sa 
+*/
+/*=============================================================================================================*/
+ReturnStatus circbuffer_push_block
 (
 	T8_CircBuffer                   *circbuf_desc,
 	size_t                          *actual_write_size,
@@ -301,140 +395,76 @@ ReturnStatus circbuffer_write_block
 	size_t          index               = 0;
 	size_t          writed_to_buf_data  = write_size;
 
-
-	if ((circbuf_desc->szActual == 0) || (write_size == 0))  {
+        
+	if ((circbuf_desc->szTotal == 0) || (write_size == 0))  {
 		if (actual_write_size != NULL)  {
 			*actual_write_size = 0;
 		}
-		return OK;
+		return ERROR;
 	}
 
 	head_store = circbuf_desc->iHead;
 	tail_store = circbuf_desc->iTail;
+        
 
-	if (write_size > circbuf_desc->szTotal) {
+	if ( write_size > circbuf_desc->szTotal ) {
 		writed_to_buf_data = write_size = circbuf_desc->szTotal;
 	}
 
-	if (tail_store < head_store) {
-		if ( (tail_store + writed_to_buf_data) >= head_store) {
-          writed_to_buf_data = head_store - tail_store;
-        }
-    } else {
-        if ((tail_store + write_size) >= circbuf_desc->szTotal) {
+        if ( write_size > circbuffer_get_space_size(circbuf_desc) ) {
+               write_size = writed_to_buf_data = circbuffer_get_space_size(circbuf_desc);              
+        }          
+        
+	if ((tail_store + write_size) >= circbuf_desc->szTotal) {
             writed_to_buf_data = (circbuf_desc->szTotal - tail_store);
-            t8_memcopy(&circbuf_desc->data[tail_store], source, writed_to_buf_data);
-            tail_store = 0;
-            index += writed_to_buf_data;
-            writed_to_buf_data = write_size - writed_to_buf_data;
-        }
-        if ( (tail_store + writed_to_buf_data) >= head_store ){
-            writed_to_buf_data = head_store - tail_store;
-        }
-    }
+            t8_memcopy(&circbuf_desc->data[tail_store], source, writed_to_buf_data * sizeof circbuf_desc->data[0]);
+	    tail_store = 0;
+	    index += writed_to_buf_data;
+	    writed_to_buf_data = write_size - writed_to_buf_data;
+	}
+        
+	t8_memcopy(&circbuf_desc->data[tail_store], &source[index], writed_to_buf_data * sizeof circbuf_desc->data[0]);
+	tail_store += writed_to_buf_data;
 
-    t8_memcopy(& circbuf_desc->data[tail_store], & source[index], writed_to_buf_data);
-    tail_store += writed_to_buf_data;
 
-    *actual_write_size = write_size;
+	*actual_write_size = write_size;
 
-    START_ATOMIC();
-    circbuf_desc->iTail = tail_store;
-    circbuf_desc->szActual += write_size;
-    STOP_ATOMIC();
+	START_ATOMIC();
+	circbuf_desc->iTail = tail_store;
+	circbuf_desc->szActual = circbuf_desc->szActual + write_size;
+	STOP_ATOMIC();
 
     return OK;
 }
 
+/*=============================================================================================================*/
+/*!  \brief 
 
-
-
-
-ReturnStatus circbuffer_pop_byte
-(
-	T8_CircBuffer           *const circbuf_desc,
-	CircBuffer_datatype     *dest
-	)
-{
-	STORAGE_ATOMIC();
-	size_t	head_store;
-
-	if ((circbuf_desc->szActual == 0) || (dest == NULL)) {
-		return OK;
-	}
-
-	head_store = circbuf_desc->iHead;
-
-	*dest = circbuf_desc->data[head_store];
-	head_store++;
-	if (head_store == circbuf_desc->szTotal) {
-		head_store = 0;
-	}
-
-	START_ATOMIC();
-	circbuf_desc->iHead =  head_store;
-	circbuf_desc->szActual--;
-	STOP_ATOMIC();
-
-	return OK;
-}
-
-
-
-ReturnStatus circbuffer_push_byte_erasing
-(
-	T8_CircBuffer           *const circbuf_desc,
-	CircBuffer_datatype     source
-)
-{
-	STORAGE_ATOMIC();
-	size_t	tail_store, head_store;
-
-    uint8_t overflow_flag = 0;
-
-	tail_store = circbuf_desc->iTail;
-        head_store = circbuf_desc->iHead;
-
-	circbuf_desc->data[tail_store] = source;
-	tail_store++;
-	if (tail_store == circbuf_desc->szTotal) {
-		tail_store = 0;
-	}
-    if (tail_store = head_store) {
-        overflow_flag = 1;
-        head_store = tail_store + 1;
-        if (head_store == circbuf_desc->szTotal) {
-            head_store = 0;
-        }
-    }
-
-	START_ATOMIC();
-	circbuf_desc->iTail =  tail_store;
-    if (overflow_flag) {
-        circbuf_desc->iHead = head_store;
-    }
-	circbuf_desc->szActual = (overflow_flag) ? circbuf_desc->szTotal : circbuf_desc->szActual++;
-	STOP_ATOMIC();
-
-	return OK;
-}
-
-
-
+     \sa 
+*/
+/*=============================================================================================================*/
 size_t	circbuffer_get_storage_data_size(const T8_CircBuffer *const circbuf_desc)
 {
-//	register size_t  head_store = circbuf_desc->iHead;
-//	register size_t  tail_store = circbuf_desc->iTail;
-
-	//return (head_store >= tail_store) ?  (head_store - tail_store) : ((circbuf_desc->szTotal - tail_store) + head_store);
     return circbuf_desc->szActual;
 }
 
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
 size_t	circbuffer_get_space_size(const T8_CircBuffer *const circbuf_desc)
 {
     return circbuf_desc->szTotal - circbuffer_get_storage_data_size(circbuf_desc);
 }
 
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
 void    circbuffer_set_empty( T8_CircBuffer* circbuf_desc ){
 
     STORAGE_ATOMIC();

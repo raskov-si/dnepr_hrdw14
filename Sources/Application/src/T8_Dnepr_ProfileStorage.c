@@ -73,7 +73,8 @@ void  dnepr_wait_eeprom_contact
     do  {
             ret = Dnepr_BPEEPROM_CheckPresent();
             time_counter = OSTimeGet();            
-    } while ( (ret != TRUE) && ( (time_begin + time) > time_counter) );
+//    } while ( (ret != TRUE) && ( (time_begin + time) > time_counter) );
+    } while ( ret != TRUE );
    
     T8_Dnepr_SetLedStatus( &init_leds );            
    

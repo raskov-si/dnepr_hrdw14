@@ -21,7 +21,8 @@ extern "C" {
         RESRV_PROTOCOL_PING_I2C  = 3,
         RESRV_PROTOCOL_PONG_I2C  = 4,
         RESRV_PROTOCOL_VOTE      = 5,
-        RESRV_PROTOCOL_AGREED    = 6
+        RESRV_PROTOCOL_AGREED    = 6,
+        RESRV_PROTOCOL_DEFAULT   = 7,
     };
     
     typedef enum RESRV_PROTOCOL_EVENT  TProtocolEvent;
@@ -35,6 +36,8 @@ extern "C" {
     int             rsrv_mcumcu_protocol_send_pong(int, clock_t);
     int             rsrv_mcumcu_protocol_send_vote(int, clock_t);
     int             rsrv_mcumcu_protocol_send_agreed(int, clock_t);
+    struct _MCU_VIEW_PAIR *rsrv_get_recevied_mcupair(void);
+
 
 /*=============================================================================================================*/
 

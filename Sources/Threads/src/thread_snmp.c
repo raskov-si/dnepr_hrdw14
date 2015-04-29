@@ -41,7 +41,9 @@
     #include "Threads/inc/threadTerminal.h"
 #endif
 
-#define   CPU_MERA_HOST         "192.168.1.100"
+//#define   CPU_MERA_HOST         "192.168.1.100"
+#define   CPU_MERA_HOST         "192.168.10.1"
+//#define   CPU_MERA_HOST         val_CUNetCPUIPAddress
 #define   CPU_MERA_PORT         (0x7777u)
 #define   CPU_MERA_RCV_TIMEO        500
 
@@ -204,7 +206,8 @@ void task_eth_init (void)
 //    IP4_ADDR(&netmask,     255,255,255,0);        
     
     ipaddr_aton("0.0.0.0", &gw);
-    ipaddr_aton("192.168.1.3", &ipaddr);
+//    ipaddr_aton("192.168.1.3", &ipaddr);
+    ipaddr_aton("192.168.10.2", &ipaddr);
 //    ipaddr_aton(val_CUNetMCUIPAddress, &ipaddr);
     ipaddr_aton(val_CUNetIPMask, &netmask);
  
@@ -240,7 +243,8 @@ void task_eth( void *pdata )
     u32         answ_timer  = OSTimeGet();
     u32         now_time    = OSTimeGet();
     
-    struct sockaddr_in  addr;
+    struct sockaddr_in  serv_addr;
+    struct sockaddr_in  client_addr;
     u8                  buf[64];
     u8                  len;
   
@@ -250,33 +254,44 @@ void task_eth( void *pdata )
     
     sock_desc = socket(AF_INET, SOCK_DGRAM, IP_PROTO_UDP);
     assert(sock_desc >= 0);
-
+    
     retsock = setsockopt(sock_desc, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));    
     assert(retsock == 0);
-    
-    
+        
     /* set up address to connect to */  
-    memset(&addr, 0, sizeof(addr));
-  
-    addr.sin_len = sizeof(addr);
-    addr.sin_family = AF_INET;  
-    addr.sin_port = PP_HTONS(CPU_MERA_PORT);
-    addr.sin_addr.s_addr = inet_addr(CPU_MERA_HOST);        
-    retsock = connect(sock_desc, (struct sockaddr*)&addr, sizeof(addr)); 
+    memset(&serv_addr, 0, sizeof(serv_addr));
+    memset(&client_addr, 0, sizeof(client_addr));
+    
+    client_addr.sin_len = sizeof(client_addr);
+    client_addr.sin_family = AF_INET;  
+    client_addr.sin_port = PP_HTONS(CPU_MERA_PORT);
+    client_addr.sin_addr.s_addr = inet_addr("192.168.10.2");    
+    
+    retsock = bind(sock_desc, (struct sockaddr*)&client_addr, sizeof(client_addr)); 
     assert(retsock == 0);       
+      
+    serv_addr.sin_len = sizeof(serv_addr);
+    serv_addr.sin_family = AF_INET;  
+    serv_addr.sin_port = PP_HTONS(CPU_MERA_PORT);
+    serv_addr.sin_addr.s_addr = inet_addr(CPU_MERA_HOST);    
+    
+//    retsock = connect(sock_desc, (struct sockaddr*)&addr, sizeof(addr)); 
+//    assert(retsock == 0);       
 
     while ( TRUE )    {
       memset(buf, 0, 64);
       len = meraprot_setrole_cmd(buf, rsrv_main_get_cpu_role());
-      retsock = write(sock_desc, buf, len);            
+//      retsock = write(sock_desc, buf, len);            
+      retsock = sendto(sock_desc, buf, len, 0, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
       
       memset(buf, 0, 64);
-      retsock = read(sock_desc, buf, MERAPROT_ROLECFM_LEN);
+//      retsock = read(sock_desc, buf, MERAPROT_ROLECFM_LEN);
+      retsock = recvfrom(sock_desc, buf, MERAPROT_ROLECFM_LEN, 0, (struct sockaddr*)&client_addr, (socklen_t*)&client_addr);
       now_time = OSTimeGet();
       if (retsock == MERAPROT_ROLECFM_LEN) {
           meraprot_setrole_cfm(buf, rsrv_main_get_cpu_role());
           answ_timer  = OSTimeGet();
-          sys_msleep(1000);      
+          sys_msleep(1000);
       } else if ( (answ_timer + 3000) < now_time ) {                              
           rsrv_main_set_cpu_udp_error();
       }

@@ -76,11 +76,11 @@ int rsrv_os_unlock(TrsrvOsSem  *sem)
 /*=============================================================================================================*/
 /*!  \brief Создает новый почтовый ящик */
 /*=============================================================================================================*/
-int rsrv_os_mbox_new(TrsrvOsMbox *mbox, void *msg)
+int rsrv_os_mbox_new(TrsrvOsMbox *mbox, TrsrvIntertaskMessage **msg)
 {
     TrsrvOsMbox     tmp_mbox;
     
-    tmp_mbox = OSMboxCreate(msg);
+    tmp_mbox = OSQCreate((void**)msg, 1);
     
     if ( tmp_mbox != NULL ) {      
         *mbox = tmp_mbox;
@@ -93,12 +93,11 @@ int rsrv_os_mbox_new(TrsrvOsMbox *mbox, void *msg)
 /*=============================================================================================================*/
 /*!  \brief Посылает в ящик сообщение      */
 /*=============================================================================================================*/
-int rsrv_os_mbox_post(TrsrvOsMbox *mbox, void *msg)
+int rsrv_os_mbox_post(TrsrvOsMbox mbox, TrsrvIntertaskMessage *msg)
 {
     int8_t         err;    
-    TrsrvOsMbox    tmp_mbox = *mbox;
     
-    err = OSMboxPost (tmp_mbox, msg);
+    err = OSQPost (mbox, (void*)msg);
     if (err == OS_ERR_NONE) {
       return 0;
     }      
@@ -109,11 +108,12 @@ int rsrv_os_mbox_post(TrsrvOsMbox *mbox, void *msg)
 /*=============================================================================================================*/
 /*!  \brief Ждет пока сообщение упадет в ящик в течение заданного таймаута */
 /*=============================================================================================================*/
-int rsrv_os_mbox_fetch(TrsrvOsMbox *mbox, void **msg, uint32_t timeout)
+int rsrv_os_mbox_fetch(TrsrvOsMbox mbox, TrsrvIntertaskMessage **msg, uint32_t timeout)
 {
     uint8_t       err;
-    TrsrvOsMbox   tmp_mbox = *mbox;
-    int32_t       ucos_timeout;
+    int32_t       ucos_timeout = 0;
+    TrsrvIntertaskMessage *message;
+    
 
     if (timeout) {
         ucos_timeout = ms_to_ticks(timeout);
@@ -124,9 +124,10 @@ int rsrv_os_mbox_fetch(TrsrvOsMbox *mbox, void **msg, uint32_t timeout)
         }
     }
 
-    *msg = OSMboxPend(tmp_mbox, ucos_timeout, (INT8U*)&err);
+    message = (TrsrvIntertaskMessage*)OSQPend(mbox, ucos_timeout, (INT8U*)&err);
     
     if (err == OS_ERR_NONE) {
+        *msg = message;
         return 0;
     } else if (err == OS_ERR_TIMEOUT ) {
         return 1; 

@@ -163,13 +163,22 @@ const struct STR_RSRV_SETTINGS  {
     clock_t       PingTimeout;
     clock_t       PingTimeoutI2C;
 }RsrvSettings = {
-    10,                 /* Kretry */
+    6,                 /* Kretry */
     100,                /* TimeColWait */
-    100                 /* PongTimeout млсек */
+    1000,                /* PongTimeout млсек */
+    1000,                /* PongTimeoutI2C млсек */
+    400,                 /* PingTimeout млсек */
+    400,                 /* PingTimeoutI2C млсек */
 };
 
 extern  struct _MCU_VIEW_PAIR   McuViewPair;
 int                             retry_times           = 3;
+clock_t                         pong_timeout;
+extern TrsrvOsMbox              mcumcu_main_mbox;
+extern TrsrvIntertaskMessage    *mcumcu_main_mbox_message;
+int                             mcu_rx_flag = 0;
+
+
 
 /*=============================================================================================================*/
 
@@ -214,12 +223,43 @@ int rsrv_mcumcu_prtcl_get_currect_signal (void)
 
 
 
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+static void rsrv_wait_main_start_signal(void)
+{
+    TrsrvIntertaskMessage   *msg;    
+    int                     retval;
+    
+//    do {
+        retval = rsrv_os_mbox_fetch(mcumcu_main_mbox, &msg, RSRV_MCUMCU_START_TIMEOUT);          
+//        if ( retval == 1 ) {
+//            break;
+//        } else if ( retval < 0 ) {
+//            break;
+//        }
+//    } while ( *msg != RESERV_INTERCODES_MCUMCU_START  );        
+}
 
 
+/*=============================================================================================================*/
+/*!  \brief 
 
-
-
-
+     \sa 
+*/
+/*=============================================================================================================*/
+static void rsrv_mcmmcu_main_diag_complete(void)
+{
+    TrsrvIntertaskMessage   msg;
+    
+    msg = RESERV_INTERCODES_MCUMCU_ENDDIAG;    
+    rsrv_os_mbox_post(mcumcu_main_mbox, &msg);
+    
+    OSTaskResume(21);
+}
 
 /*--------------------------------------функции конечного автомата MCUMCU--------------------------------------*/
 
@@ -253,8 +293,9 @@ static void stmch_init_protocol(int state, int signal)
 
     rsrv_mcumcu_protocol_init_tx();                                     /* инициализируем tx */
     
-    //rsrv_wait_main_start_signal
+    rsrv_wait_main_start_signal();
 
+    retry_times = RsrvSettings.Kretry;
     mcumcu_signal_transition = SIG_INITIAL_GOTO_PINGUART;
 }
 
@@ -270,26 +311,13 @@ static void stmch_show_uart_polling(int state, int signal)
     TProtocolEvent  evnt;
     int             ret;
     
-
+    
     ret = rsrv_mcumcu_protocol_receive_events(RESRV_UART_INTERFACE, RsrvSettings.PongTimeout, &evnt);
-
-    if (ret == RSRV_TIMEOUT) {
-        retry_times--;
-        if (retry_times == 0) {
-            /* записываем диагностику */
-            rsrv_os_lock(&McuViewPair.Sem);                                      
-            McuViewPair.Local.UARTRx  = RESERV_TREESTATE_DAMAGED;
-            McuViewPair.Remote.UARTTx = RESERV_TREESTATE_DAMAGED;
-            rsrv_os_unlock(&McuViewPair.Sem);                                      
-            retry_times = RsrvSettings.Kretry;
-            /* отсылаем сигнал что диагностика закончена */
-            return;
-        }
-
-        mcumcu_signal_transition = SIG_ANSWUART_GOTO_UARTPING;
-        return;
+    
+    if ( ret != RSRV_OK ) {
+      evnt = RESRV_PROTOCOL_DEFAULT;
     }
-
+    
     switch ( evnt )
     {
     case RESRV_PROTOCOL_PONG_UART:
@@ -303,39 +331,58 @@ static void stmch_show_uart_polling(int state, int signal)
         rsrv_os_unlock(&McuViewPair.Sem);                                      
         retry_times = RsrvSettings.Kretry;
         /* отсылаем сигнал что диагностика закончена */
-        
+        mcu_rx_flag = 0;
+        rsrv_mcmmcu_main_diag_complete();        
         break;
 
-    case RESRV_PROTOCOL_PING_UART:                                      /* nested ping */
+    case RESRV_PROTOCOL_PING_UART:                                      /* nested pong */
         rsrv_os_lock(&McuViewPair.Sem);                                      
 //        rsrv_mcumcu_protocol_get_remote_info(&McuViewPair.Remote);
         McuViewPair.Remote.UARTTx = RESERV_TREESTATE_CHECKED;
         McuViewPair.Local.UARTRx  = RESERV_TREESTATE_CHECKED;
-        rsrv_os_unlock(&McuViewPair.Sem);         
-        mcumcu_signal_transition = SIG_ANSWUART_GOTO_UARTPONG;      
-        break;
+        rsrv_os_unlock(&McuViewPair.Sem);                 
+        if (McuViewPair.Local.Role == RESERV_ROLES_SLAVE )  {        
+            mcu_rx_flag = 0;
+        }
+        
+        mcumcu_signal_transition = SIG_ANSWUART_GOTO_UARTPONG;  
+        
+        return;
 
 
     default:
-        retry_times--;
-        if (retry_times == 0) {
-            /* записываем диагностику, переходим на стадию диагностики i2c */
-            rsrv_os_lock(&McuViewPair.Sem);                                      
-            McuViewPair.Remote.UARTTx = RESERV_TREESTATE_DAMAGED;
-            McuViewPair.Remote.UARTRx = RESERV_TREESTATE_DAMAGED;
-            McuViewPair.Local.UARTRx  = RESERV_TREESTATE_DAMAGED;
-            McuViewPair.Local.UARTTx  = RESERV_TREESTATE_DAMAGED;
-            rsrv_os_unlock(&McuViewPair.Sem);                                      
-            retry_times = RsrvSettings.Kretry;
-            /* отсылаем сигнал что диагностика закончена */            
-            return;
+        if (  McuViewPair.Local.Role == RESERV_ROLES_UNKNOWN ) {      
+          if (retry_times == 0) {
+              rsrv_os_lock(&McuViewPair.Sem);                                      
+              McuViewPair.Local.UARTRx  = RESERV_TREESTATE_DAMAGED;
+              McuViewPair.Remote.UARTTx = RESERV_TREESTATE_DAMAGED;
+              if (ret != RSRV_TIMEOUT) {
+                 McuViewPair.Remote.UARTRx = RESERV_TREESTATE_DAMAGED;
+                 McuViewPair.Local.UARTTx  = RESERV_TREESTATE_DAMAGED;
+              }
+              rsrv_os_unlock(&McuViewPair.Sem);                                                
+              /* отсылаем сигнал что диагностика закончена */            
+              rsrv_mcmmcu_main_diag_complete();                    
+              return;
+          }        
+          mcumcu_signal_transition = SIG_ANSWUART_GOTO_UARTPING;            
+        }  else if (McuViewPair.Local.Role == RESERV_ROLES_SLAVE )  {
+              if (mcu_rx_flag > 5) {
+                  rsrv_os_lock(&McuViewPair.Sem);                                      
+                  McuViewPair.Local.UARTRx  = RESERV_TREESTATE_DAMAGED;
+                  McuViewPair.Remote.UARTTx = RESERV_TREESTATE_DAMAGED;
+                  rsrv_os_unlock(&McuViewPair.Sem);                                                                
+              } else {
+                  mcu_rx_flag++;
+              }
+              OSTimeDly( 200 );
+        }  else if (McuViewPair.Local.Role == RESERV_ROLES_MASTER )  {
+              OSTimeDly( 200 );
+              mcumcu_signal_transition = SIG_ANSWUART_GOTO_UARTPING;
         }
+
         break;
     }
-    
-    /* если мы в режиме мастера */
-//    if (  McuViewPair.Local.Role ==  )
-      
     
 }
 
@@ -350,11 +397,13 @@ static void stmch_show_uart_polling(int state, int signal)
 /*=============================================================================================================*/
 static void stmch_ping_send(int state, int signal)
 {
-    retry_times--;
     if (state == STATE_PING_SEND_UART) {
-        rsrv_mcumcu_protocol_ping_seng(RESRV_UART_INTERFACE, RsrvSettings.PingTimeout);
+        retry_times--;        
+        rsrv_mcumcu_protocol_ping_seng(RESRV_UART_INTERFACE, RsrvSettings.PingTimeout);        
         mcumcu_signal_transition = SIG_PINGUART_GOTO_ANSWUART;
     }
+
+    
 //    else if (state == STATE_PING_SEND_I2CRX) {
 //        rsrv_mcumcu_protocol_ping_seng(RESRV_I2C_INTERFACE, RsrvSettings.PingTimeoutI2C);
 //        mcumcu_signal_transition = SIG_PINGI2C_GOTO_ANSWI2C;
@@ -376,10 +425,15 @@ static void stmch_pong_send(int state, int signal)
         rsrv_mcumcu_protocol_send_pong(RESRV_UART_INTERFACE, RsrvSettings.PingTimeout);
         mcumcu_signal_transition = SIG_PONGUART_GOTO_ANSWUART;
     }
+    if (McuViewPair.Local.Role == RESERV_ROLES_SLAVE )  {        
+        OSTimeDly( 200 );
+    }
+    
 //    else if (state == STATE_PONGSEND_I2C) {
 //        rsrv_mcumcu_protocol_send_pong(RESRV_I2C_INTERFACE, RsrvSettings.PingTimeoutI2C);
 ////        mcumcu_ans_signal_transition = SIG_I2C_GOTO_INCOMING;
 //    }
+    
 }
 
 

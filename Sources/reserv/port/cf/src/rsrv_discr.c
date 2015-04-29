@@ -44,3 +44,15 @@ unsigned int rsrv_get_dneprpresent (void)
       
   return RSRV_DNEPR_PRESSIGNAL_NONE;
 }
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+unsigned int rsrv_leds_setstate(TRoles  cur_role)
+{
+  return (unsigned int)(RSRV_OK);
+}

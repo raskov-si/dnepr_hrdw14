@@ -1975,7 +1975,7 @@
           <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_SMI.h</name>
         </file>
         <file>
-          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_Uart_Profile.h</name>
+          <name>$PROJ_DIR$\Sources\HAL\BSP\inc\T8_Dnepr_UART_Profile.h</name>
         </file>
       </group>
       <group>
