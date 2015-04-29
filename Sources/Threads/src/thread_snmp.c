@@ -275,17 +275,12 @@ void task_eth( void *pdata )
     serv_addr.sin_port = PP_HTONS(CPU_MERA_PORT);
     serv_addr.sin_addr.s_addr = inet_addr(CPU_MERA_HOST);    
     
-//    retsock = connect(sock_desc, (struct sockaddr*)&addr, sizeof(addr)); 
-//    assert(retsock == 0);       
-
     while ( TRUE )    {
       memset(buf, 0, 64);
       len = meraprot_setrole_cmd(buf, rsrv_main_get_cpu_role());
-//      retsock = write(sock_desc, buf, len);            
       retsock = sendto(sock_desc, buf, len, 0, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
       
       memset(buf, 0, 64);
-//      retsock = read(sock_desc, buf, MERAPROT_ROLECFM_LEN);
       retsock = recvfrom(sock_desc, buf, MERAPROT_ROLECFM_LEN, 0, (struct sockaddr*)&client_addr, (socklen_t*)&client_addr);
       now_time = OSTimeGet();
       if (retsock == MERAPROT_ROLECFM_LEN) {

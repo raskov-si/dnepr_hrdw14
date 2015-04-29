@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <time.h>
 
+#include "prio.h"
 #include "reserv/core/inc/rsrv_mcumcu_protocol_stmchn.h"
 #include "reserv/core/inc/rsrv_mcumcu_protocol_func.h"
 #include "reserv/core/inc/rsrv_typedef.h"
@@ -258,7 +259,7 @@ static void rsrv_mcmmcu_main_diag_complete(void)
     msg = RESERV_INTERCODES_MCUMCU_ENDDIAG;    
     rsrv_os_mbox_post(mcumcu_main_mbox, &msg);
     
-    OSTaskResume(21);
+    OSTaskResume(TASK_RSRV_PRIORITY);
 }
 
 /*--------------------------------------функции конечного автомата MCUMCU--------------------------------------*/

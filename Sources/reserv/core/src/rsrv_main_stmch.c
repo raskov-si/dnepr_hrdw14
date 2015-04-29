@@ -429,7 +429,8 @@ void task_mcumcu(TrsrvOsThreadArg   *arg)
 
 TRoles rsrv_main_get_cpu_role(void)
 {
-  return  cpu_role;
+//  return  cpu_role;
+  return  RESERV_ROLES_MASTER;
 }
 
 
