@@ -59,6 +59,10 @@ I2C_PeriphInterfaceTypedef *Dnepr_I2C_Get_I2C_BP_Driver( const u8 nSlot ) ;
 I2C_PeriphInterfaceTypedef *Dnepr_I2C_Get_I2C_9544A_Driver() ;
 
 
+void I2C_clear_access (void);
+void I2C_set_access (void);
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define I2C_DNEPR_SWITCH_2_ADDRESS    0xEE

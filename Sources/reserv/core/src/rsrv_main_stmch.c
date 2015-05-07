@@ -234,6 +234,7 @@ static void stmch_diag(int state, int signal)
     TreservMCUDiagVector    mcu_diag_vector;
       
     resrv_wait_mcumcu_diag();   /*  ждем сообщения от автомата протокола MCUMCU, что диагностика сигнальныхлиний завершена */
+//    OSTaskChangePrio(OS_PRIO_SELF, TASK_RSRV_PRIORITY);
     
     mcu_diag_vector.UARTTxRx = (McuViewPair.Local.UARTTx == RESERV_TREESTATE_CHECKED && McuViewPair.Local.UARTRx == RESERV_TREESTATE_CHECKED)
                                ? RESERV_TREESTATE_CHECKED : RESERV_TREESTATE_DAMAGED;

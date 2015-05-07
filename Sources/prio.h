@@ -31,7 +31,8 @@
 #define ffs_mutex_PRIO 			16 	//!< приоритет мьютекса для защиты функций hotswap'а
 #define hs_mutex_PRIO 			17 	//!< приоритет мьютекса для защиты функций hotswap'а
 
-#define tackDController_PRIO	30
+//#define TASK_RSRV_PRIORITY_START       (29)
+#define tackDController_PRIO	        30
 #define taskCU_PRIO     		31	//!< приоритет задачи работы с backplane-uart'ом
 
 #define TASK_ETH_PRIORITY      (TCPIP_THREAD_PRIO+1)

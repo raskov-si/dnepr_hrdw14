@@ -347,7 +347,8 @@ static _BOOL SPI_BPEEPROM_ByteTransaction( 	u8* anDataToSend, u32 tx_len,
 											u8* anDataToGet, u32 rx_len )
 {
 	assert( anDataToSend );
-	return Dnepr_QSPI_ReadWriteArray( SPI_CS_2, anDataToSend, tx_len, anDataToGet, rx_len, SPILINE_EEPROM_DIV, TRUE, TRUE );
+//	return Dnepr_QSPI_ReadWriteArray( SPI_CS_2, anDataToSend, tx_len, anDataToGet, rx_len, SPILINE_EEPROM_DIV, TRUE, TRUE );
+	return Dnepr_QSPI_ReadWriteArray( SPI_CS_2, anDataToSend, tx_len, anDataToGet, rx_len, SPILINE_EEPROM_DIV, FALSE, FALSE );
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

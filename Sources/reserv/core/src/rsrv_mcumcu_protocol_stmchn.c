@@ -344,6 +344,7 @@ static void stmch_show_uart_polling(int state, int signal)
         rsrv_os_unlock(&McuViewPair.Sem);                 
         if (McuViewPair.Local.Role == RESERV_ROLES_SLAVE )  {        
             mcu_rx_flag = 0;
+            retry_times = RsrvSettings.Kretry;
         }
         
         mcumcu_signal_transition = SIG_ANSWUART_GOTO_UARTPONG;  
@@ -368,7 +369,7 @@ static void stmch_show_uart_polling(int state, int signal)
           }        
           mcumcu_signal_transition = SIG_ANSWUART_GOTO_UARTPING;            
         }  else if (McuViewPair.Local.Role == RESERV_ROLES_SLAVE )  {
-              if (mcu_rx_flag > 5) {
+              if (mcu_rx_flag > 20) {
                   rsrv_os_lock(&McuViewPair.Sem);                                      
                   McuViewPair.Local.UARTRx  = RESERV_TREESTATE_DAMAGED;
                   McuViewPair.Remote.UARTTx = RESERV_TREESTATE_DAMAGED;

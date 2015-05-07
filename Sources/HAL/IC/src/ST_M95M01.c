@@ -130,7 +130,9 @@ _BOOL ST_M95M01_CheckPresence()
 	u8 status ;
 	assert( SPI_EEPROM_PERIPH_INTERFACE_STRUCTURE != NULL );
 	__WriteEnable();
+        OSTimeDly(1);        
 	status = ST_M95M01_ReadStatus();
+        OSTimeDly(1);        
 	__WriteDisable();
 	return ((status & _M95_STATUS_WEL) > 0) && (status != 0xFF) ;
 }

@@ -144,7 +144,7 @@ static void taskInit(void *pdata)
     DeviceController_Init();
 
     /* пытаемся обнаружить backplane eeprom с данными профиля в течении 4 секунд, после этого все равно включаемся */
-//    dnepr_wait_eeprom_contact(4 * OS_TICKS_PER_SEC);
+    dnepr_wait_eeprom_contact(4 * OS_TICKS_PER_SEC);
 
     // Инициализуруем параметры профиля.
     Dnepr_ProfileStorage_Init();

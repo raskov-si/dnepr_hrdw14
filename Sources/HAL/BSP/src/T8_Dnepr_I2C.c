@@ -66,6 +66,7 @@ typedef struct __Dnepr_I2C_driver_internal_info {
 	_BOOL dont_block ;
 	//! номер слота, SELECT которого надо включить в FPGA
 	u8 nSelect ;
+        _BOOL access_flag;
 } Dnepr_I2C_driver_internal_info ;
 
 
@@ -676,11 +677,14 @@ u8 Dnepr_I2C_Read_ARA()
 // функции обёртки над PMB_PeriphInterfaceTypedef, блокируют мьютекс и включают
 // нужный канал i2c
 
-#define PMBUS_TRANSACTION_BEGIN()	_BOOL   ret ;																				\
+#define PMBUS_TRANSACTION_BEGIN()	_BOOL   ret = FALSE ;																				\
 									_BOOL   swtch ;																				\
 									u8		i ;																					\
 									const u8 slot_num = ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->nSelect ;				\
 									assert( p );																				\
+									if( ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->access_flag == FALSE ){						\
+										return ret ;																\
+									} 																							\
                                                                         if (times == 0)  times = 1;\
 									if( !((Dnepr_I2C_driver_internal_info*)(p->bus_info))->dont_block ){						\
 										T8_Dnepr_TS_I2C_Lock() ;																\
@@ -852,12 +856,15 @@ __PMB_WriteMultipleWords(PMB_PeriphInterfaceTypedef *p, u8 mAddr, u8 mCmd, u16* 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 
-#define I2C_TRANSACTION_BEGIN() _BOOL ret ; 																			\
+#define I2C_TRANSACTION_BEGIN() _BOOL ret = FALSE ; 																			\
 	u8 i ;																												\
 	_BOOL swtch ;																										\
 	I2C_DNEPR_BusTypedef channel_switch_to	=	((Dnepr_I2C_driver_internal_info*)(p->bus_info))->bus_channel ;			\
 	u8 slot_num = ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->nSelect ;											\
 	assert( p );																										\
+	if( ((Dnepr_I2C_driver_internal_info*)(p->bus_info))->access_flag == FALSE ){						\
+        	return ret ;																\
+	} 																							\
         if (times == 0) times = 1; \
         if( !((Dnepr_I2C_driver_internal_info*)(p->bus_info))->dont_block ){												\
 		T8_Dnepr_TS_I2C_Lock() ;																						\
@@ -1067,7 +1074,7 @@ PMB_PeriphInterfaceTypedef name =												\
 	__PMB_SendCommand, __PMB_ReadMultipleBytes, __PMB_WriteMultipleBytes,		\
 	__PMB_ReadMultipleWords, __PMB_WriteMultipleWords, __PMB_GetAcknowledge, bus_info }
 
-Dnepr_I2C_driver_internal_info __pmb_businfo_ext = { I2C_DNEPR_PMBUS_EXT, FALSE, DNEPR_I2C_NOSLOT };
+Dnepr_I2C_driver_internal_info __pmb_businfo_ext = { I2C_DNEPR_PMBUS_EXT, FALSE, DNEPR_I2C_NOSLOT, FALSE };
 DEFINE_PMBus_Struct( __pmb_ext, &__pmb_businfo_ext );
 PMB_PeriphInterfaceTypedef *Dnepr_I2C_Get_PMBUS_EXT_Driver( const u8 nSlot )
 {
@@ -1076,17 +1083,17 @@ PMB_PeriphInterfaceTypedef *Dnepr_I2C_Get_PMBUS_EXT_Driver( const u8 nSlot )
 	return &__pmb_ext ;
 }
 
-Dnepr_I2C_driver_internal_info __pmb_businfo_psu = { I2C_DNEPR_PSU, FALSE, DNEPR_I2C_NOSLOT };
+Dnepr_I2C_driver_internal_info __pmb_businfo_psu = { I2C_DNEPR_PSU, FALSE, DNEPR_I2C_NOSLOT, FALSE };
 DEFINE_PMBus_Struct( __pmb_psu, &__pmb_businfo_psu );
 PMB_PeriphInterfaceTypedef *Dnepr_I2C_Get_PMBUS_PSU_Driver()
 {	return &__pmb_psu ; }
 
-Dnepr_I2C_driver_internal_info __pmb_businfo_int = { I2C_DNEPR_PMBUS_INT, FALSE, DNEPR_I2C_NOSLOT };
+Dnepr_I2C_driver_internal_info __pmb_businfo_int = { I2C_DNEPR_PMBUS_INT, FALSE, DNEPR_I2C_NOSLOT, TRUE  };
 DEFINE_PMBus_Struct( __pmb_int, &__pmb_businfo_int );
 PMB_PeriphInterfaceTypedef *Dnepr_I2C_Get_PMBUS_INT_Driver()
 {	return &__pmb_int ; }
 
-Dnepr_I2C_driver_internal_info __pmb_businfo_int_select = { I2C_DNEPR_PMBUS_INT, TRUE, DNEPR_I2C_NOSLOT };
+Dnepr_I2C_driver_internal_info __pmb_businfo_int_select = { I2C_DNEPR_PMBUS_INT, TRUE, DNEPR_I2C_NOSLOT, TRUE  };
 DEFINE_PMBus_Struct( __pmb_int_select, &__pmb_businfo_int_select );
 PMB_PeriphInterfaceTypedef *Dnepr_I2C_Get_PMBUS_INT_SELECT_Driver()
 {	return &__pmb_int_select ; }
@@ -1101,22 +1108,22 @@ I2C_PeriphInterfaceTypedef name =												\
 	__I2C_ReadMultipleBytes_16, __I2C_WriteMultipleBytes_16, 					\
 	bus_info }
 
-Dnepr_I2C_driver_internal_info __i2c_businfo_bp_sernum = { I2C_DNEPR_BP_SERNUM, FALSE, DNEPR_I2C_NOSLOT };
+Dnepr_I2C_driver_internal_info __i2c_businfo_bp_sernum = { I2C_DNEPR_BP_SERNUM, FALSE, DNEPR_I2C_NOSLOT, FALSE };
 DEFINE_I2C_Struct( __i2c_bp_sernum, &__i2c_businfo_bp_sernum );
 I2C_PeriphInterfaceTypedef *Dnepr_I2C_Get_I2C_BP_SerNum_Driver()
 {	return &__i2c_bp_sernum ; }
 
-Dnepr_I2C_driver_internal_info __i2c_businfo_io_expander = { I2C_DNEPR_IO_EXPANDER, FALSE, DNEPR_I2C_NOSLOT };
+Dnepr_I2C_driver_internal_info __i2c_businfo_io_expander = { I2C_DNEPR_IO_EXPANDER, FALSE, DNEPR_I2C_NOSLOT, TRUE };
 DEFINE_I2C_Struct( __i2c_io_expander, &__i2c_businfo_io_expander );
 I2C_PeriphInterfaceTypedef *Dnepr_I2C_Get_I2C_IO_Expander_Driver()
 {	return &__i2c_io_expander ; }
 
-Dnepr_I2C_driver_internal_info __i2c_businfo_sfp_u = { I2C_DNEPR_SFP_U, FALSE, DNEPR_I2C_NOSLOT };
+Dnepr_I2C_driver_internal_info __i2c_businfo_sfp_u = { I2C_DNEPR_SFP_U, FALSE, DNEPR_I2C_NOSLOT, TRUE };
 DEFINE_I2C_Struct( __i2c_sfp_u, &__i2c_businfo_sfp_u );
 I2C_PeriphInterfaceTypedef *Dnepr_I2C_Get_I2C_SFP_U_Driver()
 {	return &__i2c_sfp_u ; }
 
-Dnepr_I2C_driver_internal_info __i2c_businfo_sfp_l = { I2C_DNEPR_SFP_L, FALSE, DNEPR_I2C_NOSLOT };
+Dnepr_I2C_driver_internal_info __i2c_businfo_sfp_l = { I2C_DNEPR_SFP_L, FALSE, DNEPR_I2C_NOSLOT, TRUE };
 DEFINE_I2C_Struct( __i2c_sfp_l, &__i2c_businfo_sfp_l );
 I2C_PeriphInterfaceTypedef *Dnepr_I2C_Get_I2C_SFP_L_Driver()
 {	return &__i2c_sfp_l ; }
@@ -1133,7 +1140,42 @@ I2C_PeriphInterfaceTypedef *Dnepr_I2C_Get_I2C_BP_Driver( const u8 nSlot )
 	return &__i2c_bp ;
 }
 
-Dnepr_I2C_driver_internal_info __i2c_businfo_9544A = { I2C_DNEPR_NONE, TRUE, DNEPR_I2C_NOSLOT };
+Dnepr_I2C_driver_internal_info __i2c_businfo_9544A = { I2C_DNEPR_NONE, TRUE, DNEPR_I2C_NOSLOT, TRUE  };
 DEFINE_I2C_Struct( __i2c_9544A, &__i2c_businfo_9544A );
 I2C_PeriphInterfaceTypedef *Dnepr_I2C_Get_I2C_9544A_Driver()
 {	return &__i2c_9544A ; }
+
+
+
+void I2C_clear_access (void)
+{
+//  __pmb_psu
+  __pmb_businfo_psu.access_flag  = FALSE;
+  
+  //__i2c_bp_sernum
+  __i2c_businfo_bp_sernum.access_flag  = FALSE;
+  
+//  __pmb_ext
+//  __i2c_bp
+  __pmb_businfo_ext.access_flag  = FALSE;
+  
+//  __i2c_ext
+//  __pmb_businfo_int.access_flag  = FALSE;
+}
+
+
+void I2C_set_access (void)
+{
+//  __pmb_psu
+  __pmb_businfo_psu.access_flag  = TRUE;
+  
+  //__i2c_bp_sernum
+  __i2c_businfo_bp_sernum.access_flag  = TRUE;
+  
+//  __pmb_ext
+//  __i2c_bp
+  __pmb_businfo_ext.access_flag  = TRUE;
+  
+//  __i2c_ext
+//  __pmb_businfo_int.access_flag  = TRUE;  
+}

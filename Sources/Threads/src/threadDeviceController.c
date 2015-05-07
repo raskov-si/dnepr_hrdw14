@@ -1088,7 +1088,14 @@ void Dnepr_DControl_sfp_process_present()
  	Dnepr_Refresh_SFP_Presents() ;
 
 	__processed_slots_present.bSfpPresent[ 0 ] =  I2C_DNEPR_GetPresentDevices()->bSfpPresent[ 0 ];
-	__processed_slots_present.bSfpPresent[ 1 ] =  I2C_DNEPR_GetPresentDevices()->bSfpPresent[ 1 ];
+	__processed_slots_present.bSfpPresent[ 1 ] =  I2C_DNEPR_GetPresentDevices()->bSfpPresent[ 1 ];                
+}
+
+void Dnepr_DControl_fun_process_present(void)
+{
+    Dnepr_Refresh_Presents();
+    
+    __processed_slots_present.bSlotPresent[ 13 ] =  I2C_DNEPR_GetPresentDevices()->bSlotPresent[ 13 ];
 }
 
 extern u32 val_FUFanMode ;

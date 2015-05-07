@@ -618,7 +618,8 @@ static void _Do_Measurements()
 //        return;
 ///debug        
         
-	Dnepr_DControl_sfp_process_present() ;
+	Dnepr_DControl_sfp_process_present() ;        
+        _pDev_presents = Dnepr_DControl_SlotPresent() ;  
 
 	// SFP & Fans
 	if( _pDev_presents ){
@@ -696,7 +697,7 @@ static void _Do_Measurements()
 		} else {
 			__fan_last_presence = 0 ;
 		}
-	}
+	} /* if( _pDev_presents ) */
 //	Dnepr_Backplane_Reload_PSU_DynInfo() ; // динамические параметры из БП
 
 	// зажигаем critical alarm
@@ -711,6 +712,15 @@ static void _Do_Measurements()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Measure_reset_sfp_und_fans (void)
+{
+  __sfp_l_last_presence = FALSE ;
+  __fan_last_presence = 0 ;
+  Dnepr_DControl_fun_process_present();
+}
+
+
 
 u32 alarm1_getvalue(PARAM_INDEX* p_ix, P32_PTR pPar) {
     
