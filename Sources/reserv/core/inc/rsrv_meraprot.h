@@ -76,7 +76,7 @@ int meraprot_setrole_cfm
   TRoles  current_cpu_role  
 );
 
-void rsrv_main_set_cpu_udp_error (void);
+extern  void    rsrv_main_set_cpu_udp_error(TThreeState);
 
 
       

@@ -7,6 +7,7 @@
 #include "reserv/core/inc/rsrv_mcumcu_protocol_func.h"
 #include "reserv/core/inc/rsrv_decision.h"
 #include "rsrv_backplane.h"
+#include "prio.h"
 
 
 /*=============================================================================================================*/
@@ -216,7 +217,6 @@ static void stmch_init(int state, int signal)
   
     /* инициализируем протоколы UART и ethernet */
     rsrv_mcumcu_protocol_start();
-//    rsrv_ethernet_protocol_start();
     OSTaskSuspend(OS_PRIO_SELF);
     
     main_signal_transition = INIT_GOTO_DIAG;
@@ -272,15 +272,26 @@ static void stmch_diag_cpu(int state, int signal)
     rsrv_os_lock(&McuViewPair.Sem);        
     McuViewPair.Local.Role = RESERV_ROLES_UNKNOWN;
     rsrv_os_unlock(&McuViewPair.Sem);      
+    
+    rsrv_ethernet_protocol_start();
   
     /* синхронизируем профиль в eeprom */
     rsrv_backplane_sync();
-  
-    /* выдаем на CPU роль стать активным */
-    cpu_role = RESERV_ROLES_MASTER;
     
+    OSTaskSuspend(OS_PRIO_SELF);    
+          
+    /* выдаем на CPU роль стать активным */
+    if ( McuViewPair.Local.CPUState == RESERV_TREESTATE_CHECKED ) {
+        cpu_role = RESERV_ROLES_MASTER;
+      /* выбираем роль в зависимости от ответа (максимум через 3 сек)*/    
+        main_signal_transition = DIAG_GOTO_ACTIVE;       
+        return;
+    }
+    
+    
+    cpu_role = RESERV_ROLES_SLAVE;
     /* выбираем роль в зависимости от ответа (максимум через 3 сек)*/    
-    main_signal_transition = DIAG_GOTO_ACTIVE;       
+    main_signal_transition = DIAG_GOTO_PASSIVE;       
 }
 
 
@@ -314,20 +325,23 @@ static void stmch_passive(int state, int signal)
         /* если теряем сигнал present от активного и сигнал по uart, переходим на диагностику CPU   */
         rsrv_os_lock(&McuViewPair.Sem);        
         McuViewPair.Local.RemotePresent = rsrv_get_dneprpresent();
+        McuViewPair.Remote = rsrv_get_recevied_mcupair()->Remote;        
         rsrv_os_unlock(&McuViewPair.Sem);      
             
         if (  McuViewPair.Local.RemotePresent == RSRV_DNEPR_PRESSIGNAL_NONE ) {            
-            main_signal_transition = PASSIVE_GOTO_CPU_DIAG;               
+            main_signal_transition = PASSIVE_GOTO_CPU_DIAG;
+            return;
         }
       
         if ( McuViewPair.Local.UARTTx == RESERV_TREESTATE_DAMAGED || McuViewPair.Local.UARTRx == RESERV_TREESTATE_DAMAGED ) {
             main_signal_transition = PASSIVE_GOTO_CPU_DIAG;               
+            return;
         }
-
         
         /* если принимаем пинг с соседним "пассивным" через некоторое время, переходим на диагностику CPU */
         if (  rsrv_get_recevied_mcupair()->Remote.Role == RESERV_ROLES_SLAVE ) {
             main_signal_transition = PASSIVE_GOTO_CPU_DIAG;                           
+            return;
         }          
     }
       
@@ -362,13 +376,20 @@ static void stmch_active(int state, int signal)
     {
         OSTimeDly( 1000 );                  /* время резервирования */
         
-      
+        /* если теряем сигнал present от активного и сигнал по uart, переходим на диагностику CPU   */
+        rsrv_os_lock(&McuViewPair.Sem);        
+        McuViewPair.Local.RemotePresent = rsrv_get_dneprpresent();
+        McuViewPair.Remote = rsrv_get_recevied_mcupair()->Remote;
+        rsrv_os_unlock(&McuViewPair.Sem);              
+        
+        
+              
         /* следим за работой CPU (ответами по uDP)если ответов нет в течении 3 сек меняем MCU на пассивное */
-    
-        /* отсылаем "пинг" с пассивным состоянием */
-        {;}    
-        //rsrv_backplane_stop_access();
-       // main_signal_transition = ACTIVE_GOTO_PASSIVE;
+        if ( McuViewPair.Local.CPUState == RESERV_TREESTATE_DAMAGED )
+        {
+            rsrv_backplane_stop_access();
+            main_signal_transition = ACTIVE_GOTO_PASSIVE;
+        }
     }
       
 }
@@ -429,17 +450,28 @@ void task_mcumcu(TrsrvOsThreadArg   *arg)
 
 TRoles rsrv_main_get_cpu_role(void)
 {
-//  return  cpu_role;
-  return  RESERV_ROLES_MASTER;
+  return  cpu_role;
+//  return  RESERV_ROLES_MASTER;
 }
 
 
-void rsrv_main_set_cpu_udp_error (void)
+void rsrv_main_set_cpu_udp_error 
+(
+    TThreeState   cpu_state
+)
 {
+    TrsrvIntertaskMessage *msg;
+    
     rsrv_os_lock(&McuViewPair.Sem);            
-    McuViewPair.Local.CPUState = RESERV_TREESTATE_DAMAGED;
-    rsrv_os_unlock(&McuViewPair.Sem);    
+    McuViewPair.Local.CPUState = cpu_state;
+    rsrv_os_unlock(&McuViewPair.Sem);
+
+    if ( rsrv_os_mbox_accept(ethernet_main_mbox, &msg) == OS_ERR_NONE )    {
+        OSTaskResume(TASK_RSRV_PRIORITY);
+    }
 }
+
+
 
 /*=============================================================================================================*/
 

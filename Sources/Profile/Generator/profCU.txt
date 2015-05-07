@@ -1,4 +1,4 @@
-************** GENERATED 17.04.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
+************** GENERATED 05.05.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
 *********************************
 *********************************
 #PARAM_NAME
@@ -7654,9 +7654,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-OVLPCUMainRole;NotInstalled@0|Passive@1|Active@2|Failed@3
+OVLPCUMainRole;NotInstalled@0|Active@1|Passive@2|Failed@3
 #LANGPACK
-OVLPCUMainRole;Не установлен@0|Пассивный@1|Активный@2|Сбой@3
+OVLPCUMainRole;Не установлен@0|Активный@1|Пассивный@2|Сбой@3
 #END
 *********************************
 *********************************
@@ -7673,9 +7673,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-OVLPCURsrvRole;NotInstalled@0|Passive@1|Active@2|Failed@3
+OVLPCURsrvRole;NotInstalled@0|Active@1|Passive@2|Failed@3
 #LANGPACK
-OVLPCURsrvRole;Не установлен@0|Пассивный@1|Активный@2|Сбой@3
+OVLPCURsrvRole;Не установлен@0|Активный@1|Пассивный@2|Сбой@3
 #END
 *********************************
 *********************************

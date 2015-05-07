@@ -215,3 +215,161 @@ void MV88E6095_GetMacAddr(u8* maddr){
 		maddr[i*2+1] = (u8)w;
 	}
 }
+
+
+//! Добавляет или изменяет запись БД в VTU
+//! \param vid VLAN ID
+//! \param dbnum номер БД (0-255) для разделения MAC-адресов по разным VLAN'ам
+//! \param stats состоянив портов в контексте этого VLAN'а
+void MV88E6095_AddVTUEntry(   const u8 pcbDevAddr, const u16 vid, const u8 dbnum, const MV88E6095_Ports_VLAN_Status_t* stats )
+{
+	u16 mv_data;
+
+	if( !stats )
+		return ;
+
+	mv_data = VTU_VID_VALID | VTU_VID(vid) ;
+	MV88E6095_multichip_smi_write( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_VID, mv_data );
+
+	mv_data = 	VTU_PORT0( stats->port0_tag, stats->port0_state ) | 
+				VTU_PORT1( stats->port1_tag, stats->port1_state ) | 
+				VTU_PORT2( stats->port2_tag, stats->port2_state ) | 
+				VTU_PORT3( stats->port3_tag, stats->port3_state ) ;
+	MV88E6095_multichip_smi_write( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_DATA03, mv_data );
+
+	mv_data = 	VTU_PORT4( stats->port4_tag, stats->port4_state ) | 
+				VTU_PORT5( stats->port5_tag, stats->port5_state ) | 
+				VTU_PORT6( stats->port6_tag, stats->port6_state ) | 
+				VTU_PORT7( stats->port7_tag, stats->port7_state ) ;
+	MV88E6095_multichip_smi_write( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_DATA47, mv_data );
+
+	mv_data = 	VTU_PORT8( stats->port8_tag, stats->port8_state ) | 
+				VTU_PORT9( stats->port9_tag, stats->port9_state ) | 
+				VTU_PORT10( stats->port10_tag, stats->port10_state ) ;
+	MV88E6095_multichip_smi_write( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_DATA810, mv_data );
+
+
+	mv_data = VTU_OP_LOAD | VTU_DBNUM(dbnum) | VTU_BUSY;
+	MV88E6095_multichip_smi_write( pcbDevAddr, MV88E6095_GLOBAL, MV88E6095_VTU_OPERATION, mv_data );
+	// ждём готовность
+	do{ 
+		HWait(20);
+		MV88E6095_multichip_smi_read( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_OPERATION, &mv_data );
+	} while( mv_data & VTU_BUSY );
+}
+
+
+//! Устанавливает умолчальный номер VLAN'а для порта
+//! \param port_index номер порта
+//! \param VID VLAN ID
+void MV88E6095_PortDefaultVID( const u8 pcbDevAddr,  const u8 port_index, const u8 force_def_vid, 
+								const u16 VID )
+{
+	u16 mv_data ;
+	u32 dev_addr;
+	dev_addr = 0x10 | port_index;
+	
+	MV88E6095_multichip_smi_read( pcbDevAddr,  dev_addr, MV88E6095_PORT_DEFVLANID, &mv_data );
+	mv_data &= ~( FORCE_DEF_VID | 0x0FFF );
+	if( force_def_vid > 0 )
+		mv_data |= FORCE_DEF_VID ;
+	mv_data |= DEF_VID( VID );
+	MV88E6095_multichip_smi_write( pcbDevAddr, dev_addr, MV88E6095_PORT_DEFVLANID, mv_data );	
+}
+
+
+void MV88E6095_Change_Port8021Q_state( const u8 pcbDevAddr,  const u8 port_index, const Port8021QState state )
+{
+	u16 mv_data ;
+	u32 dev_addr;
+	dev_addr = 0x10 | port_index;
+	
+	MV88E6095_multichip_smi_read( pcbDevAddr,  dev_addr, MV88E6095_PORT_CTRL2_REG, &mv_data );
+	mv_data &= 0xF3FF ; // сбрасываем 10-11е биты
+	mv_data |= VLAN_MODE( (u8)state );
+	MV88E6095_multichip_smi_write( pcbDevAddr, dev_addr, MV88E6095_PORT_CTRL2_REG, mv_data );
+}
+
+//! Читает запись в VTU с соотв. VLAN ID
+//! \param vid 		VLAN ID
+//! \param dbnum 	сюда запишется dbnum
+//! \param stats 	сюда запишутся состояния портов в этов VLAN'е
+//! \retval OK или ERROR
+u32 MV88E6095_ReadVTUEntry(   const u8 pcbDevAddr, const u16 vid, u8 *dbnum, MV88E6095_Ports_VLAN_Status_t* stats )
+{
+	u16 i, j, mv_data ;
+	i = 0 ;
+	// находим соотв. запись
+	do {
+		j = MV88E6095_NextVTUEntry( pcbDevAddr, i, &i );
+	} while( ((i & 0x0FFF) != vid) && (i != 0x0FFF) ) ;
+	// закончились записи в VTU -- выходим
+	if( !(i & VTU_VID_VALID) || ((i & 0x0FFF) != vid) ){
+		return ERROR ;
+	}
+
+	// в j dbnum
+	if( dbnum ){
+		*dbnum = j ;
+	}
+	if( !stats ){
+		return OK ;
+	}
+
+	// читаем сами данные
+	MV88E6095_multichip_smi_read( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_DATA03, &mv_data );
+	stats->port0_tag = 		mv_data & 3 ;
+	stats->port0_state = 	(mv_data >> 2) & 3;
+	stats->port1_tag = 		(mv_data >> 4) & 3;
+	stats->port1_state = 	(mv_data >> 6) & 3;
+	stats->port2_tag = 		(mv_data >> 8) & 3;
+	stats->port2_state = 	(mv_data >> 10) & 3;
+	stats->port3_tag = 		(mv_data >> 12) & 3;
+	stats->port3_state = 	(mv_data >> 14) & 3;
+
+	MV88E6095_multichip_smi_read( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_DATA47, &mv_data );
+	stats->port4_tag = 		mv_data & 3 ;
+	stats->port4_state = 	(mv_data >> 2) & 3;
+	stats->port5_tag = 		(mv_data >> 4) & 3;
+	stats->port5_state = 	(mv_data >> 6) & 3;
+	stats->port6_tag = 		(mv_data >> 8) & 3;
+	stats->port6_state = 	(mv_data >> 10) & 3;
+	stats->port7_tag = 		(mv_data >> 12) & 3;
+	stats->port7_state = 	(mv_data >> 14) & 3;
+
+	MV88E6095_multichip_smi_read( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_DATA810, &mv_data );
+	stats->port8_tag = 		mv_data & 3 ;
+	stats->port8_state = 	(mv_data >> 2) & 3;
+	stats->port9_tag = 		(mv_data >> 4) & 3;
+	stats->port9_state = 	(mv_data >> 6) & 3;
+	stats->port10_tag = 	(mv_data >> 8) & 3;
+	stats->port10_state = 	(mv_data >> 10) & 3;
+
+	return OK ;
+}
+
+
+//! Ищет в бд VTU запись следующую за записью с VID==prevvid, возвращает его DBNum 
+//! \param prevvid defines the starting VID to search. Use the last address to find the next address (there is no need to write to this register in this case).
+//! \param nextvid если не NULL сюда запишется 
+u8 MV88E6095_NextVTUEntry( const u8 pcbDevAddr, u16 prevvid, u16 *nextvid)
+{
+	u16 mv_data, dbnum;
+
+	// пишем VID
+	MV88E6095_multichip_smi_write( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_VID, VTU_VID( prevvid ));
+	// команда
+	MV88E6095_multichip_smi_write( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_OPERATION, VTU_OP_NEXT | VTU_BUSY );
+
+	// ждём готовность
+	do{ 
+		HWait(20);
+		MV88E6095_multichip_smi_read( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_OPERATION, &mv_data );
+	} while( mv_data & VTU_BUSY );
+	dbnum = (mv_data & 0x0F) | ((mv_data >> 4) & 0xF0 );
+
+	if( nextvid )
+		MV88E6095_multichip_smi_read( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_VID, nextvid );
+
+	return dbnum ;
+}

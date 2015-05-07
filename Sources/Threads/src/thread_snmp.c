@@ -74,6 +74,8 @@
 #endif
     extern  err_t   dnepr_if_init(struct netif *netif);
     extern  TRoles  rsrv_main_get_cpu_role(void);
+    extern  void    rsrv_main_set_cpu_udp_error(TThreeState);
+
 
     
     static void     ping_prepare_echo( struct icmp_echo_hdr *iecho, u16_t len);
@@ -284,13 +286,16 @@ void task_eth( void *pdata )
       retsock = recvfrom(sock_desc, buf, MERAPROT_ROLECFM_LEN, 0, (struct sockaddr*)&client_addr, (socklen_t*)&client_addr);
       now_time = OSTimeGet();
       if (retsock == MERAPROT_ROLECFM_LEN) {
-          meraprot_setrole_cfm(buf, rsrv_main_get_cpu_role());
-          answ_timer  = OSTimeGet();
-          sys_msleep(1000);
+          if ( meraprot_setrole_cfm(buf, rsrv_main_get_cpu_role()) == MERAPROT_CMDCODE_OK ) {
+              rsrv_main_set_cpu_udp_error(RESERV_TREESTATE_CHECKED);
+              answ_timer  = OSTimeGet();              
+              sys_msleep(1000);
+          } else if ( (answ_timer + 3000) < now_time ) {
+              rsrv_main_set_cpu_udp_error(RESERV_TREESTATE_DAMAGED);            
+          }
       } else if ( (answ_timer + 3000) < now_time ) {                              
-          rsrv_main_set_cpu_udp_error();
-      }
-            
+          rsrv_main_set_cpu_udp_error(RESERV_TREESTATE_DAMAGED);
+      }            
     }
     
     retsock = close(sock_desc);

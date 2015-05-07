@@ -182,8 +182,8 @@ int rsrv_mcumcu_uart_receive
         circbuffer_pop_block(&rsrv_uart_rcv_buff, &out_buf[indx], left_len, &actual_sz); 
         left_len     -= actual_sz;
         indx         += actual_sz;                                  
-//    } while ( ( indx < len ) && !timer_is_expired(&timeout_timer, timeout*1000) );
-    } while ( ( indx < len ) && !timer_is_expired(&timeout_timer, 1000*1000) );
+    } while ( ( indx < len ) && !timer_is_expired(&timeout_timer, timeout*1000) );
+//    } while ( ( indx < len ) && !timer_is_expired(&timeout_timer, 1000*1000) );
     
     if ( readed_len != NULL ) {
       *readed_len = indx;

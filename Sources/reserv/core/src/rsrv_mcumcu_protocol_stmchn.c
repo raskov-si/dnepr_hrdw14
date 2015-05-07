@@ -166,8 +166,8 @@ const struct STR_RSRV_SETTINGS  {
 }RsrvSettings = {
     6,                 /* Kretry */
     100,                /* TimeColWait */
-    1000,                /* PongTimeout млсек */
-    1000,                /* PongTimeoutI2C млсек */
+    300,                /* PongTimeout млсек */
+    300,                /* PongTimeoutI2C млсек */
     400,                 /* PingTimeout млсек */
     400,                 /* PingTimeoutI2C млсек */
 };
@@ -357,10 +357,10 @@ static void stmch_show_uart_polling(int state, int signal)
               rsrv_os_lock(&McuViewPair.Sem);                                      
               McuViewPair.Local.UARTRx  = RESERV_TREESTATE_DAMAGED;
               McuViewPair.Remote.UARTTx = RESERV_TREESTATE_DAMAGED;
-              if (ret != RSRV_TIMEOUT) {
-                 McuViewPair.Remote.UARTRx = RESERV_TREESTATE_DAMAGED;
-                 McuViewPair.Local.UARTTx  = RESERV_TREESTATE_DAMAGED;
-              }
+//              if (ret == RSRV_TIMEOUT) {
+//                 McuViewPair.Remote.UARTRx = RESERV_TREESTATE_DAMAGED;
+//                 McuViewPair.Local.UARTTx  = RESERV_TREESTATE_DAMAGED;
+//              }
               rsrv_os_unlock(&McuViewPair.Sem);                                                
               /* отсылаем сигнал что диагностика закончена */            
               rsrv_mcmmcu_main_diag_complete();                    
@@ -372,14 +372,28 @@ static void stmch_show_uart_polling(int state, int signal)
                   rsrv_os_lock(&McuViewPair.Sem);                                      
                   McuViewPair.Local.UARTRx  = RESERV_TREESTATE_DAMAGED;
                   McuViewPair.Remote.UARTTx = RESERV_TREESTATE_DAMAGED;
+                  McuViewPair.Remote.CPUState = RESERV_TREESTATE_DAMAGED;                  
                   rsrv_os_unlock(&McuViewPair.Sem);                                                                
               } else {
                   mcu_rx_flag++;
               }
               OSTimeDly( 200 );
         }  else if (McuViewPair.Local.Role == RESERV_ROLES_MASTER )  {
-              OSTimeDly( 200 );
+              if (mcu_rx_flag > 5) {
+                  rsrv_os_lock(&McuViewPair.Sem);                                      
+                  McuViewPair.Local.UARTRx  = RESERV_TREESTATE_DAMAGED;
+                  McuViewPair.Remote.UARTTx = RESERV_TREESTATE_DAMAGED;
+                  McuViewPair.Remote.CPUState = RESERV_TREESTATE_DAMAGED;
+//                  if (ret == RSRV_TIMEOUT) {
+//                    McuViewPair.Remote.UARTRx = RESERV_TREESTATE_DAMAGED;
+//                    McuViewPair.Local.UARTTx  = RESERV_TREESTATE_DAMAGED;
+//                  }
+                  rsrv_os_unlock(&McuViewPair.Sem);                                                                
+              } else {
+                  mcu_rx_flag++;
+              }              
               mcumcu_signal_transition = SIG_ANSWUART_GOTO_UARTPING;
+              OSTimeDly( 200 );
         }
 
         break;

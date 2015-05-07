@@ -102,6 +102,154 @@ int dnepr_ethernet_fec_init
 }
 
 
+
+/*=============================================================================================================*/
+
+void VLAN_AddVID( const u8 pcbDevAddr, const VLAN_ID_t vid )
+{
+	MV88E6095_Ports_VLAN_Status_t stats = (MV88E6095_Ports_VLAN_Status_t){
+							VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+							VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+							VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+							VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+							VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+							VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+							VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+							VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+							VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+							VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+							VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING };
+
+	if( (vid < 1) || (vid > 4095) )
+		return ;
+
+	//	Параметры 					vid		dbnum	MV88E6095_Ports_VLAN_Status_t*
+	MV88E6095_AddVTUEntry( pcbDevAddr,	vid,	0, 	&stats 	);
+}
+
+void VLAN_PortDefVIDSet( const u8 pcbDevAddr, const VLAN_ID_t vid, const size_t port_num )
+{
+	//										port_index	force_def_vid	VID
+	MV88E6095_PortDefaultVID( 	pcbDevAddr, 	port_num, 	0, 				vid );
+}
+
+
+void __change_port_state( MV88E6095_Ports_VLAN_Status_t* stats, const size_t port_num,
+							MV88E6095_Port_Tagging tag, MV88E6095_Port_State state )
+{
+	if( !stats )
+		return ;
+	switch( port_num ){
+		case 0:
+			stats->port0_tag = tag ;
+			stats->port0_state = state ;
+			break ;
+		case 1:
+			stats->port1_tag = tag ;
+			stats->port1_state = state ;
+			break ;
+		case 2:
+			stats->port2_tag = tag ;
+			stats->port2_state = state ;
+			break ;
+		case 3:
+			stats->port3_tag = tag ;
+			stats->port3_state = state ;
+			break ;
+		case 4:
+			stats->port4_tag = tag ;
+			stats->port4_state = state ;
+			break ;
+		case 5:
+			stats->port5_tag = tag ;
+			stats->port5_state = state ;
+			break ;
+		case 6:
+			stats->port6_tag = tag ;
+			stats->port6_state = state ;
+			break ;
+		case 7:
+			stats->port7_tag = tag ;
+			stats->port7_state = state ;
+			break ;
+		case 8:
+			stats->port8_tag = tag ;
+			stats->port8_state = state ;
+			break ;
+		case 9:
+			stats->port9_tag = tag ;
+			stats->port9_state = state ;
+			break ;
+		case 10:
+			stats->port10_tag = tag ;
+			stats->port10_state = state ;
+			break ;
+	}
+}
+
+u32 VLAN_PortModeSet( 	const u8 pcbDevAddr, const size_t port_num,
+						VLAN_ID_t defvid, VLAN_ID_t *vids_arr, const size_t vids_arr_len,
+						const VLAN_PortMode_t mode, u8 secure_flag )
+{
+	size_t i ;
+	MV88E6095_Ports_VLAN_Status_t stats;
+
+	if( (mode == VLAN_PORTMODE_ACCESS) || (mode == VLAN_PORTMODE_TRUNK) ){
+          if ( secure_flag ) {
+		MV88E6095_Change_Port8021Q_state( pcbDevAddr, port_num, PORT_8021Q_SECURE );
+          } else {
+		MV88E6095_Change_Port8021Q_state( pcbDevAddr, port_num, PORT_8021Q_FALLBACK );
+          }
+	} else if( mode == VLAN_PORTMODE_GENERAL_ALL ){
+		MV88E6095_Change_Port8021Q_state( pcbDevAddr, port_num, PORT_8021Q_FALLBACK );
+	}
+
+	for( i = 0; i < vids_arr_len; i++){
+		if( MV88E6095_ReadVTUEntry( pcbDevAddr, vids_arr[i], NULL, &stats ) == OK ){
+			// если порт ACCESS -- все VLAN'ы его транка становятся недоступны
+			if( mode == VLAN_PORTMODE_ACCESS ){
+				__change_port_state( &stats, port_num,
+							VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING );
+			} else if( mode == VLAN_PORTMODE_GENERAL_ALL ){
+				__change_port_state( &stats, port_num,
+							VTU_PORT_UNMODIFIED, VTU_PORT_FORWARDING );
+			} else if( mode == VLAN_PORTMODE_TRUNK){
+				__change_port_state( &stats, port_num,
+							VTU_PORT_TAGGED, VTU_PORT_FORWARDING );
+			}
+			MV88E6095_AddVTUEntry( 	pcbDevAddr, vids_arr[i], 	0,		&stats 	);
+		}
+	}
+	if( mode == VLAN_PORTMODE_ACCESS ){
+		if( MV88E6095_ReadVTUEntry( pcbDevAddr, defvid, NULL, &stats ) == OK ){
+			__change_port_state( &stats, port_num,
+						VTU_PORT_UNTAGGED, VTU_PORT_FORWARDING );
+			MV88E6095_AddVTUEntry( pcbDevAddr,	defvid, 	0,		&stats 	);
+		}  else
+			return ERROR ;
+	}
+
+	return OK ;
+}
+
+
+void __set_up_port(const u8 pcbDevAddr, const u8 port, const u8 port_state,
+					const u8 cpu_port, const _BOOL dsa_port )
+{
+	u16 usBuffer ;
+
+	usBuffer = TRANSMIT_FRAMES_UNTAGGED | FORWARD_UNKNOWN
+          | PORT_STATE(port_state) | (dsa_port ? DSA_TAG : 0);
+	MV88E6095_multichip_smi_write( pcbDevAddr, port, MV88E6095_PORT_CTRL_REG, usBuffer);
+	usBuffer = MAP_DA | DEFAULT_FORWARD | CPU_PORT(cpu_port);
+	MV88E6095_multichip_smi_write( pcbDevAddr, port, MV88E6095_PORT_CTRL2_REG, usBuffer);	
+}
+
+
+
+/*=============================================================================================================*/
+
+
 /*=============================================================================================================*/
 /*!  \brief Инициализация PHY для стека
 *
@@ -111,7 +259,12 @@ int dnepr_ethernet_fec_init
 int dnepr_ethernet_phy_init(void)
 {
     u16	usBuffer = 0 ;
+    VLAN_ID_t mcu_port_vids[] = { 20 };
+//    VLAN_ID_t cpu_port_vids[] = { 1, 20 };
+    VLAN_ID_t cpu_port_vids[] = { 20 };
     
+    
+        
 // PCS Control Register -- ForcedLink (88E6095 datasheet page 61 Note) и LinkValue 
     MV88E6095_multichip_smi_read( MV88E6095_1_CHIPADDR, MV88E6095_PORT8, MV88E6095_PCS_CTRL_REG, &usBuffer  );
     usBuffer |= FORCE_LINK | LINK_FORCED_VALUE(1) ;
@@ -132,22 +285,27 @@ int dnepr_ethernet_phy_init(void)
 
 //    MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_GLOBAL, MV88E6095_GLOBAL_2, MV88E6095_CASCADE_PORT(0x8) | MV88E6095_DEV_NUM(1)  );
 //    MV88E6095_multichip_smi_write( MV88E6095_2_CHIPADDR, MV88E6095_GLOBAL, MV88E6095_GLOBAL_2, MV88E6095_CASCADE_PORT(0x8) | MV88E6095_DEV_NUM(0x10)  );  
+        
+    /* настраиваем VLAN 20 */
+//    VLAN_AddVID( MV88E6095_1_CHIPADDR, 1 );
+//    VLAN_AddVID( MV88E6095_1_CHIPADDR, 20 );
+//    
+//    // порт CU
+//    VLAN_PortDefVIDSet( MV88E6095_1_CHIPADDR, 1, 10 );
+//    VLAN_PortModeSet( MV88E6095_1_CHIPADDR, 10, 20, cpu_port_vids, 2, VLAN_PORTMODE_TRUNK, 0);
+//    
+//    //порт MCU
+//    VLAN_PortDefVIDSet( MV88E6095_1_CHIPADDR, 20, 9 );
+//    VLAN_PortModeSet( MV88E6095_1_CHIPADDR, 9, 20, mcu_port_vids, 1, VLAN_PORTMODE_ACCESS, 1);
+//    
+////	// Настраиваем порт Kontron'а
+////    __set_up_port( MV88E6095_1_CHIPADDR, MV88E6095_PORT10, MV88E6095_PORT_FORWARDING, MV88E6095_PORT9, FALSE );
+//    __set_up_port( MV88E6095_1_CHIPADDR, MV88E6095_PORT9, MV88E6095_PORT_FORWARDING, MV88E6095_PORT10, FALSE );
     
+	// Порты лицевой панели принимают нетэгированный трафик, становятся членами VLAN'а 100, участвуют в RSTP
+//	__set_up_port( &hSwitch2, MV88E6095_PORT0, MV88E6095_PORT_LEARNING, MV88E6095_PORT8, FALSE ); // 1я медь UR
     
-    
-
-//	// Инициализируем MAC
-//	if( !maddr )
-//		goto _err ;
-//	for(i=0;i<3;i++){
-//		usBuffer = ((u16)(maddr[i*2]) << 8) | (u16)maddr[i*2+1];
-//		MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR,  MV88E6095_GLOBAL, (u8)(i+1), (u16)usBuffer );
-//		if(i==2)
-//			MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR,  MV88E6095_GLOBAL, (u8)(i+1), (u16)usBuffer+1 );
-//		else
-//			MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR,  MV88E6095_GLOBAL, (u8)(i+1), (u16)usBuffer );
-//	}
-    
+       
     
   return 0;
 }

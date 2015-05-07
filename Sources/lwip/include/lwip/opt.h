@@ -2406,6 +2406,7 @@
  * - 0: Packet must be dropped.
  * - != 0: Packet must be accepted.
  */
+#define LWIP_HOOK_VLAN_CHECK(netif, eth_hdr, vlan_hdr) etherarp_vlan_check(netif, eth_hdr, vlan_hdr)
 
 /**
  * LWIP_HOOK_VLAN_SET(netif, eth_hdr, vlan_hdr):
@@ -2418,6 +2419,7 @@
  * - != 0: Packet shall contain VLAN header.
  * Hook can be used to set prio_vid field of vlan_hdr.
  */
+#define LWIP_HOOK_VLAN_SET(netif, eth_hdr, vlan_hdr) etherarp_vlan_set(netif, eth_hdr, vlan_hdr)
 
 /*
    ---------------------------------------

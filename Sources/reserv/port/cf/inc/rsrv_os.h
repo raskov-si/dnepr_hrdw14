@@ -42,7 +42,7 @@ int   rsrv_os_unlock      (TrsrvOsSem  *sem);
 int   rsrv_os_mbox_new    (TrsrvOsMbox *mbox, TrsrvIntertaskMessage **msg);
 int   rsrv_os_mbox_post   (TrsrvOsMbox mbox, TrsrvIntertaskMessage *msg);
 int   rsrv_os_mbox_fetch  (TrsrvOsMbox mbox, TrsrvIntertaskMessage **msg, uint32_t timeout);
-
+int   rsrv_os_mbox_accept (TrsrvOsMbox mbox, TrsrvIntertaskMessage **msg);
 
 /*=============================================================================================================*/
 

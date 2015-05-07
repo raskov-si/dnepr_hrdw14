@@ -138,6 +138,27 @@ int rsrv_os_mbox_fetch(TrsrvOsMbox mbox, TrsrvIntertaskMessage **msg, uint32_t t
 
 
 
+/*=============================================================================================================*/
+/*!  \brief ∆дет пока сообщение упадет в €щик в течение заданного таймаута */
+/*=============================================================================================================*/
+int rsrv_os_mbox_accept(TrsrvOsMbox mbox, TrsrvIntertaskMessage **msg)
+{
+    uint8_t               err;
+    TrsrvIntertaskMessage *message;
+    
+    message = (TrsrvIntertaskMessage*)OSQAccept(mbox, (INT8U*)&err);
+    
+    if (err == OS_ERR_NONE) {
+        *msg = message;
+        return 0;
+    } else if (err == OS_ERR_Q_EMPTY ) {
+        return 1; 
+    }
+       
+    return -1;
+}
+
+
 
 
 

@@ -147,6 +147,9 @@ static unsigned int backplane_uart_isr_snd_hook( unsigned int *snd_buff, const u
     return i ;
 }
 
+T8_Dnepr_LedColorTypedef get_now_led_state(void);
+
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //! \brief Задача обмена с ПК по UART
 void  taskCU (void *pdata)
@@ -209,7 +212,8 @@ void  taskCU (void *pdata)
             continue ;
         // пришла команда от контрона -- зажигаем светодиод
         } else {
-            Dnepr_Measure_SetCPULed( (T8_Dnepr_LedTypedef){GREEN, FALSE} );
+            T8_Dnepr_LedColorTypedef  nowled = get_now_led_state();
+            Dnepr_Measure_SetCPULed( (T8_Dnepr_LedTypedef){nowled, FALSE} );
         }
 
         // сюда будет записан ответ

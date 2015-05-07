@@ -4,6 +4,7 @@
 
 #include "HAL/BSP/inc/T8_Dnepr_Select.h"
 #include "HAL/BSP/inc/T8_Dnepr_API.h"
+#include "HAL/BSP/inc/T8_Dnepr_LED.h"
 #include "reserv/core/inc/rsrv_typedef.h"
 
 /*=============================================================================================================*/
@@ -46,6 +47,8 @@ unsigned int rsrv_get_dneprpresent (void)
 }
 
 
+extern  struct _MCU_VIEW_PAIR   McuViewPair;
+static T8_Dnepr_LedColorTypedef  cpuled_role_color;
 /*=============================================================================================================*/
 /*!  \brief 
 
@@ -54,5 +57,20 @@ unsigned int rsrv_get_dneprpresent (void)
 /*=============================================================================================================*/
 unsigned int rsrv_leds_setstate(TRoles  cur_role)
 {
+  if ( cur_role == RESERV_ROLES_MASTER ) {    
+    cpuled_role_color = GREEN;
+  } else {
+    cpuled_role_color = YELLOW;
+  }
+  
   return (unsigned int)(RSRV_OK);
+}
+
+
+T8_Dnepr_LedColorTypedef get_now_led_state(void)
+{
+  if ( McuViewPair.Local.CPUState == RESERV_TREESTATE_DAMAGED ) {
+      return RED;    
+  }  
+    return  cpuled_role_color;
 }
