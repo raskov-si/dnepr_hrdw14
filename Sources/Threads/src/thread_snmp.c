@@ -42,8 +42,8 @@
 #endif
 
 //#define   CPU_MERA_HOST         "192.168.1.100"
-#define   CPU_MERA_HOST         "192.168.10.1"
-//#define   CPU_MERA_HOST         val_CUNetCPUIPAddress
+//#define   CPU_MERA_HOST         "192.168.10.1"
+#define   CPU_MERA_HOST         val_CUNetCPUIPAddress
 #define   CPU_MERA_PORT         (0x7777u)
 #define   CPU_MERA_RCV_TIMEO        500
 
@@ -209,8 +209,8 @@ void task_eth_init (void)
     
     ipaddr_aton("0.0.0.0", &gw);
 //    ipaddr_aton("192.168.1.3", &ipaddr);
-    ipaddr_aton("192.168.10.2", &ipaddr);
-//    ipaddr_aton(val_CUNetMCUIPAddress, &ipaddr);
+//    ipaddr_aton("192.168.10.2", &ipaddr);
+    ipaddr_aton(val_CUNetMCUIPAddress, &ipaddr);
     ipaddr_aton(val_CUNetIPMask, &netmask);
  
 // Start the TCP/IP thread & init stuff  
@@ -267,7 +267,7 @@ void task_eth( void *pdata )
     client_addr.sin_len = sizeof(client_addr);
     client_addr.sin_family = AF_INET;  
     client_addr.sin_port = PP_HTONS(CPU_MERA_PORT);
-    client_addr.sin_addr.s_addr = inet_addr("192.168.10.2");    
+    client_addr.sin_addr.s_addr = inet_addr(val_CUNetMCUIPAddress);    
     
     retsock = bind(sock_desc, (struct sockaddr*)&client_addr, sizeof(client_addr)); 
     assert(retsock == 0);       

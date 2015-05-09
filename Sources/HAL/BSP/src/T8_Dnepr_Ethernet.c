@@ -260,8 +260,8 @@ int dnepr_ethernet_phy_init(void)
 {
     u16	usBuffer = 0 ;
     VLAN_ID_t mcu_port_vids[] = { 20 };
-//    VLAN_ID_t cpu_port_vids[] = { 1, 20 };
-    VLAN_ID_t cpu_port_vids[] = { 20 };
+    VLAN_ID_t cpu_port_vids[] = { 1, 20 };
+//    VLAN_ID_t cpu_port_vids[] = { 20 };
     
     
         
@@ -283,6 +283,11 @@ int dnepr_ethernet_phy_init(void)
     usBuffer = NOT_FORCE_SPD | FORCE_LINK | LINK_FORCED_VALUE(1);
     MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_PORT9, MV88E6095_PCS_CTRL_REG, usBuffer);
 
+    /* отключаем линк CU-CU через backplane */
+    usBuffer = PORT_DISABLED;
+    MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_PORT2, MV88E6095_PORT_CTRL_REG, usBuffer);
+
+    
 //    MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR, MV88E6095_GLOBAL, MV88E6095_GLOBAL_2, MV88E6095_CASCADE_PORT(0x8) | MV88E6095_DEV_NUM(1)  );
 //    MV88E6095_multichip_smi_write( MV88E6095_2_CHIPADDR, MV88E6095_GLOBAL, MV88E6095_GLOBAL_2, MV88E6095_CASCADE_PORT(0x8) | MV88E6095_DEV_NUM(0x10)  );  
         
@@ -298,6 +303,10 @@ int dnepr_ethernet_phy_init(void)
 //    VLAN_PortDefVIDSet( MV88E6095_1_CHIPADDR, 20, 9 );
 //    VLAN_PortModeSet( MV88E6095_1_CHIPADDR, 9, 20, mcu_port_vids, 1, VLAN_PORTMODE_ACCESS, 1);
 //    
+//    //acsess port 8
+//    VLAN_PortDefVIDSet( MV88E6095_1_CHIPADDR, 1, 8 );
+//    VLAN_PortModeSet( MV88E6095_1_CHIPADDR, 8, 20, cpu_port_vids, 1, VLAN_PORTMODE_ACCESS, 1);
+    
 ////	// Настраиваем порт Kontron'а
 ////    __set_up_port( MV88E6095_1_CHIPADDR, MV88E6095_PORT10, MV88E6095_PORT_FORWARDING, MV88E6095_PORT9, FALSE );
 //    __set_up_port( MV88E6095_1_CHIPADDR, MV88E6095_PORT9, MV88E6095_PORT_FORWARDING, MV88E6095_PORT10, FALSE );

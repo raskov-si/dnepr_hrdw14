@@ -339,7 +339,8 @@ static _BOOL SPI_Flash_ByteTransaction( 	u8* anDataToSend, u32 tx_len,
 											u8* anDataToGet, u32 rx_len )
 {
 	assert( anDataToSend );
-	return Dnepr_QSPI_ReadWriteArray( SPI_CS_0, anDataToSend, tx_len, anDataToGet, rx_len, SPILINE_FLASH_DIV, TRUE, TRUE );
+//	return Dnepr_QSPI_ReadWriteArray( SPI_CS_0, anDataToSend, tx_len, anDataToGet, rx_len, SPILINE_FLASH_DIV, TRUE, TRUE );
+	return Dnepr_QSPI_ReadWriteArray( SPI_CS_0, anDataToSend, tx_len, anDataToGet, rx_len, SPILINE_FLASH_DIV, FALSE, FALSE );
 }
 
 //! интерфейс записи/чтения spi в EEPROM на бекплейне

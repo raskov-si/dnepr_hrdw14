@@ -143,11 +143,11 @@ static void taskInit(void *pdata)
     // задерживаем включение не работающих слотовых устройств
     DeviceController_Init();
 
-    /* пытаемся обнаружить backplane eeprom с данными профиля в течении 4 секунд, после этого все равно включаемся */
-    dnepr_wait_eeprom_contact(4 * OS_TICKS_PER_SEC);
-
     // Инициализуруем параметры профиля.
     Dnepr_ProfileStorage_Init();
+    
+//    /* пытаемся обнаружить backplane eeprom с данными профиля в течении 4 секунд, после этого все равно включаемся */
+//    dnepr_wait_eeprom_contact(4 * OS_TICKS_PER_SEC);
 
     {
         /* сторожевой таймер (запуск, периодический сброс) */

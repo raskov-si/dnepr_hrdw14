@@ -99,7 +99,7 @@ void QSPI_ReadWriteArray( const u8 cur_cs, const u8 *tx_data, const size_t tx_le
 	// MCF_QSPI_QMR &= ~MCF_QSPI_QMR_CPOL ;
 	// MCF_QSPI_QMR &= ~MCF_QSPI_QMR_CPHA ;
 	// MCF_QSPI_QMR &= ~(MCF_QSPI_QMR_BAUD(0xFF));
-	MCF_QSPI_QMR &= 0xFFFF ^ (MCF_QSPI_QMR_BAUD(0xFF) | MCF_QSPI_QMR_CPHA );
+	MCF_QSPI_QMR &= 0xFFFF ^ (MCF_QSPI_QMR_BAUD(0xFF) | MCF_QSPI_QMR_CPHA | MCF_QSPI_QMR_CPOL );
 	// MCF_QSPI_QMR |= MCF_QSPI_QMR_BAUD(divider) | MCF_QSPI_QMR_CPOL | MCF_QSPI_QMR_CPHA ;
 	MCF_QSPI_QMR |= MCF_QSPI_QMR_BAUD(divider) 		|
 				 ( cpha ? MCF_QSPI_QMR_CPHA : 0 ) | ( cpol ? MCF_QSPI_QMR_CPOL : 0 )	;

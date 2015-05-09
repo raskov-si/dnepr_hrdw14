@@ -82,8 +82,9 @@ extern  void        sys_arch_unprotect(sys_prot_t pval);
 
 t_dnepr_if      s_dnepr_if;
 
-extern s8       val_CMPhyAddr[];
-s8              val_CMMAC[19] = "00:01:02:03:04:05";
+s8              val_CUNetMCUMAC[19] = "00:01:02:03:04:07";
+//s8              val_CUNetMCUMAC[19] = "00:01:02:03:04:06";
+//s8              val_CUNetMCUMAC[19] = "00:01:02:03:04:05";
 
 /*=============================================================================================================*/
 
@@ -125,7 +126,7 @@ err_t dnepr_if_init(struct netif *netif)
         
     netif->hwaddr_len = 6;                                  /* set MAC hardware address length */
     
-    dnepr_ethernet_str_2_mac( netif->hwaddr, val_CMMAC );     /* set MAC hardware address */
+    dnepr_ethernet_str_2_mac( netif->hwaddr, val_CUNetMCUMAC );     /* set MAC hardware address */
 
     /* maximum transfer unit */
 //    netif->mtu = MTU_FEC - 18; (512-18)
