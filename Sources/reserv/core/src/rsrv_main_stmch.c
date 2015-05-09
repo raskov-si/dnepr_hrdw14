@@ -89,7 +89,7 @@ TrsrvIntertaskMessage           *ethernet_main_mbox_message[1];
 struct _MCU_VIEW_PAIR           McuViewPair;
 TRoles                         mcu_role = RESERV_ROLES_UNKNOWN;
 TRoles                         cpu_role = RESERV_ROLES_UNKNOWN;
-
+u8                             eth_need_start = 0;
 
 /*=============================================================================================================*/
 
@@ -116,10 +116,11 @@ static void rsrv_mcumcu_protocol_start(void)
 /*=============================================================================================================*/
 static void rsrv_ethernet_protocol_start(void)
 {
-    TrsrvIntertaskMessage   msg;
+//    TrsrvIntertaskMessage   msg;
     
-    msg = RESERV_INTERCODES_MCUCPU_START;    
-    rsrv_os_mbox_post(ethernet_main_mbox, &msg);  
+//    msg = RESERV_INTERCODES_MCUCPU_START;    
+//    rsrv_os_mbox_post(ethernet_main_mbox, &msg);  
+    eth_need_start = 1;
 }
 
 
@@ -244,12 +245,21 @@ static void stmch_diag(int state, int signal)
     McuViewPair.Remote = rsrv_get_recevied_mcupair()->Remote;     
     rsrv_os_unlock(&McuViewPair.Sem);                      
     
+    if (  McuViewPair.Remote.Role == RESERV_ROLES_UNKNOWN ) {
+              OSTimeDly( 3000 * McuViewPair.Local.RackNum );
+              rsrv_os_lock(&McuViewPair.Sem);                
+              McuViewPair.Remote = rsrv_get_recevied_mcupair()->Remote;     
+              rsrv_os_unlock(&McuViewPair.Sem);                      
+    }
+            
     mcu_diag_vector.NeighborPresent = McuViewPair.Local.RemotePresent;
     mcu_diag_vector.NeighborRole    = McuViewPair.Remote.Role; 
     
     /* по составленной диагностике определяем какое состояние должно быть у MCU */
     mcu_diag_vector.SlotPosition = McuViewPair.Local.RackNum;
     mcu_role = rsrv_make_mcu_descision( &mcu_diag_vector );
+    
+    OSTimeDly( 10000 );                         
 
     /* если пассивное переходим на passive state */
     if ( mcu_role != RESERV_ROLES_MASTER )  {
@@ -273,13 +283,12 @@ static void stmch_diag_cpu(int state, int signal)
     rsrv_os_lock(&McuViewPair.Sem);        
     McuViewPair.Local.Role = RESERV_ROLES_UNKNOWN;
     rsrv_os_unlock(&McuViewPair.Sem);      
-    
-    rsrv_ethernet_protocol_start();
-  
+      
     /* синхронизируем профиль в eeprom */
     rsrv_backplane_sync();
     
-    OSTaskSuspend(OS_PRIO_SELF);    
+//    rsrv_ethernet_protocol_start();
+//    OSTaskSuspend(OS_PRIO_SELF);    
           
     /* выдаем на CPU роль стать активным */
     if ( McuViewPair.Local.CPUState == RESERV_TREESTATE_CHECKED ) {
@@ -317,6 +326,8 @@ static void stmch_passive(int state, int signal)
     /* выдаем световую индикацию */
     rsrv_leds_setstate(McuViewPair.Local.Role);
     
+    OSTimeDly( 5000 );                     
+    
   
     /* принимаем пинги по UARTу, отсылаем понги */
     while ( TRUE )
@@ -334,10 +345,10 @@ static void stmch_passive(int state, int signal)
             return;
         }
       
-        if ( McuViewPair.Local.UARTTx == RESERV_TREESTATE_DAMAGED || McuViewPair.Local.UARTRx == RESERV_TREESTATE_DAMAGED ) {
-            main_signal_transition = PASSIVE_GOTO_CPU_DIAG;               
-            return;
-        }
+//        if ( McuViewPair.Local.UARTTx == RESERV_TREESTATE_DAMAGED || McuViewPair.Local.UARTRx == RESERV_TREESTATE_DAMAGED ) {
+//            main_signal_transition = PASSIVE_GOTO_CPU_DIAG;               
+//            return;
+//        }
         
         /* если принимаем пинг с соседним "пассивным" через некоторое время, переходим на диагностику CPU */
         if (  rsrv_get_recevied_mcupair()->Remote.Role == RESERV_ROLES_SLAVE ) {
@@ -461,15 +472,24 @@ void rsrv_main_set_cpu_udp_error
     TThreeState   cpu_state
 )
 {
-    TrsrvIntertaskMessage *msg;
+//    TrsrvIntertaskMessage *msg;
+    OS_TCB  rsrv_tcb;
     
     rsrv_os_lock(&McuViewPair.Sem);            
     McuViewPair.Local.CPUState = cpu_state;
     rsrv_os_unlock(&McuViewPair.Sem);
 
-    if ( rsrv_os_mbox_accept(ethernet_main_mbox, &msg) == OS_ERR_NONE )    {
-        OSTaskResume(TASK_RSRV_PRIORITY);
-    }
+//    if ( eth_need_start == 1 ) {
+//        OSTaskResume(TASK_RSRV_PRIORITY);
+//    }
+
+//    if ( OSTaskQuery(TASK_RSRV_PRIORITY, &rsrv_tcb) == OS_ERR_NONE )    {
+//      if ( rsrv_tcb.OSTCBStatPend ) {
+//        OSTaskResume(TASK_RSRV_PRIORITY);
+//      }
+//    }
+    
+    
 }
 
 

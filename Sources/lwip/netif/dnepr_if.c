@@ -82,9 +82,9 @@ extern  void        sys_arch_unprotect(sys_prot_t pval);
 
 t_dnepr_if      s_dnepr_if;
 
-s8              val_CUNetMCUMAC[19] = "00:01:02:03:04:07";
+//s8              val_CUNetMCUMAC[19] = "00:01:02:03:04:07";
 //s8              val_CUNetMCUMAC[19] = "00:01:02:03:04:06";
-//s8              val_CUNetMCUMAC[19] = "00:01:02:03:04:05";
+s8              val_CUNetMCUMAC[19] = "00:01:02:03:04:05";
 
 /*=============================================================================================================*/
 

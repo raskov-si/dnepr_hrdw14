@@ -164,7 +164,7 @@ const struct STR_RSRV_SETTINGS  {
     clock_t       PingTimeout;
     clock_t       PingTimeoutI2C;
 }RsrvSettings = {
-    6,                 /* Kretry */
+    12,                 /* Kretry */
     100,                /* TimeColWait */
     300,                /* PongTimeout млсек */
     300,                /* PongTimeoutI2C млсек */
