@@ -37,7 +37,7 @@
 //!Numbers of devices
 #define I2C_DNEPR_NUMBER_OF_SLOTS 	14
 #define I2C_DNEPR_FAN_SLOT_NUM 		13
-#define I2C_DNEPR_NUMBER_OF_PSU   	2
+#define I2C_DNEPR_NUMBER_OF_PSU   	4
 #define I2C_DNEPR_NUMBER_OF_SFP   	2
 
 /*! Outputs state config */

@@ -1247,15 +1247,15 @@ u32 psinpwrstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
                 
                 
 	} else if( p_ix->parent->owner == 2 ){
-		if( Dnepr_Backplane_PS1_Present() ){
-			pPar->value.U32 = Dnepr_Backplane_GetPSU_Status()->tPs1.bInOk ;
+		if( Dnepr_Backplane_PS3_Present() ){
+			pPar->value.U32 = Dnepr_Backplane_GetPSU_Status()->tPs3.bInOk ;
 		} else {
 			pPar->ready = 0 ;
 			return ERROR ;
 		}
 	} else if( p_ix->parent->owner == 3 ){
-		if( Dnepr_Backplane_PS2_Present() ){
-			pPar->value.U32 = Dnepr_Backplane_GetPSU_Status()->tPs2.bInOk ;
+		if( Dnepr_Backplane_PS4_Present() ){
+			pPar->value.U32 = Dnepr_Backplane_GetPSU_Status()->tPs4.bInOk ;
 		} else {
 			pPar->ready = 0 ;
 			return ERROR ;
@@ -1275,6 +1275,8 @@ u32 psinpwrstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 
 MEDFILT_CREATE( ps1outpwr_medfilt );
 MEDFILT_CREATE( ps2outpwr_medfilt );
+MEDFILT_CREATE( ps3outpwr_medfilt );
+MEDFILT_CREATE( ps4outpwr_medfilt );
 u32 psoutpwrstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 {
 	if( p_ix->parent->owner == 0 ){
@@ -1301,8 +1303,8 @@ u32 psoutpwrstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 		}
                 
 	} else if( p_ix->parent->owner == 2 ){
-		if( Dnepr_Backplane_PS1_Present() ){
-			pPar->value.U32 = t8_medfilt_u32( &ps1outpwr_medfilt, Dnepr_Backplane_GetPSU_Status()->tPs1.bPowerGood );
+		if( Dnepr_Backplane_PS3_Present() ){
+			pPar->value.U32 = t8_medfilt_u32( &ps3outpwr_medfilt, Dnepr_Backplane_GetPSU_Status()->tPs3.bPowerGood );
 			pPar->par_color = pPar->value.U32 == 1 ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
 			pPar->ready = 1 ;
 			return OK ;
@@ -1312,8 +1314,8 @@ u32 psoutpwrstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 			return ERROR ;
 		}
 	} else if( p_ix->parent->owner == 3 ){
-		if( Dnepr_Backplane_PS2_Present() ){
-			pPar->value.U32 = t8_medfilt_u32( &ps2outpwr_medfilt, Dnepr_Backplane_GetPSU_Status()->tPs2.bPowerGood );
+		if( Dnepr_Backplane_PS4_Present() ){
+			pPar->value.U32 = t8_medfilt_u32( &ps2outpwr_medfilt, Dnepr_Backplane_GetPSU_Status()->tPs4.bPowerGood );
 			pPar->par_color = pPar->value.U32 == 1 ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
 			pPar->ready = 1 ;
 			return OK ;

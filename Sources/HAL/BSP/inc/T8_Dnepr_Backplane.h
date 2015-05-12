@@ -30,12 +30,16 @@ typedef struct __PsTypedef{
 typedef struct __PsStatusTypedef{
 	T8_Dnepr_PsTypedef tPs1; /*!< PSU 1 status */
 	T8_Dnepr_PsTypedef tPs2; /*!< PSU 2 status */
+	T8_Dnepr_PsTypedef tPs3; /*!< PSU 1 status */
+	T8_Dnepr_PsTypedef tPs4; /*!< PSU 2 status */
 } T8_Dnepr_PsStatusTypedef;
 
 /*! States of PSU */
 typedef struct __PsStateTypedef{
 	u8 bPs1On :1; /*!< PSU 1 state */
 	u8 bPs2On :1; /*!< PSU 2 state */
+	u8 bPs3On :1; /*!< PSU 1 state */
+	u8 bPs4On :1; /*!< PSU 2 state */
 } T8_Dnepr_PsStateTypedef;
 
 
@@ -57,6 +61,9 @@ void Dnepr_Backplane_Reload_PSU_DynInfo();
 
 _BOOL Dnepr_Backplane_PS1_Present() ;
 _BOOL Dnepr_Backplane_PS2_Present() ;
+_BOOL Dnepr_Backplane_PS3_Present() ;
+_BOOL Dnepr_Backplane_PS4_Present() ;
+
 
 //! переключается на HotSwap PMB_Ext, т.ч. следующее обращение к LTC4222 будет к HotSwap'ам на стороне Backplane'а
 void Dnepr_Backplane_SelectHotSwap() ;

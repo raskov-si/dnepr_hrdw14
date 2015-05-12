@@ -47,17 +47,16 @@ _BOOL Dnepr_Reload_PSU_Status_Pins()
 	if( i >= 3 ){
 		return FALSE ;
 	}
-	__ps_status.tPs1.bSeated = (value & 0x0400) > 0 ;
-	__ps_status.tPs1.bInOk = (value & 0x0800) > 0 ;
-	__ps_status.tPs1.bPowerGood = (value & 0x1000) > 0 ;
-	__ps_status.tPs1.bFanFail = (value & 0x2000) > 0 ;
-	__ps_status.tPs1.bTempOk = (value & 0x4000) > 0 ;
+__ps_status.tPs1.bSeated = (value & 0x0400) > 0 ; 
+__ps_status.tPs1.bPowerGood = __ps_status.tPs1.bTempOk = __ps_status.tPs1.bInOk   = (value & 0x0800) > 0 ;   
+__ps_status.tPs2.bSeated = (value & 0x2000) > 0 ;
+__ps_status.tPs2.bPowerGood = __ps_status.tPs2.bTempOk = __ps_status.tPs2.bInOk   = (value & 0x4000) > 0 ;
 
-	__ps_status.tPs2.bSeated = (value & 0x0020) > 0 ;
-	__ps_status.tPs2.bInOk = (value & 0x0010) > 0 ;
-	__ps_status.tPs2.bPowerGood = (value & 0x0008) > 0 ;
-	__ps_status.tPs2.bFanFail = (value & 0x0002) > 0 ;
-	__ps_status.tPs2.bTempOk = (value & 0x0004) > 0 ;
+__ps_status.tPs3.bSeated = (value & 0x0020) > 0 ;
+__ps_status.tPs3.bPowerGood = __ps_status.tPs3.bTempOk = __ps_status.tPs3.bInOk   = (value & 0x0010) > 0 ;
+__ps_status.tPs4.bSeated = (value & 0x0002) > 0 ;
+__ps_status.tPs4.bPowerGood = __ps_status.tPs4.bTempOk = __ps_status.tPs4.bInOk   = (value & 0x0004) > 0 ;
+        
 
 	return TRUE ;
 }
@@ -66,6 +65,8 @@ _BOOL Dnepr_Reload_PSU_Status_Pins()
 
 static _BOOL __ps1_seated = FALSE ;
 static _BOOL __ps2_seated = FALSE ;
+static _BOOL __ps3_seated = FALSE ;
+static _BOOL __ps4_seated = FALSE ;
 
 //! \brief перечитывает состояние выводов БП и параметры по PMBus \ SMI
 //! \retval возвращает TRUE если установленные БП ответили
@@ -107,6 +108,26 @@ _BOOL Dnepr_Backplane_Reload_PSU_Info()
 		// сбрасываем коэф.-ты и пр.
 		PSU_ClearUnit( 2 );
 	}
+	if( __ps_status.tPs3.bSeated == 0 ){
+		btest = PSU_Setup( 3, &__psu_info[2] );
+		ret = ret && btest ;
+		__ps3_seated = TRUE ;
+	// PSU2 вынули
+	} else if ( __ps_status.tPs2.bSeated == 1 ){
+		__ps3_seated = FALSE ;
+		// сбрасываем коэф.-ты и пр.
+		PSU_ClearUnit( 3 );
+	}
+	if( __ps_status.tPs4.bSeated == 0 ){
+		btest = PSU_Setup( 4, &__psu_info[3] );
+		ret = ret && btest ;
+		__ps4_seated = TRUE ;
+	// PSU2 вынули
+	} else if ( __ps_status.tPs2.bSeated == 1 ){
+		__ps4_seated = FALSE ;
+		// сбрасываем коэф.-ты и пр.
+		PSU_ClearUnit( 4 );
+	}
 	return ret ;
 }
 
@@ -117,6 +138,10 @@ void Dnepr_Backplane_Reload_PSU_DynInfo()
 		PSU_GetUnitMeasurements( 1, &__psu_measues[0] );
 	if( __ps2_seated )
 		PSU_GetUnitMeasurements( 2, &__psu_measues[1] );
+	if( __ps3_seated )
+		PSU_GetUnitMeasurements( 3, &__psu_measues[2] );
+	if( __ps4_seated )
+		PSU_GetUnitMeasurements( 4, &__psu_measues[3] );
 }
 
 //! \brief getter для __ps_status
@@ -133,6 +158,10 @@ const PSU_UnitMeasurements* Dnepr_Backplane_GetPSU_Measures(const u8 num)
 		return &__psu_measues[ num ];
 	} else if((num == 1) && (__ps2_seated == TRUE)){
 		return &__psu_measues[ num ];
+	} else if((num == 2) && (__ps3_seated == TRUE)){
+		return &__psu_measues[ num ];
+	} else if((num == 3) && (__ps4_seated == TRUE)){
+		return &__psu_measues[ num ];
 	} else {
 		return NULL ;
 	}
@@ -145,6 +174,10 @@ const PSU_UnitInfoTypedef* Dnepr_Backplane_GetPSU_Info( const u32 num )
 	if((num == 0) && (__ps1_seated == TRUE)){
 		return &__psu_info[ num ];
 	} else if((num == 1) && (__ps2_seated == TRUE)){
+		return &__psu_info[ num ];
+	} else if((num == 2) && (__ps3_seated == TRUE)){
+		return &__psu_info[ num ];
+	} else if((num == 3) && (__ps4_seated == TRUE)){
 		return &__psu_info[ num ];
 	} else {
 		return NULL ;
@@ -160,6 +193,17 @@ _BOOL Dnepr_Backplane_PS2_Present()
 {
 	return __ps2_seated ;
 }
+
+_BOOL Dnepr_Backplane_PS3_Present()
+{
+	return __ps3_seated ;
+}
+
+_BOOL Dnepr_Backplane_PS4_Present()
+{
+	return __ps4_seated ;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // серийный номер на бекплейне

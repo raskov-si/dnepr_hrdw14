@@ -81,7 +81,7 @@ static I2C_DNEPR_PresentDevicesTypedef __processed_slots_present ;
 
 static OS_EVENT  *__qRcvQueue = 0;
 
-static f32 __fPowerLimit1, __fPowerLimit2 ;	// мощность блоков питани€
+static f32 __fPowerLimit1, __fPowerLimit2,  __fPowerLimit3, __fPowerLimit4;	// мощность блоков питани€
 static f32 __fPowerLimit ; // сколько всего мощности можно потребить
 static f32 __fSlotPower[ I2C_DNEPR_NUMBER_OF_SLOTS ]; //!< сколько мощности потребл€ет каждый слот
 extern u32 val_VPowerLimitSource;
@@ -187,6 +187,8 @@ void taskDeviceController(void *pdata)
 	task_message_t *qCurMessage ;
 	const PSU_UnitInfoTypedef* pPSUInfo1 = NULL ;
 	const PSU_UnitInfoTypedef* pPSUInfo2 = NULL ;
+	const PSU_UnitInfoTypedef* pPSUInfo3 = NULL ;
+	const PSU_UnitInfoTypedef* pPSUInfo4 = NULL ;
 	
 	pdata = pdata;
 	// очередь сообщений дл€ потока
@@ -228,8 +230,12 @@ void taskDeviceController(void *pdata)
 				Dnepr_Backplane_Reload_PSU_Info() ;
 				pPSUInfo1 = Dnepr_Backplane_GetPSU_Info( 0 );
 				pPSUInfo2 = Dnepr_Backplane_GetPSU_Info( 1 );
+				pPSUInfo3 = Dnepr_Backplane_GetPSU_Info( 2 );
+				pPSUInfo4 = Dnepr_Backplane_GetPSU_Info( 3 );
 				__fPowerLimit1 = pPSUInfo1 ? pPSUInfo1->fPower : 0.0 ;
 				__fPowerLimit2 = pPSUInfo2 ? pPSUInfo2->fPower : 0.0 ;
+				__fPowerLimit3 = pPSUInfo3 ? pPSUInfo3->fPower : 0.0 ;
+				__fPowerLimit4 = pPSUInfo4 ? pPSUInfo4->fPower : 0.0 ;
 
                               // если не удаЄтс€ прочитать мощность -- перечитываем через паузу                                
                                 /* если максимальна€ мощьность не считываетс€ то лимиты делаем максимальными !! */
@@ -240,6 +246,16 @@ void taskDeviceController(void *pdata)
                 		if( (__fPowerLimit2 < 10.) || (__fPowerLimit2 > 3000.) ||
         			(!Dnepr_Backplane_GetPSU_Status()->tPs2.bPowerGood) ){
 					__fPowerLimit2= FLT_MAX ;
+				}
+                                
+                		if( (__fPowerLimit3 < 10.) || (__fPowerLimit3 > 3000.) ||
+        			(!Dnepr_Backplane_GetPSU_Status()->tPs3.bPowerGood) ){
+					__fPowerLimit3= FLT_MAX ;
+				}
+                                
+                		if( (__fPowerLimit4 < 10.) || (__fPowerLimit4 > 3000.) ||
+        			(!Dnepr_Backplane_GetPSU_Status()->tPs4.bPowerGood) ){
+					__fPowerLimit4= FLT_MAX ;
 				}
 
 				// обновл€ем светодиоды POWER
