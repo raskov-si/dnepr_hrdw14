@@ -129,6 +129,143 @@
 #define MV88E6095_PORT_LEARNING	0x2
 #define MV88E6095_PORT_FORWARDING	0x3
 
+
+//! VTU VID Register
+#define MV88E6095_VTU_VID                               0x06
+#define VTU_VID_VALID                                   0x1000
+#define VTU_VID(x)                                      (x & 0x0FFF)
+#define VTU_OP_LOAD                                     0x3000
+#define VTU_BUSY                                        0x8000
+#define MV88E6095_VTU_OPERATION                         0x05
+#define VTU_DBNUM(x)                                    (((x & 0xF0) << 4) | (x & 0x0F))
+
+
+//! VTU Data Register Ports 0 to 3
+#define MV88E6095_VTU_DATA03                    0x07
+#define VTU_PORT0(tag, state)                   (tag | (state << 2))
+#define VTU_PORT1(tag, state)                   ((tag << 4) | (state << 6))
+#define VTU_PORT2(tag, state)                   ((tag << 8) | (state << 10))
+#define VTU_PORT3(tag, state)                   ((tag << 12) | (state << 14))
+
+//! VTU Data Register Ports 4 to 7
+#define MV88E6095_VTU_DATA47                    0x08
+#define VTU_PORT4(tag, state)                   (tag | (state << 2))
+#define VTU_PORT5(tag, state)                   ((tag << 4) | (state << 6))
+#define VTU_PORT6(tag, state)                   ((tag << 8) | (state << 10))
+#define VTU_PORT7(tag, state)                   ((tag << 12) | (state << 14))
+
+//! VTU Data Register Ports 8 to 11
+#define MV88E6095_VTU_DATA810                   0x09
+#define VTU_PORT8(tag, state)                   (tag | (state << 2))
+#define VTU_PORT9(tag, state)                   ((tag << 4) | (state << 6))
+#define VTU_PORT10(tag, state)                  ((tag << 8) | (state << 10))
+#define VTU_VIDPRI(x)                                   ((x & 3) << 12)
+#define VTU_VIDPRI_Override                             ((x & 1) << 15)
+
+//! Default Port VLAN ID & Priority
+#define MV88E6095_PORT_DEFVLANID                0x07
+#define DEFPRI(x)                               ((x & 0x07) << 13)
+#define FORCE_DEF_VID                           0x1000
+#define DEF_VID(x)                              (x & 0x0FFF)
+#define VTU_BUSY                                0x8000
+#define VTU_OP_FLUSH                            0x1000
+#define VTU_OP_LOAD                             0x3000
+#define VTU_OP_NEXT                             0x4000
+#define VLAN_MODE(x)                            ((x & 3) << 10)
+
+//! Режимы работы порта
+enum __VLAN_PortMode_t {
+        VLAN_PORTMODE_ACCESS            = 0, //!< нетегированный трафик для одной VLAN
+        VLAN_PORTMODE_GENERAL_ALL       = 1, //!< принимать все фреймы
+        VLAN_PORTMODE_TRUNK             = 2  //!< принимать только тегированный трафик с нужными VLAN ID
+} ;
+
+typedef enum  __VLAN_PortMode_t VLAN_PortMode_t; 
+
+typedef u16 VLAN_ID_t; //!< Тип для VLAN ID
+
+//! Значения tag для MV88E6095_VTU_PORT*
+typedef enum {  
+        //! Port is a member of this VLAN and frames are to egress unmodified
+        VTU_PORT_UNMODIFIED     = 0,
+        //! Port is a member of this VLAN and frames are to egress Tagged
+        VTU_PORT_UNTAGGED               = 1,
+        //! Port is a member of this VLAN and frames are to egress Untagged
+        VTU_PORT_TAGGED                 = 2,
+        //! Port is not a member of this VLAN. Any frames with this VID are discarded at ingress and are not allowed to egress this port.       VTU_PORT_UNMODIFIED     = 0,
+        VTU_PORT_NOTMEMBER              = 3
+} MV88E6095_Port_Tagging;
+
+//! Значения state для MV88E6095_VTU_PORT*
+typedef enum {
+        //! 802.1S Disabled. Use non-VLAN Port States for this port from frames with this VID.
+        VTU_PORT_8021S_DISABLED                 = 0,
+        //! Blocking/Listening Port State for this port for frames with this VID.
+        VTU_PORT_BLOCKING_LISTENING             = 1,
+        //! Learning Port State for this port for frames with this VID.
+        VTU_PORT_LEARNING                               = 2,
+        //! Forwarding Port State for this port for frames with this VID.
+        VTU_PORT_FORWARDING                             = 3
+} MV88E6095_Port_State;
+
+
+//! определяются состояния портов в терминах 802.1Q и 802.1S
+typedef struct {
+        MV88E6095_Port_Tagging port0_tag;
+        MV88E6095_Port_State port0_state;
+
+        MV88E6095_Port_Tagging port1_tag;
+        MV88E6095_Port_State port1_state;
+
+        MV88E6095_Port_Tagging port2_tag;
+        MV88E6095_Port_State port2_state;
+
+        MV88E6095_Port_Tagging port3_tag;
+        MV88E6095_Port_State port3_state;
+
+        MV88E6095_Port_Tagging port4_tag;
+        MV88E6095_Port_State port4_state;
+
+        MV88E6095_Port_Tagging port5_tag;
+        MV88E6095_Port_State port5_state;
+
+        MV88E6095_Port_Tagging port6_tag;
+        MV88E6095_Port_State port6_state;
+
+        MV88E6095_Port_Tagging port7_tag;
+        MV88E6095_Port_State port7_state;
+
+        MV88E6095_Port_Tagging port8_tag;
+        MV88E6095_Port_State port8_state;
+
+        MV88E6095_Port_Tagging port9_tag;
+        MV88E6095_Port_State port9_state;
+
+        MV88E6095_Port_Tagging port10_tag;
+        MV88E6095_Port_State port10_state;
+} MV88E6095_Ports_VLAN_Status_t ;
+
+
+typedef enum __Port8021QState {  
+        //! Use Port Based VLANs only. The VLANTable bits and the DefaultVID
+        //! assigned to the frame during ingress determine which Egress ports this
+        //! Ingress port is allowed to switch frames to for all frames.
+        PORT_8021Q_DISABLED = 0,
+        //! Enable 802.1Q for this Ingress port. Do not discard Ingreess Membership 
+        //! violations and use the VLANTable bits below if the frame's VID is not
+        //! contained in the VTU (both errors are logged)
+        PORT_8021Q_FALLBACK = 1,
+        //! Enable 802.1Q for this Ingress port. Do not discard Ingress Membership
+        //! violations but discard the frame if its VID is not contained in the VTU
+        //! (both errors are logged).
+        PORT_8021Q_CHECK = 2,
+        //! Enable 802.1Q for this Ingress port. Discard Ingress Membership
+        //! violations and discard frames whose VID is not contained in the VTU
+        //! (both errors are logged).
+        PORT_8021Q_SECURE = 3
+} Port8021QState;
+
+
 //! \brief Инициализазирует интерфейс SMI
 //! \param _smi_iface указатель на структуру с указателями на функции SMI
 void MV_88E6095_InitPeripheralInterface( SMI_PeriphInterfaceTypedef* _smi_iface );
@@ -192,5 +329,13 @@ typedef struct {
 #define TO_CPU_C(x) (((x).body[1] & 0x1))
 #define TO_CPU_PRI (((x).body[2]&0xE0) >> 5)
 #define TO_CPU_VID (((u16)((x).body[2])&0x0F)|(x).body[3])
+
+
+void MV88E6095_AddVTUEntry(   const u8 pcbDevAddr, const u16 vid, const u8 dbnum, const MV88E6095_Ports_VLAN_Status_t* stats );
+u32 MV88E6095_ReadVTUEntry(   const u8 pcbDevAddr, const u16 vid, u8 *dbnum, MV88E6095_Ports_VLAN_Status_t* stats );
+u8 MV88E6095_NextVTUEntry( const u8 pcbDevAddr, u16 prevvid, u16 *nextvid);
+void MV88E6095_PortDefaultVID( const u8 pcbDevAddr,  const u8 port_index, const u8 force_def_vid, const u16 VID );
+void MV88E6095_Change_Port8021Q_state( const u8 pcbDevAddr,  const u8 port_index, const Port8021QState state );
+
 
 #endif /* MARAVELL_88E6095_H_ */
