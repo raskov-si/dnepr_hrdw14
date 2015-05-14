@@ -50,6 +50,10 @@ u8 ST_M95M01_ReadStatus();
 //! \brief Returns TRUE if device is accessible
 _BOOL ST_M95M01_CheckPresence();
 
+void ST_M95M01_WriteEnable(void);
+void ST_M95M01_WriteDisable(void);
+
+
 /*!
 \}
 */ // ST_M95M01_Driver

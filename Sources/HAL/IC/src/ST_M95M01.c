@@ -135,6 +135,17 @@ _BOOL ST_M95M01_CheckPresence()
 	return ((status & _M95_STATUS_WEL) > 0) && (status != 0xFF) ;
 }
 
+void ST_M95M01_WriteEnable(void)
+{
+	__WriteEnable();
+}
+
+void ST_M95M01_WriteDisable(void)
+{
+	__WriteDisable();
+}
+
+
 /*!
 \}
 */ //ST_M95M01_Driver_Exported_Functions

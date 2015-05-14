@@ -56,5 +56,8 @@ _BOOL Dnepr_eeprom_sync();
 BPEEPROM_State Dnepr_eeprom_GetState() ;
 
 _BOOL Dnepr_BPEEPROM_CheckPresent();
+void Dnepr_BPEEPROM_WriteEnable(void);
+void Dnepr_BPEEPROM_WriteDisable(void);
+
 
 #endif

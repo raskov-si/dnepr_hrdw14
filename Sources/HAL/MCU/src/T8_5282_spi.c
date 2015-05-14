@@ -67,7 +67,8 @@ void QSPI_Init()
 	MCF_PAD_PQSPAR |= 0x07 ; // MOSI, MISO и CLK, CS управлю€тс€ "в ручном режиме" вышесто€щим кодом
 	//CPOL=0, CPHA=1, Master, 8 bits
 //	 MCF_QSPI_QMR = MCF_QSPI_QMR_MSTR | MCF_QSPI_QMR_BITS(8) | MCF_QSPI_QMR_CPHA | MCF_QSPI_QMR_CPOL ;
-	MCF_QSPI_QMR = MCF_QSPI_QMR_MSTR | MCF_QSPI_QMR_BITS(8) | MCF_QSPI_QMR_CPOL ;
+//	MCF_QSPI_QMR = MCF_QSPI_QMR_MSTR | MCF_QSPI_QMR_BITS(8) | MCF_QSPI_QMR_CPOL ;
+	MCF_QSPI_QMR = MCF_QSPI_QMR_MSTR | MCF_QSPI_QMR_BITS(8);
 	//QSPI_CS inactive level = active low.
 	MCF_QSPI_QWR = MCF_QSPI_QWR_CSIV;
 	// 200 нс задержка между фронтом CS и началом/концом передачи
@@ -98,10 +99,11 @@ void QSPI_ReadWriteArray( const u8 cur_cs, const u8 *tx_data, const size_t tx_le
 	// MCF_QSPI_QMR &= ~MCF_QSPI_QMR_CPOL ;
 	// MCF_QSPI_QMR &= ~MCF_QSPI_QMR_CPHA ;
 	// MCF_QSPI_QMR &= ~(MCF_QSPI_QMR_BAUD(0xFF));
-	MCF_QSPI_QMR &= 0xFFFF ^ (MCF_QSPI_QMR_BAUD(0xFF) | MCF_QSPI_QMR_CPHA );
+	MCF_QSPI_QMR &= 0xFFFF ^ (MCF_QSPI_QMR_BAUD(0xFF) | MCF_QSPI_QMR_CPHA | MCF_QSPI_QMR_CPOL );
 	// MCF_QSPI_QMR |= MCF_QSPI_QMR_BAUD(divider) | MCF_QSPI_QMR_CPOL | MCF_QSPI_QMR_CPHA ;
 	MCF_QSPI_QMR |= MCF_QSPI_QMR_BAUD(divider) 		|
-				 ( cpha ? MCF_QSPI_QMR_CPHA : 0 )	;
+				 ( cpha ? MCF_QSPI_QMR_CPHA : 0 ) | ( cpol ? MCF_QSPI_QMR_CPOL : 0 )	;
+
 
 	MCF_QSPI_QIR |= MCF_QSPI_QIR_SPIFE ;
 	__buffer_transmit_recieve();

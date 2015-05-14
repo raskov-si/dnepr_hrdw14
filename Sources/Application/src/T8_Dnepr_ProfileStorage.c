@@ -55,7 +55,7 @@ void  dnepr_wait_eeprom_contact
 {     
     _BOOL   ret = FALSE;
     u32     time_begin  = OSTimeGet();
-    u32     time_counter; 
+    u32     time_counter = 0; 
     
     
     T8_Dnepr_LedStatusTypedef alarm_nocontact_leds = {
@@ -70,12 +70,12 @@ void  dnepr_wait_eeprom_contact
                                                      };
     T8_Dnepr_SetLedStatus( &alarm_nocontact_leds );
                    
-    do  {
+    do  {    
             ret = Dnepr_BPEEPROM_CheckPresent();
             time_counter = OSTimeGet();            
     } while ( (ret != TRUE) && ( (time_begin + time) > time_counter) );
-   
-    T8_Dnepr_SetLedStatus( &init_leds );            
+    
+    T8_Dnepr_SetLedStatus( &init_leds );
    
     // читаем все EEPROM и HotSwap Controller'ы и задерживаем включение тех, которые
     // ещё не включились

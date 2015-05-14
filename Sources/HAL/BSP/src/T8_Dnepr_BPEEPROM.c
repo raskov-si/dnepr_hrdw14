@@ -51,6 +51,21 @@ _BOOL Dnepr_BPEEPROM_CheckPresent()
     return __eeprom_present;
 }
 
+void ST_M95M01_WriteEnable(void);
+void ST_M95M01_WriteDisable(void);
+
+
+void Dnepr_BPEEPROM_WriteEnable(void)
+{
+  ST_M95M01_WriteEnable();
+}
+
+void Dnepr_BPEEPROM_WriteDisable(void)
+{
+  ST_M95M01_WriteDisable();
+}
+
+
 
 _BOOL Dnepr_BPEEPROM_Init()
 {
