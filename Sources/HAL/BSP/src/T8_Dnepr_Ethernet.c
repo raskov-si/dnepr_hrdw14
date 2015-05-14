@@ -15,6 +15,8 @@ void VLAN_PortDefVIDSet( const u8 pcbDevAddr, const VLAN_ID_t vid, const size_t 
 u32  VLAN_PortModeSet(   const u8 pcbDevAddr, const size_t port_num,
                                                 VLAN_ID_t defvid, VLAN_ID_t *vids_arr, const size_t vids_arr_len,
                                                 const VLAN_PortMode_t mode, u8 secure_flag );
+u32  VLAN_TrunkPortUntSet (const u8 pcbDevAddr, const size_t port_num, VLAN_ID_t defvid );
+
 
 
 /*!
@@ -74,6 +76,7 @@ u32 Dnepr_Ethernet_Init( const u8* maddr )
         //MV88E6095_1_CHIPADDR, MV88E6095_PORT10    /*  CPU */
         VLAN_PortDefVIDSet( MV88E6095_1_CHIPADDR, EXTRN_VLAN, 10 );
         VLAN_PortModeSet( MV88E6095_1_CHIPADDR, 10, EXTRN_VLAN, &cpu_port_vids[0], 2, VLAN_PORTMODE_TRUNK, 1);
+        VLAN_TrunkPortUntSet(  MV88E6095_1_CHIPADDR, 10, EXTRN_VLAN );
         
         /* VID 10  - между слотами и CPU */
         VLAN_PortDefVIDSet( MV88E6095_1_CHIPADDR, SHELF_VLAN, 0 );
@@ -310,6 +313,21 @@ u32 VLAN_PortModeSet(   const u8 pcbDevAddr, const size_t port_num,
         }
 
         return OK ;
+}
+
+u32  VLAN_TrunkPortUntSet (const u8 pcbDevAddr, const size_t port_num, VLAN_ID_t defvid )
+{
+        MV88E6095_Ports_VLAN_Status_t stats;
+  
+                if( MV88E6095_ReadVTUEntry( pcbDevAddr, defvid, NULL, &stats ) == OK ){
+                        __change_port_state( &stats, port_num,
+                                                VTU_PORT_UNTAGGED, VTU_PORT_FORWARDING );
+                        MV88E6095_AddVTUEntry( pcbDevAddr,      defvid,         0,              &stats  );
+                }  else {
+                        return ERROR ;
+                }
+        
+        return OK;
 }
 /*=============================================================================================================*/
 
