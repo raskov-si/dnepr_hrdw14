@@ -74,16 +74,21 @@ size_t	CircBuffer_actual_size( const T8_CircBuffer* const desc_ );
 //! \brief	количество потерянных данных
 size_t	CircBuffer_lost_size( const T8_CircBuffer* const desc_ );
 
-ReturnStatus circbuffer_read_byte
+/*=============================================================================================================*/
+
+ReturnStatus circbuffer_pop_byte
 ( 
     T8_CircBuffer           *const circbuf_desc,
     CircBuffer_datatype     *dest
 );
 
-size_t	circbuffer_get_storage_data_size ( const T8_CircBuffer* const circbuf_desc );
-size_t	circbuffer_get_space_size( const T8_CircBuffer* const circbuf_desc );
+ReturnStatus circbuffer_push_byte_erasing
+(
+	T8_CircBuffer           *const circbuf_desc,
+	CircBuffer_datatype     source
+);
 
-ReturnStatus circbuffer_read_block
+ReturnStatus circbuffer_pop_block
 ( 
     T8_CircBuffer                   *circbuf_desc,
     CircBuffer_datatype             *dest, 
@@ -91,7 +96,25 @@ ReturnStatus circbuffer_read_block
     size_t                          *actual_read_size 
 );
 
+ReturnStatus circbuffer_push_block
+(
+	T8_CircBuffer                   *circbuf_desc,
+        size_t                          *actual_write_size,
+	CircBuffer_datatype             *source,
+	size_t                          write_size
+);
 
+ReturnStatus circbuffer_push_block_erasing
+(
+	T8_CircBuffer                   *circbuf_desc,
+	size_t                          *actual_write_size,
+	CircBuffer_datatype             *source,
+	size_t                          write_size
+);
+
+size_t	circbuffer_get_storage_data_size ( const T8_CircBuffer* const circbuf_desc );
+size_t	circbuffer_get_space_size( const T8_CircBuffer* const circbuf_desc );
+void    circbuffer_set_empty( T8_CircBuffer* circbuf_desc );
 
 
 
