@@ -7,7 +7,7 @@
 
 #include "HAL/BSP/inc/T8_Dnepr_Ethernet.h"
 #include "HAL/IC/inc/MV_88E6095.h"
-#include "HAL/MCU/inc/T8_5282_MII.h"
+#include "HAL/MCU/inc/T8_5282_FEC.h"
 
 
 void VLAN_AddVID( const u8 pcbDevAddr, const VLAN_ID_t vid );
@@ -184,6 +184,45 @@ void dnepr_ethernet_sfpport_autoneg_mode
     }
     MV88E6095_multichip_smi_write( MV88E6095_2_CHIPADDR, port, MV88E6095_PCS_CTRL_REG, temp_reg  );
 }
+
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+     \details 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+void dnepr_ethernet_get_switch_atu_entry
+(
+    const u8* maddr,
+    uint8_t   slotnum
+)
+{
+  /* читаем базу данных */
+  
+  /* возвращаем */
+  
+  
+}
+
+/*=============================================================================================================*/
+/*!  \brief 
+     \details 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+void dnepr_ethernet_delete_switch_atu_entry
+(
+    uint8_t   slotnum
+)
+{
+  
+}
+
+
 
 
 /*=============================================================================================================*/

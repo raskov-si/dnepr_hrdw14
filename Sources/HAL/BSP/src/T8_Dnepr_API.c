@@ -13,6 +13,7 @@
 #include "HAL/IC/inc/TI_UCD9080.h"
 #include "HAL/IC/inc/TI_TCA9539.h"
 
+#include "HAL/BSP/inc/T8_Dnepr_SMI.h"
 #include "HAL/BSP/inc/T8_Dnepr_I2C.h"
 #include "HAL/BSP/inc/T8_Dnepr_GPIO.h"
 #include "HAL/BSP/inc/T8_Dnepr_API.h"
@@ -70,9 +71,11 @@ void DNEPR_InitPeripherials()
 	
 	/////////////////////////////////////////////////////////////////////////
 	// Ceòü: MDIO: 88E6095
-	tSMIPeriphInterface.SMI_Read 	= &fec_mii_read ;
-    tSMIPeriphInterface.SMI_Write	= &fec_mii_write ;
-    MV_88E6095_InitPeripheralInterface( &tSMIPeriphInterface ) ;
+//	tSMIPeriphInterface.SMI_Read 	= &fec_mii_read ;
+//    tSMIPeriphInterface.SMI_Write	= &fec_mii_write ;
+//    MV_88E6095_InitPeripheralInterface( &tSMIPeriphInterface ) ;
+            MV_88E6095_InitPeripheralInterface( dnepr_smi_get_driver_descriptor() ) ;
+
 
 	Dnepr_Ethernet_Init( switch_mac_addr_default ) ;
 

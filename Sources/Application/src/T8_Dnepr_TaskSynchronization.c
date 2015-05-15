@@ -20,6 +20,8 @@ static OS_EVENT *__spi_mutex = NULL ; //!< блокирует одновременный доступ из раз
 static OS_EVENT *__i2c_mutex = NULL ; //!< блокирует одновременный доступ из разных потоков
 static OS_EVENT *__ffs_mutex = NULL ; //!< защищает файловую систему
 
+static OS_EVENT *smi_mutex = NULL;    //!< блокирует доступ из разных потоков к SMI (MDIO) интерфейсу 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void T8_Dnepr_TS_Init()
@@ -34,6 +36,10 @@ void T8_Dnepr_TS_Init()
 
 	__ffs_mutex = OSMutexCreate( ffs_mutex_PRIO, &return_code );
 	assert( return_code == OS_ERR_NONE );
+        
+	smi_mutex = OSMutexCreate( SMI_MUTEX_PRIO, &return_code );
+	assert( return_code == OS_ERR_NONE );
+        
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -84,3 +90,21 @@ void T8_Dnepr_TS_FFS_Unlock()
 	OSMutexPost( __ffs_mutex );
 }
 
+/*------------------------------------------------------------------------------------------------------------------*/
+
+void t8_dnepr_ts_smi_lock(void)
+{
+    INT8U return_code = OS_ERR_NONE;
+    
+    assert( smi_mutex );
+    OSMutexPend( smi_mutex, 0, &return_code );
+    assert( return_code == OS_ERR_NONE );
+}
+
+void t8_dnepr_ts_smi_unlock(void)
+{
+    assert( smi_mutex );
+    OSMutexPost( smi_mutex );
+}
+
+/*------------------------------------------------------------------------------------------------------------------*/

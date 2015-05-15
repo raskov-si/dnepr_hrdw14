@@ -8,6 +8,8 @@
 #ifndef __SMI_INTERFACE_H_
 #define __SMI_INTERFACE_H_
 
+#include "support_common.h"
+
 typedef struct __SMI_PeriphInterfaceTypedef {
 	u32 (*SMI_Read)		(u32 phy_addr, u32 reg_addr, u16* data) ;
 	u32 (*SMI_Write)		(u32 phy_addr, u32 reg_addr, u16 data) ;

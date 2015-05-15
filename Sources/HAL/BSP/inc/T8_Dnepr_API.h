@@ -19,7 +19,7 @@
 #include "HAL\BSP\inc\T8_Dnepr_FPGA.h"
 
 #include "HAL\MCU\inc\I2C_GenericDriver.h"
-#include "HAL/MCU/inc/T8_5282_MII.h"
+#include "HAL/MCU/inc/T8_5282_FEC.h"
 #include "HAL\MCU\inc\SPI_GenericDriver.h"
 
 //! Адрес датчика температуры
