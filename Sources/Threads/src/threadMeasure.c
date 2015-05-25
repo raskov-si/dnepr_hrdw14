@@ -86,6 +86,7 @@ static _BOOL __sfp_on_changed = FALSE ; //!< TRUE, когда поменяли __sfp_*_on, но
 static u32 sfp1_pin_color = SYS_NO_COLOR;
 static u32 sfp2_pin_color = SYS_NO_COLOR;
 
+static _BOOL  _stwichport_state[5];
 
 static struct
 {
@@ -113,6 +114,10 @@ static _BOOL mAlarm1State, mAlarm2State;
 static u32 __fan_last_presence = 0 ;
 // через сколько циклов threadMeasure можно обращаться к плате вентиляции после её вставления
 static const u32 __fan_last_presence_delay = 5 ;
+
+static u32        last_link_check_times = 0; 
+static const u32  last_link_check_delay = 5;
+
 
 // статические/информационнные параметры платы вентиляции
 static Dnepr_Fans_CalData_t __fans_calib_data =	{ .max_rpm = 4000, .min_rpm = 1000, .max_work_hrs = 30000,
@@ -165,8 +170,8 @@ void taskMeasure(void *pdata)
 												.rcvmsg_len = 0, .rcv_cbuff = 0 };
 	u32 button_cnt = 0 ;
 	T8_Dnepr_LedStatusTypedef button_led_status = 	{{ 	RED, TRUE },	//	Power
-													{	RED, TRUE },	// CPU
-													{	RED, TRUE }};	// Alarm;
+						        {	RED, TRUE },	// CPU
+							{	RED, TRUE }};	// Alarm;
     pdata = pdata;
     _Init() ;
 	    
@@ -618,7 +623,24 @@ static void _Do_Measurements()
 //        return;
 ///debug        
         
-	Dnepr_DControl_sfp_process_present() ;
+        _pDev_presents = Dnepr_DControl_SlotPresent() ;  
+	Dnepr_DControl_sfp_process_present();
+        Dnepr_DControl_fun_process_present();
+        
+     
+         /* link status */
+        if (last_link_check_times > last_link_check_delay)
+        {
+          _stwichport_state[0] = dnepr_ethernet_get_FEport_link_status(1);
+          _stwichport_state[1] = dnepr_ethernet_get_FEport_link_status(2);
+          _stwichport_state[2] = dnepr_ethernet_get_FEport_link_status(3);
+          _stwichport_state[3] = dnepr_ethernet_get_GEport_link_status(1);
+          _stwichport_state[4] = dnepr_ethernet_get_GEport_link_status(2);
+          last_link_check_times = 0;
+        } else {
+          last_link_check_times++;
+        }
+        
 
 	// SFP & Fans
 	if( _pDev_presents ){
@@ -678,17 +700,21 @@ static void _Do_Measurements()
 			if( __fan_last_presence < __fan_last_presence_delay ){
 				++__fan_last_presence ;
 			} else if( __fan_last_presence == __fan_last_presence_delay ){
+                                _BOOL ret;
 				++__fan_last_presence ;
 				// читаем EEPROM
-				Dnepr_Fans_ReadCalibration() ;
+				ret = Dnepr_Fans_ReadCalibration() ;
 				// инициализируем
-				Dnepr_Fans_Init( );
+				ret = ret && Dnepr_Fans_Init();
 				// запустим вентиляторы в верхней процедуре потока
-				__set_fans_power = TRUE ;
+				__set_fans_power = ret ;
 				// обновляем локальные данные
 				if( Dnepr_Fans_CalData() ){
 					t8_memcopy( (u8*)&__fans_calib_data, (u8*)Dnepr_Fans_CalData(), sizeof(Dnepr_Fans_CalData_t) );
 				}
+                                if ( ret == FALSE ) {
+                                   __fan_last_presence = 0 ;
+                                }
 			}
 			// читаем HotSwap
 			LT_LTC4222_GetAdcVoltages( Dnepr_I2C_Get_PMBUS_EXT_Driver( I2C_DNEPR_FAN_SLOT_NUM ), DNEPR_BACKPLANE_FAN_HS, &tFansAdcVoltagesStructure);
@@ -1079,17 +1105,30 @@ u32 cmoscalarm_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 {
   
 //  CMOSCAlarm;Norm@0|Warning@1|Failure@2
-    if ( (sfp1_pin_color == SYS_NORMAL_COLOR) && (sfp2_pin_color == SYS_NORMAL_COLOR) )
+//    if ( (sfp1_pin_color == SYS_NORMAL_COLOR) && (sfp2_pin_color == SYS_NORMAL_COLOR) )
+//    {
+//          pPar->value.U32 = 0;
+//          pPar->par_color = SYS_NORMAL_COLOR ;        
+//    } else if ( (sfp1_pin_color == SYS_NORMAL_COLOR) || (sfp2_pin_color == SYS_NORMAL_COLOR) ) {
+//          pPar->value.U32 = 1;
+//          pPar->par_color = SYS_MINOR_COLOR ;        
+//    } else { 
+//          pPar->value.U32 = 2;
+//          pPar->par_color = SYS_CRITICAL_COLOR;      
+//    }
+  
+    if ( (_stwichport_state[3] == TRUE) && (_stwichport_state[4] == TRUE) )
     {
           pPar->value.U32 = 0;
           pPar->par_color = SYS_NORMAL_COLOR ;        
-    } else if ( (sfp1_pin_color == SYS_NORMAL_COLOR) || (sfp2_pin_color == SYS_NORMAL_COLOR) ) {
+    } else if ( (_stwichport_state[3] == TRUE) || (_stwichport_state[4] == TRUE) ) {
           pPar->value.U32 = 1;
           pPar->par_color = SYS_MINOR_COLOR ;        
     } else { 
           pPar->value.U32 = 2;
           pPar->par_color = SYS_CRITICAL_COLOR;      
     }
+  
       
       pPar->ready = 1;
       
@@ -1154,6 +1193,40 @@ u32 cmsfpthrmode_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar) {
 	pPar->par_color = STR_NO_TRAP_COLOR ;
 	return OK ;
 }
+
+u32 cmfelink_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+    const u32 fe_num = p_ix->parent->owner; // eth1 -- 1, eth2 -- 2, eth3 -- 3
+    
+    switch ( fe_num )    {
+    case 0:   pPar->value.U32 = _stwichport_state[0]; pPar->ready = 1;  break;
+    case 1:   pPar->value.U32 = _stwichport_state[1]; pPar->ready = 1;  break;
+    case 2:   pPar->value.U32 = _stwichport_state[2]; pPar->ready = 1;  break;
+    default:  pPar->value.U32 = 0 ; pPar->ready = 0;  break;      
+    }
+    
+  
+    pPar->par_color = STR_NO_TRAP_COLOR ;
+    return OK ;
+}
+
+
+u32 cmgelink_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+    const u32 ge_num = p_ix->parent->owner; // sfp1 -- 1, sfp2 -- 2
+    
+    switch ( ge_num )    {
+    case 0:   pPar->value.U32 = _stwichport_state[3]; pPar->ready = 1;  break;
+    case 1:   pPar->value.U32 = _stwichport_state[4]; pPar->ready = 1;  break;
+    default:  pPar->value.U32 = 0 ; pPar->ready = 0;  break;      
+    }
+      
+    pPar->par_color = STR_NO_TRAP_COLOR ;
+    return OK ;
+    
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

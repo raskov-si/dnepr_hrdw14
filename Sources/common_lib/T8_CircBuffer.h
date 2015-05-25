@@ -30,13 +30,15 @@ typedef struct
 	size_t					iHead ;
 	//! номер следующего за последним принятым элементом в хранилище
 	size_t					iTail ;
+        uint8_t                                 push_lock;
+        uint8_t                                 pop_lock;
 } T8_CircBuffer ;
 
 //! определяет кольцевой буфер в коде (м.б. в стеке или глобально)
 // грязный хак с преобразованием типов сделан для того, чтобы применять t8_memcopy32
 #define		CIRCBUFFER(name, size) u8 name##_array_[size];\
 		T8_CircBuffer name = { (CircBuffer_datatype*)name##_array_, \
-		size, 0, 0, 0, 0}
+		size, 0, 0, 0, 0, 0, 0}
 
 ////////////////////////////////////////////////////////////////////////////////
 

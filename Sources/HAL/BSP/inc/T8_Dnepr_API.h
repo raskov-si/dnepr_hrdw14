@@ -100,7 +100,7 @@ _BOOL I2C_Dnepr_SFP_OnOff( const _BOOL sfp_1_on_, const _BOOL sfp_2_on_ );
 //! \param sfp_params структура с данными результата
 //! \param renew_static_info перечитывать неизменяемые параметры или нет
 //! \param sfp_num номер sfp модуля (0 нижний, 1 верхний)
-void I2C_Dnepr_SFP_Renew( T8_SFP_OPTICAL_CHANNEL* sfp_params,
+_BOOL I2C_Dnepr_SFP_Renew( T8_SFP_OPTICAL_CHANNEL* sfp_params,
 					const _BOOL renew_static_info, const u32 sfp_num );
 
 void isr_Watchdog();

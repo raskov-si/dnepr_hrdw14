@@ -57,6 +57,8 @@ u32 cmsfppin_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar);
 u32 cmsfppout_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar);
 u32 cmsfpthrmode_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar);
 u32 cmtime_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar);
+u32 cmfelink_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar);
+u32 cmgelink_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar);
 u32 cmoscalarm_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar);
 u32 uptime_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar);
 u32 cmi33v_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar);

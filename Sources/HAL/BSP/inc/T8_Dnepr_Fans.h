@@ -73,6 +73,7 @@ _BOOL Dnepr_Fans_Calibrated();
 Dnepr_Fans_CalData_t *Dnepr_Fans_CalData();
 
 //! инициализирует вентил€торы, но не включает их
-void Dnepr_Fans_Init( );
+
+_BOOL Dnepr_Fans_Init(void);
 
 #endif

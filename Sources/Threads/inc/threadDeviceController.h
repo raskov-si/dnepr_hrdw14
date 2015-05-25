@@ -67,6 +67,8 @@ I2C_DNEPR_PresentDevicesTypedef* Dnepr_DControl_SlotRawPresent() ;
 
 //! Обновить состояние презентов в SFP.
 void Dnepr_DControl_sfp_process_present() ;
+void Dnepr_DControl_fun_process_present(void);
+
 
 //! отдаёт команду потоку пересмотреть разрешение запуска устройства
 void Dnepr_SlotEEPROM_RereadPowerOnOff( const u32 slot_num );

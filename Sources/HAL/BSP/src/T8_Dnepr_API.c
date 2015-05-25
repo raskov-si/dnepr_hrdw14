@@ -274,32 +274,38 @@ _BOOL I2C_Dnepr_SFP_OnOff( const _BOOL sfp_1_on_, const _BOOL sfp_2_on_ )
         return ret ;
 }
 
-void I2C_Dnepr_SFP_Renew( T8_SFP_OPTICAL_CHANNEL* sfp_params,
+_BOOL I2C_Dnepr_SFP_Renew( T8_SFP_OPTICAL_CHANNEL* sfp_params,
 					const _BOOL renew_static_info, const u32 sfp_num )
 {
-	size_t i = 0 ;
+	size_t        i = 0;
+        ReturnStatus  ret = ERROR;
 	// 1й, нижний sfp
 	if( sfp_num == 0 ){
-		if( renew_static_info ){
-			for( i = 0;
-				(T8_SFP_Init( Dnepr_I2C_Get_I2C_SFP_L_Driver(), sfp_params, sfp_num ) != OK) &&
-				i < 3; i++ );
-		}
-		for( i = 0;
-				(T8_SFP_GetSfpVolatileValues( Dnepr_I2C_Get_I2C_SFP_L_Driver(), sfp_params ) != OK) &&
-				i < 3; i++ );
+                for( i = 0; renew_static_info && ret == ERROR && i < 3; i++ ) {
+                    ret = T8_SFP_Init( Dnepr_I2C_Get_I2C_SFP_L_Driver(), sfp_params, sfp_num );
+                }
+                if (ret == ERROR )  {
+                  return FALSE;
+                }
+                ret = ERROR;
+                for( i = 0; ret == ERROR && i < 3; i++ ) {
+                    ret = T8_SFP_GetSfpVolatileValues( Dnepr_I2C_Get_I2C_SFP_L_Driver(), sfp_params );
+                }
 	// 2й, верхний sfp
 	} else if( sfp_num == 1 ){
-		if( renew_static_info ){
-			for( i = 0;
-				(T8_SFP_Init( Dnepr_I2C_Get_I2C_SFP_U_Driver(), sfp_params, sfp_num ) != OK) &&
-				i < 3; i++ );
-		}
-		for( i = 0;
-				(T8_SFP_GetSfpVolatileValues( Dnepr_I2C_Get_I2C_SFP_U_Driver(), sfp_params ) != OK) &&
-				i < 3; i++ );
-
+                for( i = 0; renew_static_info && ret == ERROR && i < 3; i++ ) {
+		    ret = T8_SFP_Init( Dnepr_I2C_Get_I2C_SFP_U_Driver(), sfp_params, sfp_num );
+                }
+                if (ret == ERROR )  {
+                  return FALSE;
+                }
+                ret = ERROR;
+                for( i = 0; ret == ERROR && i < 3; i++ ) {
+	            ret = T8_SFP_GetSfpVolatileValues( Dnepr_I2C_Get_I2C_SFP_U_Driver(), sfp_params );
+                }
 	}
+        
+        return (ret == OK) ? TRUE : FALSE;
 }
 
 _BOOL Dnepr_ReadDS28CM00_Internal(MAX_DS28CM00_ContentsTypedef* tContents)

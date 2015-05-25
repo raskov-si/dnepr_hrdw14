@@ -240,10 +240,10 @@ Dnepr_Fans_CalData_t* Dnepr_Fans_CalData()
 	}
 }
 
-void Dnepr_Fans_Init( )
+_BOOL Dnepr_Fans_Init(void)
 {
 	size_t i ;
-	_BOOL retry = TRUE ;
+	_BOOL retry = TRUE;
 	u32 retry_times = 10 ;
 	
 	MAX31785_SetMfrMode( (u8)MAX31785_MFR_ALERT_ENABLED );
@@ -255,6 +255,8 @@ void Dnepr_Fans_Init( )
 			retry &= MAX31785_SetTachPulses( i, MAX31785_TACH2 );
 		}
 	} while( (!retry) && (--retry_times > 0) );
+        
+        return retry;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

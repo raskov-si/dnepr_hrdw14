@@ -105,12 +105,6 @@ static void taskInit(void *pdata)
 	// As mentioned in the book's text, you MUST initialize the ticker only
 	// once multitasking
 	// ¬ключаем ticker -- таймер ќ— 
-//	PIT_Init(0, // номер таймера
-//			1, // делитель PCSR
-//			18750, // модуль таймера, 75 ћ√ц -> 1 к√ц 
-//			3, 0 // IPL, prio
-//	);
-	
 	PIT_Init(       0, // номер таймера
 			1, // делитель PCSR
 			18750, // модуль таймера, 75 ћ√ц -> 1 к√ц 

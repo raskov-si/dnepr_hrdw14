@@ -185,6 +185,61 @@ void dnepr_ethernet_sfpport_autoneg_mode
     MV88E6095_multichip_smi_write( MV88E6095_2_CHIPADDR, port, MV88E6095_PCS_CTRL_REG, temp_reg  );
 }
 
+/*=============================================================================================================*/
+/*!  \brief 
+     \details 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+_BOOL dnepr_ethernet_get_FEport_link_status
+( 
+    u8      num                               /*!< [in] номер FE 1,2,3                                   */
+)
+{
+    u8      port;
+    u16     temp_reg;
+  
+    switch (num)
+    {
+    case 1:     port = MV88E6095_PORT0;      break;  /* 8P8C совмещенный с USB  */
+    case 2:     port = MV88E6095_PORT1;      break;  /* 8P8C левый              */
+    case 3:     port = MV88E6095_PORT2;      break;  /* 8P8C правый             */
+    default:    return FALSE;
+    }
+    
+    MV88E6095_multichip_smi_read( MV88E6095_2_CHIPADDR, port, MV88E6095_PORT_STATUS_REG, &temp_reg  );  
+
+    return (temp_reg & MV88E6095_LINK) ? TRUE : FALSE;
+}
+
+
+/*=============================================================================================================*/
+/*!  \brief 
+     \details 
+
+     \sa 
+*/
+/*=============================================================================================================*/
+_BOOL dnepr_ethernet_get_GEport_link_status
+( 
+    u8      num                               /*!< [in] номер FE 1,2,3                                   */
+)
+{
+    u8      port;
+    u16     temp_reg;
+  
+    switch (num)
+    {
+    case 1:     port = MV88E6095_PORT10;     break;  /* 1 - нижн€€  L port10  */
+    case 2:     port = MV88E6095_PORT9;      break;  /* 2 - верхн€€ U port9   */
+    default:    return FALSE;
+    }
+    
+    MV88E6095_multichip_smi_read( MV88E6095_2_CHIPADDR, port, MV88E6095_PORT_STATUS_REG, &temp_reg  );  
+
+    return (temp_reg & MV88E6095_LINK) ? TRUE : FALSE;
+}
 
 
 /*=============================================================================================================*/

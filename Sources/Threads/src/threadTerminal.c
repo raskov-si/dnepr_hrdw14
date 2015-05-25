@@ -96,6 +96,12 @@ void UART0_Handler(void)
 {
     uart_isr( &uart0_desc );
 }
+#else
+
+void UART0_Handler(void) 
+{
+}
+
 #endif
 
 
@@ -261,9 +267,13 @@ static void terminal_send_log
 //                          if ( indx > 128 ) { 
 //                            break; 
 //                          }
-                          circbuffer_push_block(p_answ_buff, &act_write, (u8*)&send_buff[indx], left_len);         
+                          circbuffer_push_block(p_answ_buff, &act_write, (u8*)&send_buff[indx], left_len);
+                          if ( strstr(p_answ_buff->data, "w") != NULL && cur_cmd->get_log_message_num() < 1190  )
+                          {  
+                              memset(send_buff, 0, 128);
+                          }
                           left_len     -= act_write;
-                          indx         += act_write;                          
+                          indx         += act_write;
                       } while ( indx < answ_len);
                         
                       uart_terminal_start_tx(uart_desc) ;

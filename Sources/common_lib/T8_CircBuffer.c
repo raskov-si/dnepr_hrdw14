@@ -162,22 +162,26 @@ ReturnStatus circbuffer_push_byte_erasing
 {
 	STORAGE_ATOMIC();
 	size_t	tail_store, head_store;
+        uint8_t push_lock_store;
         uint8_t overflow_flag = 0;
-
+        
+	START_ATOMIC();
 	tail_store = circbuf_desc->iTail;
         head_store = circbuf_desc->iHead;
+        push_lock_store = circbuf_desc->push_lock;
+        circbuf_desc->push_lock = 1;
+	STOP_ATOMIC();
 
 	circbuf_desc->data[tail_store] = source;
+        if ( circbuffer_get_space_size(circbuf_desc) == 0 ) {
+          overflow_flag = 1;
+        }
 	tail_store++;
 	if (tail_store == circbuf_desc->szTotal) {
 		tail_store = 0;
 	}
-        if (tail_store == head_store) {
-          overflow_flag = 1;
-          head_store = tail_store + 1;
-          if (head_store == circbuf_desc->szTotal) {
-            head_store = 0;
-          }
+        if (overflow_flag) {
+          head_store = tail_store;
         }
 
 	START_ATOMIC();
@@ -186,6 +190,8 @@ ReturnStatus circbuffer_push_byte_erasing
             circbuf_desc->iHead = head_store;
         }
 	circbuf_desc->szActual = (overflow_flag) ? circbuf_desc->szTotal : circbuf_desc->szActual+1;
+        circbuf_desc->push_lock = push_lock_store;
+        
 	STOP_ATOMIC();
 
 	return OK;
@@ -211,7 +217,9 @@ ReturnStatus circbuffer_pop_byte
 		return ERROR;
 	}
 
+	START_ATOMIC();
 	head_store = circbuf_desc->iHead;
+	STOP_ATOMIC();
 
 	*dest = circbuf_desc->data[head_store];
 	head_store++;
@@ -257,19 +265,22 @@ ReturnStatus circbuffer_pop_block
 		return ERROR;
 	}
 
+	START_ATOMIC();
 	head_store = circbuf_desc->iHead;
 	tail_store = circbuf_desc->iTail;
+	STOP_ATOMIC();
 
 	if (read_size > circbuf_desc->szActual) {
 		read_size = circbuf_desc->szActual;
 	}
 
 	/* определяем сколько можем вычитать из буфера */
-	readed_from_buf_data = (tail_store > head_store) ?  (tail_store - head_store) : (circbuf_desc->szTotal - head_store);
+	readed_from_buf_data = (tail_store > head_store) ?  (tail_store - head_store) : (circbuf_desc->szTotal - 1 - head_store);
 
 
 	/* если количество запрашиваемых данных меньше, читаем только то что запросили */
-	if (readed_from_buf_data > read_size) {readed_from_buf_data = 	read_size; }
+	if (readed_from_buf_data > read_size) 
+        {readed_from_buf_data = 	read_size; }
 
 
 	t8_memcopy(dest, &(circbuf_desc->data[head_store]), readed_from_buf_data * sizeof circbuf_desc->data[0]);
@@ -320,6 +331,7 @@ ReturnStatus circbuffer_push_block_erasing
 )
 {
 	STORAGE_ATOMIC();
+        uint8_t         push_lock_store;        
 	size_t          head_store, tail_store;
 	size_t          index               = 0;
 	size_t          writed_to_buf_data  = write_size;
@@ -333,8 +345,12 @@ ReturnStatus circbuffer_push_block_erasing
 		return ERROR;
 	}
 
+	START_ATOMIC();
 	head_store = circbuf_desc->iHead;
 	tail_store = circbuf_desc->iTail;
+        push_lock_store = circbuf_desc->push_lock;
+        circbuf_desc->push_lock = 1;        
+	STOP_ATOMIC();
 
 	if ( write_size > circbuf_desc->szTotal ) {
 		writed_to_buf_data = write_size = circbuf_desc->szTotal;
@@ -356,10 +372,7 @@ ReturnStatus circbuffer_push_block_erasing
 	tail_store += writed_to_buf_data;
         
         if ( overflow_flag == 1 ) {          
-            head_store = tail_store + 1;
-            if (head_store == circbuf_desc->szTotal) {
-                head_store = 0;
-            }
+            head_store = tail_store;
         }
 
 	*actual_write_size = write_size;
@@ -370,6 +383,8 @@ ReturnStatus circbuffer_push_block_erasing
           circbuf_desc->iHead = head_store;
         }
 	circbuf_desc->szActual = (overflow_flag) ? circbuf_desc->szTotal : (circbuf_desc->szActual + write_size) ;
+        circbuf_desc->push_lock = push_lock_store;        
+        
 	STOP_ATOMIC();
 
 	return OK;
@@ -402,9 +417,21 @@ ReturnStatus circbuffer_push_block
 		}
 		return ERROR;
 	}
+        
+        if ( circbuf_desc->push_lock == 1 ) {
+		if (actual_write_size != NULL)  {
+			*actual_write_size = 0;
+		}
+		return ERROR;
+        }
+          
+        
 
+	START_ATOMIC();
 	head_store = circbuf_desc->iHead;
 	tail_store = circbuf_desc->iTail;
+        circbuf_desc->push_lock = 1;        
+	STOP_ATOMIC();
         
 
 	if ( write_size > circbuf_desc->szTotal ) {
@@ -432,6 +459,7 @@ ReturnStatus circbuffer_push_block
 	START_ATOMIC();
 	circbuf_desc->iTail = tail_store;
 	circbuf_desc->szActual = circbuf_desc->szActual + write_size;
+        circbuf_desc->push_lock = 0;                
 	STOP_ATOMIC();
 
     return OK;
