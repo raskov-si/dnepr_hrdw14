@@ -125,7 +125,8 @@ const s8* Dnepr_SlotEEPROM_DeviceName( const u32 slot_num )
 			}
 		}
 	}
-	return "Unavailable" ;
+//	return "Unavailable" ;
+	return "" ;
 }
 
 u32 Dnepr_SlotEEPROM_SlotPower( const u32 slot_num )

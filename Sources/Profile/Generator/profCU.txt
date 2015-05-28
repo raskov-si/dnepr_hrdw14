@@ -1,4 +1,4 @@
-************** GENERATED 25.05.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
+************** GENERATED 27.05.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
 *********************************
 *********************************
 #PARAM_NAME
@@ -1214,155 +1214,6 @@ NONMETER
 *********************************
 *********************************
 #PARAM_NAME
-ALARM1
-#COMMENT
-Not critical Alarm
-#SEC_LEVEL
-SL(r,r,r,r)
-#OWNER
-1024
-#TYPE
-PR_DYNAMIC_PARAM
-#DATA_TYPE
-BOOL
-#MFLAG
-NONMETER
-#FAILURE_COLOR
-0
-#LANGPACK
-ALARM1;;Некритическая авария устройства
-#END
-*********************************
-*********************************
-#PARAM_NAME
-ALARM2
-#COMMENT
-Critical Alarm
-#SEC_LEVEL
-SL(r,r,r,r)
-#OWNER
-1024
-#TYPE
-PR_DYNAMIC_PARAM
-#DATA_TYPE
-BOOL
-#MFLAG
-NONMETER
-#DEGRADE_COLOR
-0
-#LANGPACK
-ALARM2;;Критическая авария устройства
-#END
-*********************************
-*********************************
-#PARAM_NAME
-BlockColor
-#COMMENT
-Block Color Status
-#SEC_LEVEL
-SL(r,r,r,r)
-#OWNER
-1024
-#TYPE
-PR_DYNAMIC_PARAM
-#DATA_TYPE
-UINTEGER
-#MFLAG
-NONMETER
-#DEGRADE_COLOR
-0
-#FAILURE_COLOR
-0
-#LANGPACK
-BlockColor;;Цвет устройства
-#END
-*********************************
-*********************************
-#PARAM_NAME
-TCase
-#COMMENT
-Case temperature
-#SEC_LEVEL
-SL(r,r,r,r)
-#OWNER
-1024
-#TYPE
-PR_DYNAMIC_PARAM
-#DATA_TYPE
-REAL
-#MFLAG
-PRECISION1|TRP_COLOR|AL12_COLOR
-#UNIT
-°C
-#LANGPACK
-TCase;°C;Температура корпуса блока
-#END
-*********************************
-*********************************
-#PARAM_NAME
-CPUUsage
-#COMMENT
-Computer CPU Usage in %
-#SEC_LEVEL
-SL(r,r,r,r)
-#OWNER
-1024
-#TYPE
-PR_DYNAMIC_PARAM
-#DATA_TYPE
-INTEGER
-#MFLAG
-NONMETER
-#UNIT
-%
-#LANGPACK
-CPUUsage;%;Загруженность ЦП встроенной ЭВМ в %
-#END
-*********************************
-*********************************
-#PARAM_NAME
-MemLoad
-#COMMENT
-Computer Memory Usage in %
-#SEC_LEVEL
-SL(r,r,r,r)
-#OWNER
-1024
-#TYPE
-PR_DYNAMIC_PARAM
-#DATA_TYPE
-INTEGER
-#MFLAG
-NONMETER
-#UNIT
-%
-#LANGPACK
-MemLoad;%;Загруженность ОЗУ встроенной ЭВМ в %
-#END
-*********************************
-*********************************
-#PARAM_NAME
-DiskSpace
-#COMMENT
-Computer Disk Space Usage in %
-#SEC_LEVEL
-SL(r,r,r,r)
-#OWNER
-1024
-#TYPE
-PR_DYNAMIC_PARAM
-#DATA_TYPE
-INTEGER
-#MFLAG
-NONMETER
-#UNIT
-%
-#LANGPACK
-DiskSpace;%;Заполненность ППЗУ встроенной ЭВМ в %
-#END
-*********************************
-*********************************
-#PARAM_NAME
 LocalTime
 #COMMENT
 Local Time of the Computer
@@ -1470,7 +1321,7 @@ CMSFP1ThrMode
 #COMMENT
 SFP 1 Thresholds source
 #SEC_LEVEL
-SL(r,r,r,r)
+SL(n,n,n,r)
 #OWNER
 0
 #TYPE
@@ -1550,7 +1401,7 @@ CMSFP2ThrMode
 #COMMENT
 SFP 2 Thresholds source
 #SEC_LEVEL
-SL(r,r,r,r)
+SL(n,n,n,r)
 #OWNER
 1
 #TYPE
@@ -1561,31 +1412,6 @@ ENUM
 GRP_ACCESS
 #LANGPACK
 CMSFP2ThrMode;;Источник порогов SFP 2
-#END
-*********************************
-*********************************
-#PARAM_NAME
-CMTime
-#COMMENT
-Time of work from switching on
-#SEC_LEVEL
-SL(n,n,r,r)
-#OWNER
-1024
-#TYPE
-PR_DYNAMIC_PARAM
-#DATA_TYPE
-UINTEGER
-#MFLAG
-NONMETER
-#DEGRADE_COLOR
-0
-#FAILURE_COLOR
-0
-#UNIT
-sec
-#LANGPACK
-CMTime;сек;Время с момента включения блока
 #END
 *********************************
 *********************************
@@ -1773,46 +1599,6 @@ CMI12V;мА;Ток потребляемый CU по линии 12 В
 *********************************
 *********************************
 #PARAM_NAME
-VState
-#COMMENT
-Alarm State of Crate
-#SEC_LEVEL
-SL(r,r,r,r)
-#OWNER
-1032
-#TYPE
-PR_DYNAMIC_PARAM
-#DATA_TYPE
-BOOL
-#MFLAG
-NONMETER
-#LANGPACK
-VState;;Состояние крейта
-#END
-*********************************
-*********************************
-#PARAM_NAME
-VPowerReserve
-#COMMENT
-Available power
-#SEC_LEVEL
-SL(r,r,r,r)
-#OWNER
-1024
-#TYPE
-PR_DYNAMIC_PARAM
-#DATA_TYPE
-REAL
-#MFLAG
-PRECISION0
-#UNIT
-W
-#LANGPACK
-VPowerReserve;Вт;Запас мощности в крейте
-#END
-*********************************
-*********************************
-#PARAM_NAME
 SlotsState
 #COMMENT
 Block Presence in Crate Slots
@@ -1851,30 +1637,11 @@ PassiveSlotState;;Присутствие пассивных блоков в слотах крейта
 *********************************
 *********************************
 #PARAM_NAME
-VEEPROMState
-#COMMENT
-Crate EEPROM status
-#SEC_LEVEL
-SL(r,r,r,r)
-#OWNER
-1024
-#TYPE
-PR_DYNAMIC_PARAM
-#DATA_TYPE
-BOOL
-#MFLAG
-NONMETER
-#LANGPACK
-VEEPROMState;;Состояние EEPROM крейте
-#END
-*********************************
-*********************************
-#PARAM_NAME
 V33V
 #COMMENT
 Auxiliary Board Power Line 3.3 V Voltage
 #SEC_LEVEL
-SL(r,r,r,r)
+SL(n,n,n,r)
 #OWNER
 1024
 #TYPE
@@ -1895,7 +1662,7 @@ V12V
 #COMMENT
 Auxiliary Board Power Line 12.0 V Voltage
 #SEC_LEVEL
-SL(r,r,r,r)
+SL(n,n,n,r)
 #OWNER
 1024
 #TYPE
@@ -2238,7 +2005,7 @@ FUV12I
 #COMMENT
 Fans 12 V line current
 #SEC_LEVEL
-SL(r,r,r,r)
+SL(n,n,n,r)
 #OWNER
 1024
 #TYPE
@@ -2259,7 +2026,7 @@ FUV33I
 #COMMENT
 Fans 3.3 V line current
 #SEC_LEVEL
-SL(r,r,r,r)
+SL(n,n,n,r)
 #OWNER
 1024
 #TYPE
@@ -2280,7 +2047,7 @@ FUEEPROMState
 #COMMENT
 FU EEPROM status
 #SEC_LEVEL
-SL(r,r,r,r)
+SL(n,n,n,r)
 #OWNER
 1024
 #TYPE
@@ -3187,6 +2954,239 @@ NONMETER
 ms
 #LANGPACK
 CMProfDelay;мс;Максимальная длительность обработки профиля
+#END
+*********************************
+*********************************
+#PARAM_NAME
+ALARM1
+#COMMENT
+Not critical Alarm
+#SEC_LEVEL
+SL(r,r,r,r)
+#OWNER
+1024
+#TYPE
+PR_DYNAMIC_PARAM
+#DATA_TYPE
+BOOL
+#MFLAG
+NONMETER
+#FAILURE_COLOR
+0
+#LANGPACK
+ALARM1;;Некритическая авария устройства
+#END
+*********************************
+*********************************
+#PARAM_NAME
+ALARM2
+#COMMENT
+Critical Alarm
+#SEC_LEVEL
+SL(r,r,r,r)
+#OWNER
+1024
+#TYPE
+PR_DYNAMIC_PARAM
+#DATA_TYPE
+BOOL
+#MFLAG
+NONMETER
+#DEGRADE_COLOR
+0
+#LANGPACK
+ALARM2;;Критическая авария устройства
+#END
+*********************************
+*********************************
+#PARAM_NAME
+BlockColor
+#COMMENT
+Block Color Status
+#SEC_LEVEL
+SL(r,r,r,r)
+#OWNER
+1024
+#TYPE
+PR_DYNAMIC_PARAM
+#DATA_TYPE
+UINTEGER
+#MFLAG
+NONMETER
+#DEGRADE_COLOR
+0
+#FAILURE_COLOR
+0
+#LANGPACK
+BlockColor;;Цвет устройства
+#END
+*********************************
+*********************************
+#PARAM_NAME
+TCase
+#COMMENT
+Case temperature
+#SEC_LEVEL
+SL(r,r,r,r)
+#OWNER
+1024
+#TYPE
+PR_DYNAMIC_PARAM
+#DATA_TYPE
+REAL
+#MFLAG
+PRECISION1|TRP_COLOR|AL12_COLOR
+#UNIT
+°C
+#LANGPACK
+TCase;°C;Температура корпуса блока
+#END
+*********************************
+*********************************
+#PARAM_NAME
+CPUUsage
+#COMMENT
+Computer CPU Usage in %
+#SEC_LEVEL
+SL(r,r,r,r)
+#OWNER
+1024
+#TYPE
+PR_DYNAMIC_PARAM
+#DATA_TYPE
+INTEGER
+#MFLAG
+NONMETER
+#UNIT
+%
+#LANGPACK
+CPUUsage;%;Загруженность ЦП встроенной ЭВМ в %
+#END
+*********************************
+*********************************
+#PARAM_NAME
+MemLoad
+#COMMENT
+Computer Memory Usage in %
+#SEC_LEVEL
+SL(r,r,r,r)
+#OWNER
+1024
+#TYPE
+PR_DYNAMIC_PARAM
+#DATA_TYPE
+INTEGER
+#MFLAG
+NONMETER
+#UNIT
+%
+#LANGPACK
+MemLoad;%;Загруженность ОЗУ встроенной ЭВМ в %
+#END
+*********************************
+*********************************
+#PARAM_NAME
+DiskSpace
+#COMMENT
+Computer Disk Space Usage in %
+#SEC_LEVEL
+SL(r,r,r,r)
+#OWNER
+1024
+#TYPE
+PR_DYNAMIC_PARAM
+#DATA_TYPE
+INTEGER
+#MFLAG
+NONMETER
+#UNIT
+%
+#LANGPACK
+DiskSpace;%;Заполненность ППЗУ встроенной ЭВМ в %
+#END
+*********************************
+*********************************
+#PARAM_NAME
+CMTime
+#COMMENT
+Time of work from switching on
+#SEC_LEVEL
+SL(n,n,r,r)
+#OWNER
+1024
+#TYPE
+PR_DYNAMIC_PARAM
+#DATA_TYPE
+UINTEGER
+#MFLAG
+NONMETER
+#DEGRADE_COLOR
+0
+#FAILURE_COLOR
+0
+#UNIT
+sec
+#LANGPACK
+CMTime;сек;Время с момента включения блока
+#END
+*********************************
+*********************************
+#PARAM_NAME
+VState
+#COMMENT
+Alarm State of Crate
+#SEC_LEVEL
+SL(r,r,r,r)
+#OWNER
+1032
+#TYPE
+PR_DYNAMIC_PARAM
+#DATA_TYPE
+BOOL
+#MFLAG
+NONMETER
+#LANGPACK
+VState;;Состояние крейта
+#END
+*********************************
+*********************************
+#PARAM_NAME
+VPowerReserve
+#COMMENT
+Available power
+#SEC_LEVEL
+SL(r,r,r,r)
+#OWNER
+1024
+#TYPE
+PR_DYNAMIC_PARAM
+#DATA_TYPE
+REAL
+#MFLAG
+PRECISION0
+#UNIT
+W
+#LANGPACK
+VPowerReserve;Вт;Запас мощности в крейте
+#END
+*********************************
+*********************************
+#PARAM_NAME
+VEEPROMState
+#COMMENT
+Crate EEPROM status
+#SEC_LEVEL
+SL(r,r,r,r)
+#OWNER
+1024
+#TYPE
+PR_DYNAMIC_PARAM
+#DATA_TYPE
+BOOL
+#MFLAG
+NONMETER
+#LANGPACK
+VEEPROMState;;Состояние EEPROM крейте
 #END
 *********************************
 *********************************
