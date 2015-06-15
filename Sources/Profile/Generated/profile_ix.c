@@ -410,15 +410,5 @@ PARAM_INDEX param_ix[] = {
 	{&pT403,NULL},
 	{&pT404,NULL},
 	{&pT405,NULL},
-	{&pT406,NULL},
-	{&pT407,NULL},
-	{&pT408,NULL},
-	{&pT409,NULL},
-	{&pT410,NULL},
-	{&pT411,NULL},
-	{&pT412,NULL},
-	{&pT413,NULL},
-	{&pT414,NULL},
-	{&pT415,NULL},
 	{NULL}
 };

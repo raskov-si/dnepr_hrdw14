@@ -1486,7 +1486,7 @@ u32 veepromstate_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 	// BPEEPROM_ERRORNEOUS		//!< ошибки
 
 	pPar->value.U32 = Dnepr_eeprom_GetState() != BPEEPROM_OK ;
-	pPar->par_color = Dnepr_eeprom_GetState() == BPEEPROM_OK ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
+//	pPar->par_color = Dnepr_eeprom_GetState() == BPEEPROM_OK ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
 	pPar->ready = 1 ;
 	return OK ;
 }

@@ -1,4 +1,4 @@
-************** GENERATED 27.05.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
+************** GENERATED 28.05.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
 *********************************
 *********************************
 #PARAM_NAME
@@ -1529,7 +1529,7 @@ PR_DYNAMIC_PARAM
 #DATA_TYPE
 ENUM
 #MFLAG
-GRP_ACCESS
+GRP_ACCESS|TRP_COLOR|AL12_COLOR
 #LANGPACK
 CMOSCAlarm;;Состояние служебного канала (OSC)
 #END
@@ -1569,7 +1569,7 @@ PR_DYNAMIC_PARAM
 #DATA_TYPE
 REAL
 #MFLAG
-TRP_COLOR|AL12_COLOR|PRECISION1
+PRECISION1
 #UNIT
 mA
 #LANGPACK
@@ -1590,7 +1590,7 @@ PR_DYNAMIC_PARAM
 #DATA_TYPE
 REAL
 #MFLAG
-TRP_COLOR|AL12_COLOR|PRECISION1
+PRECISION1
 #UNIT
 mA
 #LANGPACK
@@ -1649,7 +1649,7 @@ PR_DYNAMIC_PARAM
 #DATA_TYPE
 REAL
 #MFLAG
-TRP_COLOR|AL12_COLOR|PRECISION2
+PRECISION2
 #UNIT
 V
 #LANGPACK
@@ -1670,7 +1670,7 @@ PR_DYNAMIC_PARAM
 #DATA_TYPE
 REAL
 #MFLAG
-TRP_COLOR|AL12_COLOR|PRECISION2
+PRECISION2
 #UNIT
 V
 #LANGPACK
@@ -4885,190 +4885,6 @@ PRECISION1|PR_ONLY | EEPROM_PARAM
 °C
 #LANGPACK
 TCaseCMin;°C;Критический минимум для TCase
-#END
-*********************************
-*********************************
-#PARAM_NAME
-V33VCMax
-#COMMENT
-Maximum Limit (Critical) of V33
-#SEC_LEVEL
-SL(r,r,rw,rw)
-#OWNER
-1024
-#TYPE
-PR_STATIC_PARAM
-#DATA_TYPE
-REAL
-#MFLAG
-PRECISION2|PR_ONLY | EEPROM_PARAM
-#VALUE
-3.7
-#UNIT
-V
-#LANGPACK
-V33VCMax;В;Критический максимум для V33
-#END
-*********************************
-*********************************
-#PARAM_NAME
-V33VWMax
-#COMMENT
-Maximum Limit (Warning) of V33
-#SEC_LEVEL
-SL(r,r,rw,rw)
-#OWNER
-1024
-#TYPE
-PR_STATIC_PARAM
-#DATA_TYPE
-REAL
-#MFLAG
-PRECISION2|PR_ONLY | EEPROM_PARAM
-#VALUE
-3.5
-#UNIT
-V
-#LANGPACK
-V33VWMax;В;Верхний порог (предупреждение) для V33
-#END
-*********************************
-*********************************
-#PARAM_NAME
-V33VWMin
-#COMMENT
-Minimum Limit (Warning) of V33
-#SEC_LEVEL
-SL(r,r,rw,rw)
-#OWNER
-1024
-#TYPE
-PR_STATIC_PARAM
-#DATA_TYPE
-REAL
-#MFLAG
-PRECISION2|PR_ONLY | EEPROM_PARAM
-#VALUE
-3.15
-#UNIT
-V
-#LANGPACK
-V33VWMin;В;Нижний порог (предупреждение) для V33
-#END
-*********************************
-*********************************
-#PARAM_NAME
-V33VCMin
-#COMMENT
-Minimum Limit (Critical) of V33
-#SEC_LEVEL
-SL(r,r,rw,rw)
-#OWNER
-1024
-#TYPE
-PR_STATIC_PARAM
-#DATA_TYPE
-REAL
-#MFLAG
-PRECISION2|PR_ONLY | EEPROM_PARAM
-#VALUE
-3
-#UNIT
-V
-#LANGPACK
-V33VCMin;В;Критический минимум для V33
-#END
-*********************************
-*********************************
-#PARAM_NAME
-V12VCMax
-#COMMENT
-Maximum Limit (Critical) of V12
-#SEC_LEVEL
-SL(r,r,rw,rw)
-#OWNER
-1024
-#TYPE
-PR_STATIC_PARAM
-#DATA_TYPE
-REAL
-#MFLAG
-PRECISION2|PR_ONLY | EEPROM_PARAM
-#VALUE
-13
-#UNIT
-V
-#LANGPACK
-V12VCMax;В;Критический максимум для V12
-#END
-*********************************
-*********************************
-#PARAM_NAME
-V12VWMax
-#COMMENT
-Maximum Limit (Warning) of V12
-#SEC_LEVEL
-SL(r,r,rw,rw)
-#OWNER
-1024
-#TYPE
-PR_STATIC_PARAM
-#DATA_TYPE
-REAL
-#MFLAG
-PRECISION2|PR_ONLY | EEPROM_PARAM
-#VALUE
-12.5
-#UNIT
-V
-#LANGPACK
-V12VWMax;В;Верхний порог (предупреждение) для V12
-#END
-*********************************
-*********************************
-#PARAM_NAME
-V12VWMin
-#COMMENT
-Minimum Limit (Warning) of V12
-#SEC_LEVEL
-SL(r,r,rw,rw)
-#OWNER
-1024
-#TYPE
-PR_STATIC_PARAM
-#DATA_TYPE
-REAL
-#MFLAG
-PRECISION2|PR_ONLY | EEPROM_PARAM
-#VALUE
-11.5
-#UNIT
-V
-#LANGPACK
-V12VWMin;В;Нижний порог (предупреждение) для V12
-#END
-*********************************
-*********************************
-#PARAM_NAME
-V12VCMin
-#COMMENT
-Minimum Limit (Critical) of V12
-#SEC_LEVEL
-SL(r,r,rw,rw)
-#OWNER
-1024
-#TYPE
-PR_STATIC_PARAM
-#DATA_TYPE
-REAL
-#MFLAG
-PRECISION2|PR_ONLY | EEPROM_PARAM
-#VALUE
-11
-#UNIT
-V
-#LANGPACK
-V12VCMin;В;Критический минимум для V12
 #END
 *********************************
 *********************************
@@ -8366,40 +8182,6 @@ CHARLINE
 #MFLAG
 NONMETER
 #VALUE
-V33V;V33V;V33VCMax|V33VWMax|V33VWMin|V33VCMin;7|5|4|3|1
-#END
-*********************************
-*********************************
-#PARAM_NAME
-ColorTranslator
-#SEC_LEVEL
-NOT_ACCESSIBLE
-#OWNER
-1024
-#TYPE
-PR_COLORTRANSLATOR
-#DATA_TYPE
-CHARLINE
-#MFLAG
-NONMETER
-#VALUE
-V12V;V12V;V12VCMax|V12VWMax|V12VWMin|V12VCMin;7|5|4|3|1
-#END
-*********************************
-*********************************
-#PARAM_NAME
-ColorTranslator
-#SEC_LEVEL
-NOT_ACCESSIBLE
-#OWNER
-1024
-#TYPE
-PR_COLORTRANSLATOR
-#DATA_TYPE
-CHARLINE
-#MFLAG
-NONMETER
-#VALUE
 CMSFP1Pin;CMSFP1Pin;CMSFP1PinCMax|CMSFP1PinWMax|CMSFP1PinWMin|CMSFP1PinCMin;7|5|4|3|1
 #END
 *********************************
@@ -8434,7 +8216,7 @@ CHARLINE
 #MFLAG
 NONMETER
 #VALUE
-CMSFP1Pout;CMSFP1Pout;CMSFP1PoutCMax|CMSFP1PoutWMax|CMSFP1PoutWMin|CMSFP1PoutCMin;7|5|4|3|1
+CMSFP1Pout;CMSFP1Pout;CMSFP1PoutCMax|CMSFP1PoutWMax|CMSFP1PoutWMin|CMSFP1PoutCMin|CMOSCAlarm;7|5|4|3|1
 #END
 *********************************
 *********************************
@@ -8451,7 +8233,7 @@ CHARLINE
 #MFLAG
 NONMETER
 #VALUE
-CMSFP2Pout;CMSFP2Pout;CMSFP2PoutCMax|CMSFP2PoutWMax|CMSFP2PoutWMin|CMSFP2PoutCMin;7|5|4|3|1
+CMSFP2Pout;CMSFP2Pout;CMSFP2PoutCMax|CMSFP2PoutWMax|CMSFP2PoutWMin|CMSFP2PoutCMin|CMOSCAlarm;7|5|4|3|1
 #END
 *********************************
 *********************************
