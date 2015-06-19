@@ -651,9 +651,10 @@ u8 Dnepr_I2C_Read_ARA()
 	u8 ret ;
 	u8 i ;
 	_BOOL swtch ;
+        
 	T8_Dnepr_TS_I2C_Lock() ;
 	// 5 раза пытаемся включить нужный select
-	for( i = 5 ; i < 3; i++ ){
+	for( i = 0 ; i < 5; i++ ){
 		if( Dnepr_Select( SELECT_SLOT_ALL, &swtch ) ){
 			break ;
 		}
@@ -663,10 +664,17 @@ u8 Dnepr_I2C_Read_ARA()
 	if( swtch ){
 		OSTimeDly( 1 );
 	}
-	if( I2C_Dnepr_CurrentBus() != I2C_DNEPR_PMBUS_EXT )
+	if( I2C_Dnepr_CurrentBus() != I2C_DNEPR_PMBUS_EXT ) {
 		I2C_DNEPR_SelectBus( I2C_DNEPR_PMBUS_EXT );
+        }
 
 	I2C_ReadCommand( 0x18, &ret ) ;
+        
+        for( i = 0 ; i < 5 && swtch; i++ ){
+	    if( Dnepr_Select( SELECT_SLOT_NONE, &swtch ) ){
+	          break ;
+	    }
+	}        
 	T8_Dnepr_TS_I2C_Unlock() ;
 	
 	return ret ;

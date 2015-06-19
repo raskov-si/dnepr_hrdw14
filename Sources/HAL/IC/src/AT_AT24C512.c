@@ -9,8 +9,8 @@
 
 #define AT_AT24C512_I2C_TIMOUTMS     (30)
 
-#define PAGESIZE	32 // размер страницы в EEPROM, 32 чтобы быть совместимыми с microchip 24xx64
-#define PAGEMASK	0xFFFFFFE0 // биты адреса, кратного PAGESIZE
+#define PAGESIZE	32          /* размер страницы в EEPROM, 32 чтобы быть совместимыми с microchip 24xx64 */
+#define PAGEMASK	0xFFFFFFE0  /* биты адреса, кратного PAGESIZE */
 
 #define __read_i2c(p, devAddr,addr,data,len, timeout, times) (p->I2C_ReadMultipleBytes_16( p, devAddr,addr,data,len, timeout, times))
 #define __write_i2c(p, devAddr,addr,data, len, timeout, times) (p->I2C_WriteMultipleBytes_16( p, devAddr,addr,data, len, timeout, times))
