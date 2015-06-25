@@ -848,7 +848,7 @@ u32 slotsstate_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar) {
 
 	if(_pDev_presents){
 		// проходим по всем и складываем в одну переменную
-		slot_present_2_hex = 0 ;
+		slot_present_2_hex = (u32)1 << 31 ;
 		for(i = 0; i < I2C_DNEPR_NUMBER_OF_SLOTS; i++ ){
 			// Если в EEPROM устройства есть дополнительная запись,
 			// в которой указано, что устройство пассивное, -- пропускаем это устройство.
@@ -868,11 +868,13 @@ u32 slotsstate_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar) {
 			}
 		}
 
-		if( Dnepr_Backplane_GetPSU_Status()->tPs1.bSeated == 0 )
-			slot_present_2_hex |= (u32)1 << 30 ;
-		if( Dnepr_Backplane_GetPSU_Status()->tPs2.bSeated == 0 )
-			slot_present_2_hex |= (u32)1 << 31 ;
-
+//		if( Dnepr_Backplane_GetPSU_Status()->tPs1.bSeated == 0 ) {                 
+//			slot_present_2_hex |= (u32)1 << 30 ;
+//                }
+//		if( Dnepr_Backplane_GetPSU_Status()->tPs2.bSeated == 0 ) {
+//			slot_present_2_hex |= (u32)1 << 31 ;
+//                }
+                
 		pPar->value.U32 = slot_present_2_hex ;
 		pPar->ready = 1 ;
 	} else 

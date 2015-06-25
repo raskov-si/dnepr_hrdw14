@@ -16,6 +16,11 @@ u32  VLAN_PortModeSet(   const u8 pcbDevAddr, const size_t port_num,
                                                 VLAN_ID_t defvid, VLAN_ID_t *vids_arr, const size_t vids_arr_len,
                                                 const VLAN_PortMode_t mode, u8 secure_flag );
 u32  VLAN_TrunkPortUntSet (const u8 pcbDevAddr, const size_t port_num, VLAN_ID_t defvid );
+void VLAN_RemoveAllVIDs( const u8 pcbDevAddr) ;
+void VLAN_PortDefVIDClear( const u8 pcbDevAddr, const size_t port_num );
+u32   VLAN_PortModeReset( const u8 pcbDevAddr, const size_t port_num);
+
+
 
 
 
@@ -50,8 +55,10 @@ u32 Dnepr_Ethernet_Init( const u8* maddr )
 	MV88E6095_multichip_smi_write( MV88E6095_2_CHIPADDR, MV88E6095_PORT8, MV88E6095_PCS_CTRL_REG, usBuffer  );
 
 	// Инициализируем MAC
-	if( !maddr )
-		goto _err ;
+	if( !maddr ) {
+	    return ERROR ;
+        }
+        
 	for(i=0;i<3;i++){
 		usBuffer = ((u16)(maddr[i*2]) << 8) | (u16)maddr[i*2+1];
 		MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR,  MV88E6095_GLOBAL, (u8)(i+1), (u16)usBuffer );
@@ -61,13 +68,14 @@ u32 Dnepr_Ethernet_Init( const u8* maddr )
 			MV88E6095_multichip_smi_write( MV88E6095_1_CHIPADDR,  MV88E6095_GLOBAL, (u8)(i+1), (u16)usBuffer );
 	}
         
+        
         /* инициализируем VLAN  */
         VLAN_AddVID( MV88E6095_1_CHIPADDR, EXTRN_VLAN );
         VLAN_AddVID( MV88E6095_2_CHIPADDR, EXTRN_VLAN );
         VLAN_AddVID( MV88E6095_1_CHIPADDR, SHELF_VLAN );
         VLAN_AddVID( MV88E6095_2_CHIPADDR, SHELF_VLAN );
 
-                                                        /* trunk порты между чипами */
+        /* trunk порты между чипами */
         VLAN_PortDefVIDSet( MV88E6095_1_CHIPADDR, EXTRN_VLAN, 8 );
         VLAN_PortModeSet( MV88E6095_1_CHIPADDR, 8, EXTRN_VLAN, &cpu_port_vids[0], 2, VLAN_PORTMODE_TRUNK, 1);
         VLAN_PortDefVIDSet( MV88E6095_2_CHIPADDR, EXTRN_VLAN, 8 );
@@ -120,7 +128,7 @@ u32 Dnepr_Ethernet_Init( const u8* maddr )
         VLAN_PortModeSet( MV88E6095_2_CHIPADDR, 7, SHELF_VLAN, &cpu_port_vids[1], 1, VLAN_PORTMODE_ACCESS, 1);
                 
         
-        /* VID 100 - c внешним миром и CPU */              
+        /* VID 1 - c внешним миром и CPU */              
                                                         /*  8P8C совмещенный с USB   */
         VLAN_PortDefVIDSet( MV88E6095_2_CHIPADDR, EXTRN_VLAN, 2 );
         VLAN_PortModeSet( MV88E6095_2_CHIPADDR, 2, EXTRN_VLAN, cpu_port_vids, 1, VLAN_PORTMODE_ACCESS, 1);          
@@ -142,10 +150,92 @@ u32 Dnepr_Ethernet_Init( const u8* maddr )
         
 
 	return OK ; 
-
-_err:
-	return ERROR ;
 }
+
+
+
+u32 Dnepr_Ethernet_Reset( void )
+{
+    /* set ports mode general */
+    //MV88E6095_1_CHIPADDR, MV88E6095_PORT10    /*  CPU */
+    VLAN_PortDefVIDClear( MV88E6095_1_CHIPADDR, 10 );
+    VLAN_PortModeReset( MV88E6095_1_CHIPADDR, 10);
+
+        /* VID 10  - между слотами и CPU */
+    VLAN_PortDefVIDClear( MV88E6095_1_CHIPADDR, 0 );
+    VLAN_PortModeReset( MV88E6095_1_CHIPADDR, 0 );
+        
+    VLAN_PortDefVIDClear( MV88E6095_1_CHIPADDR, 1 );
+    VLAN_PortModeReset( MV88E6095_1_CHIPADDR, 1);
+        
+    VLAN_PortDefVIDClear( MV88E6095_1_CHIPADDR, 2 );
+    VLAN_PortModeReset( MV88E6095_1_CHIPADDR, 2 );
+        
+    VLAN_PortDefVIDClear( MV88E6095_1_CHIPADDR, 3 );
+    VLAN_PortModeReset( MV88E6095_1_CHIPADDR, 3 );
+        
+    VLAN_PortDefVIDClear( MV88E6095_1_CHIPADDR, 4 );
+    VLAN_PortModeReset( MV88E6095_1_CHIPADDR, 4 );
+        
+    VLAN_PortDefVIDClear( MV88E6095_1_CHIPADDR, 5 );
+    VLAN_PortModeReset( MV88E6095_1_CHIPADDR, 5 );
+        
+    VLAN_PortDefVIDClear( MV88E6095_1_CHIPADDR, 6 );
+    VLAN_PortModeReset( MV88E6095_1_CHIPADDR, 6 );
+        
+    VLAN_PortDefVIDClear( MV88E6095_1_CHIPADDR, 7 );
+    VLAN_PortModeReset( MV88E6095_1_CHIPADDR, 7 );
+                 
+    VLAN_PortDefVIDClear( MV88E6095_2_CHIPADDR, 3 );
+    VLAN_PortModeReset( MV88E6095_2_CHIPADDR, 3 );
+        
+    VLAN_PortDefVIDClear( MV88E6095_2_CHIPADDR, 4 );
+    VLAN_PortModeReset( MV88E6095_2_CHIPADDR, 4 );
+        
+    VLAN_PortDefVIDClear( MV88E6095_2_CHIPADDR, 5 );
+    VLAN_PortModeReset( MV88E6095_2_CHIPADDR, 5 );
+        
+    VLAN_PortDefVIDClear( MV88E6095_2_CHIPADDR, 6 );
+    VLAN_PortModeReset( MV88E6095_2_CHIPADDR, 6 );
+        
+    VLAN_PortDefVIDClear( MV88E6095_2_CHIPADDR, 7 );
+    VLAN_PortModeReset( MV88E6095_2_CHIPADDR, 7 );
+
+
+    /* VID 1 - c внешним миром и CPU */              
+                                                        /*  8P8C совмещенный с USB   */
+    VLAN_PortDefVIDClear( MV88E6095_2_CHIPADDR, 2 );
+    VLAN_PortModeReset( MV88E6095_2_CHIPADDR, 2);          
+          
+//        MV88E6095_2_CHIPADDR,    MV88E6095_PORT0  /*  8P8C    */
+//        MV88E6095_2_CHIPADDR,    MV88E6095_PORT1  /*  8P8C    */
+   VLAN_PortDefVIDClear( MV88E6095_2_CHIPADDR, 0 );
+   VLAN_PortModeReset( MV88E6095_2_CHIPADDR, 0 );
+   VLAN_PortDefVIDClear( MV88E6095_2_CHIPADDR, 1 );
+   VLAN_PortModeReset( MV88E6095_2_CHIPADDR, 1 );
+        
+//        MV88E6095_2_CHIPADDR,    MV88E6095_PORT10 /* sfp1 - нижняя  L port10  */
+   VLAN_PortDefVIDClear( MV88E6095_2_CHIPADDR, 10 );
+   VLAN_PortModeReset( MV88E6095_2_CHIPADDR, 10 );
+                
+//        MV88E6095_2_CHIPADDR,    MV88E6095_PORT9  /* sfp2 - верхняя U port9   */
+   VLAN_PortDefVIDClear( MV88E6095_2_CHIPADDR, 9 );
+   VLAN_PortModeReset( MV88E6095_2_CHIPADDR, 9 );    
+        
+   /* trunk порты между чипами */
+   VLAN_PortDefVIDClear( MV88E6095_1_CHIPADDR, 8 );
+   VLAN_PortModeReset  ( MV88E6095_1_CHIPADDR, 8 );
+   VLAN_PortDefVIDClear( MV88E6095_2_CHIPADDR, 8 );
+   VLAN_PortModeReset  ( MV88E6095_2_CHIPADDR, 8 );
+        
+   /* remove vlan table */
+   VLAN_RemoveAllVIDs(MV88E6095_2_CHIPADDR);
+   VLAN_RemoveAllVIDs(MV88E6095_1_CHIPADDR);
+           
+    
+   return OK ; 
+}
+
 
 /*=============================================================================================================*/
 /*!  \brief Управляем режимом автоопределения типа сети auto-negotiation для SFP
@@ -304,11 +394,49 @@ void VLAN_AddVID( const u8 pcbDevAddr, const VLAN_ID_t vid )
         MV88E6095_AddVTUEntry( pcbDevAddr,      vid,    0,      &stats  );
 }
 
+
+void VLAN_RemoveVID( const u8 pcbDevAddr, const VLAN_ID_t vid )
+{
+        MV88E6095_Ports_VLAN_Status_t stats = (MV88E6095_Ports_VLAN_Status_t){
+                                                        VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+                                                        VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+                                                        VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+                                                        VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+                                                        VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+                                                        VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+                                                        VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+                                                        VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+                                                        VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+                                                        VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING,
+                                                        VTU_PORT_NOTMEMBER, VTU_PORT_FORWARDING };
+
+        if( (vid < 1) || (vid > 4095) )
+                return ;
+
+        //      Параметры                                       vid             dbnum   MV88E6095_Ports_VLAN_Status_t*
+        MV88E6095_AddVTUEntry( pcbDevAddr,      vid,    0,      &stats  );
+}
+
+
+
+void VLAN_RemoveAllVIDs( const u8 pcbDevAddr ) {
+    mv88E6095_flush_all_entrys(pcbDevAddr);
+}
+
+
+
 void VLAN_PortDefVIDSet( const u8 pcbDevAddr, const VLAN_ID_t vid, const size_t port_num )
 {
         //                                                                              port_index      force_def_vid   VID
-        MV88E6095_PortDefaultVID(       pcbDevAddr,     port_num,       0,                              vid );
+    MV88E6095_PortDefaultVID(       pcbDevAddr,     port_num,       0,                              vid );
 }
+
+
+void VLAN_PortDefVIDClear( const u8 pcbDevAddr, const size_t port_num )
+{
+    MV88E6095_PortResetDefaultVID( pcbDevAddr, port_num);
+}
+
 
 
 void __change_port_state( MV88E6095_Ports_VLAN_Status_t* stats, const size_t port_num,
@@ -408,6 +536,16 @@ u32 VLAN_PortModeSet(   const u8 pcbDevAddr, const size_t port_num,
 
         return OK ;
 }
+
+
+
+u32 VLAN_PortModeReset( const u8 pcbDevAddr, const size_t port_num)
+{
+    MV88E6095_Reset_Port8021Q_state (pcbDevAddr, port_num);
+    return OK ;    
+}
+
+
 
 u32  VLAN_TrunkPortUntSet (const u8 pcbDevAddr, const size_t port_num, VLAN_ID_t defvid )
 {

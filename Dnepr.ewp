@@ -1443,7 +1443,7 @@
       <archiveVersion>1</archiveVersion>
       <data>
         <prebuild>$PROJ_DIR$\Sources\scripts\prebuild.bat $PROJ_DIR$</prebuild>
-        <postbuild>python.exe $PROJ_DIR$\Sources\scripts\release_postbuild.py -v $PROJ_DIR$\Sources\Profile\Generated\value.c -c DNEP0020 -i $PROJ_DIR$\Release\Exe\Dnepr.s19</postbuild>
+        <postbuild>$PROJ_DIR$\Sources\scripts\postbuild.bat $PROJ_DIR$</postbuild>
       </data>
     </settings>
     <settings>
@@ -1637,7 +1637,7 @@
         </option>
         <option>
           <name>XExtraOutOverride</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>ExtraOutputFile</name>
@@ -1646,7 +1646,7 @@
         <option>
           <name>ExtraOutputFormat</name>
           <version>11</version>
-          <state>23</state>
+          <state>28</state>
         </option>
         <option>
           <name>ExtraFormatVariant</name>

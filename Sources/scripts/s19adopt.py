@@ -74,7 +74,11 @@ str = "{0:0=4X}".format( N )
 str = HexLen( str ) + str
 str = str + CalcSum( str )
 
-in_lines_list.insert(-1, "S5{0}\n".format( str ))
+#in_lines_list.insert(-1, "S5{0}\n".format( str ))
+#in_lines_list.append("S70500002C18B6")
+
+
+
 
 ########################################################################################################################
 

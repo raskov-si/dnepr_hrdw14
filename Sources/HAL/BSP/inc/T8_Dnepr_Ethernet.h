@@ -28,3 +28,5 @@ _BOOL dnepr_ethernet_get_GEport_link_status
 ( 
     u8      num                               /*!< [in] номер GE 1,2                                   */
 );
+
+u32 Dnepr_Ethernet_Reset( void );

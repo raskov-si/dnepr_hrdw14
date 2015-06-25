@@ -130,12 +130,16 @@
 #define MV88E6095_PORT_FORWARDING	0x3
 
 
+/* global conrol register */
+#define MV88E6095_GLOBAL_CONTROL            0x04
+  #define GLOBAL_CONTROL_SWRESET                (1 << 15)
+
 //! VTU VID Register
-#define MV88E6095_VTU_VID                               0x06
+#define MV88E6095_VTU_VID                   0x06
 #define VTU_VID_VALID                                   0x1000
 #define VTU_VID(x)                                      (x & 0x0FFF)
-#define VTU_OP_LOAD                                     0x3000
-#define VTU_BUSY                                        0x8000
+//#define VTU_OP_LOAD                                     0x3000
+//#define VTU_BUSY                                        0x8000
 #define MV88E6095_VTU_OPERATION                         0x05
 #define VTU_DBNUM(x)                                    (((x & 0xF0) << 4) | (x & 0x0F))
 
@@ -168,9 +172,13 @@
 #define FORCE_DEF_VID                           0x1000
 #define DEF_VID(x)                              (x & 0x0FFF)
 #define VTU_BUSY                                0x8000
+
+#define VTU_NO_OP                               0x0000
 #define VTU_OP_FLUSH                            0x1000
-#define VTU_OP_LOAD                             0x3000
+#define VTU_OP_LOAD_OR_PURGE                    0x3000
 #define VTU_OP_NEXT                             0x4000
+#define VTU_OP_GET_CLEAR_VIOLDATA               0x7000
+
 #define VLAN_MODE(x)                            ((x & 3) << 10)
 
 //! Режимы работы порта
@@ -332,10 +340,15 @@ typedef struct {
 
 
 void MV88E6095_AddVTUEntry(   const u8 pcbDevAddr, const u16 vid, const u8 dbnum, const MV88E6095_Ports_VLAN_Status_t* stats );
+void mv88E6095_purge_vtu_entry(  const u8 pcbDevAddr, const u16 vid, const u8 dbnum, const MV88E6095_Ports_VLAN_Status_t* stats );
+void mv88E6095_flush_all_entrys(  const u8 pcbDevAddr );
+void MV88E6095_PortResetDefaultVID( const u8 pcbDevAddr,  const u8 port_index );
+
+
 u32 MV88E6095_ReadVTUEntry(   const u8 pcbDevAddr, const u16 vid, u8 *dbnum, MV88E6095_Ports_VLAN_Status_t* stats );
 u8 MV88E6095_NextVTUEntry( const u8 pcbDevAddr, u16 prevvid, u16 *nextvid);
 void MV88E6095_PortDefaultVID( const u8 pcbDevAddr,  const u8 port_index, const u8 force_def_vid, const u16 VID );
 void MV88E6095_Change_Port8021Q_state( const u8 pcbDevAddr,  const u8 port_index, const Port8021QState state );
-
+void MV88E6095_Reset_Port8021Q_state( const u8 pcbDevAddr,  const u8 port_index );
 
 #endif /* MARAVELL_88E6095_H_ */

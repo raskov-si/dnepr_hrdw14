@@ -14,6 +14,7 @@
 #include "Profile/inc/pr_ch.h"
 #include "Storage/inc/eeprom_storage.h"
 #include "HAL/BSP/inc/T8_Dnepr_BPEEPROM.h"
+#include "HAL/BSP/inc/T8_Dnepr_Ethernet.h"
 #include "HAL/BSP/inc/T8_Dnepr_Uart_Profile.h"
 #include "HAL/MCU/inc/T8_5282_cfm.h"
 #include <stdio.h>
@@ -560,8 +561,10 @@ ReturnStatus Profile_message_processing(const s8 * recv_buff_,
 		pL = strchr((char*)recv_buff_+2,0x0d);
 		if (pL){
 			*pL = 0;
-			if(0 == strcmp((char*)recv_buff_+2,"ResetMcu_ucMteseR"))
-				MCF_RCM_RCR = MCF_RCM_RCR_SOFTRST ;	//soft reset				
+			if( 0 == strcmp((char*)recv_buff_+2,"ResetMcu_ucMteseR") ) {
+                            (void)Dnepr_Ethernet_Reset();       /* switch reset */   
+		            MCF_RCM_RCR = MCF_RCM_RCR_SOFTRST ;	/* soft reset */
+                        }				
 		}
 		flag = parameter_undefined(recv_buff_+1, answer_);
 		break;
@@ -577,6 +580,7 @@ ReturnStatus Profile_message_processing(const s8 * recv_buff_,
 		}	
 		vP = (ldrEntry)pFlash[1];
 		if((u32)vP > 0 && (u32)vP < 0x00080000UL && (((u32)vP & 0x00000003UL) == 0UL)	){
+                        (void)Dnepr_Ethernet_Reset();       /* switch reset */       
 			__disable_interrupts() ;
 			vP(0,BACKPLANE_UART);//call (void)T8Loader(u32,u32)
 		}

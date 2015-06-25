@@ -226,8 +226,9 @@ void MV88E6095_AddVTUEntry(   const u8 pcbDevAddr, const u16 vid, const u8 dbnum
 {
         u16 mv_data;
 
-        if( !stats )
+        if( !stats ) {
                 return ;
+        }
 
         mv_data = VTU_VID_VALID | VTU_VID(vid) ;
         MV88E6095_multichip_smi_write( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_VID, mv_data );
@@ -250,7 +251,7 @@ void MV88E6095_AddVTUEntry(   const u8 pcbDevAddr, const u16 vid, const u8 dbnum
         MV88E6095_multichip_smi_write( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_DATA810, mv_data );
 
 
-        mv_data = VTU_OP_LOAD | VTU_DBNUM(dbnum) | VTU_BUSY;
+        mv_data = VTU_OP_LOAD_OR_PURGE | VTU_DBNUM(dbnum) | VTU_BUSY;
         MV88E6095_multichip_smi_write( pcbDevAddr, MV88E6095_GLOBAL, MV88E6095_VTU_OPERATION, mv_data );
         // ждём готовность
         do{ 
@@ -260,23 +261,89 @@ void MV88E6095_AddVTUEntry(   const u8 pcbDevAddr, const u16 vid, const u8 dbnum
 }
 
 
+void mv88E6095_purge_vtu_entry(  const u8 pcbDevAddr, const u16 vid, const u8 dbnum, const MV88E6095_Ports_VLAN_Status_t* stats )
+{
+    u16   mv_data;
+
+    if( !stats ) {
+        return ;
+    }
+
+    mv_data = VTU_VID(vid) ; /* no valid bit */
+    MV88E6095_multichip_smi_write( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_VID, mv_data );
+        
+           
+    mv_data =       VTU_PORT0( stats->port0_tag, stats->port0_state ) | 
+                           VTU_PORT1( stats->port1_tag, stats->port1_state ) | 
+                           VTU_PORT2( stats->port2_tag, stats->port2_state ) | 
+                           VTU_PORT3( stats->port3_tag, stats->port3_state ) ;
+    MV88E6095_multichip_smi_write( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_DATA03, mv_data );
+
+    mv_data =       VTU_PORT4( stats->port4_tag, stats->port4_state ) | 
+                           VTU_PORT5( stats->port5_tag, stats->port5_state ) | 
+                           VTU_PORT6( stats->port6_tag, stats->port6_state ) | 
+                           VTU_PORT7( stats->port7_tag, stats->port7_state ) ;
+    MV88E6095_multichip_smi_write( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_DATA47, mv_data );
+
+    mv_data =       VTU_PORT8( stats->port8_tag, stats->port8_state ) | 
+                           VTU_PORT9( stats->port9_tag, stats->port9_state ) | 
+                           VTU_PORT10( stats->port10_tag, stats->port10_state ) ;
+    MV88E6095_multichip_smi_write( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_DATA810, mv_data );
+
+    mv_data = VTU_OP_LOAD_OR_PURGE | VTU_DBNUM(dbnum) | VTU_BUSY;
+    MV88E6095_multichip_smi_write( pcbDevAddr, MV88E6095_GLOBAL, MV88E6095_VTU_OPERATION, mv_data );
+    // ждём готовность
+    do{ 
+        HWait(20);
+        MV88E6095_multichip_smi_read( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_OPERATION, &mv_data );
+    } while( mv_data & VTU_BUSY );
+    
+}
+
+void mv88E6095_flush_all_entrys(  const u8 pcbDevAddr )
+{
+    u16 mv_data = VTU_OP_FLUSH | VTU_BUSY;
+    MV88E6095_multichip_smi_write( pcbDevAddr, MV88E6095_GLOBAL, MV88E6095_VTU_OPERATION, mv_data );
+    // ждём готовность
+    do{ 
+        HWait(20);
+        MV88E6095_multichip_smi_read( pcbDevAddr,  MV88E6095_GLOBAL, MV88E6095_VTU_OPERATION, &mv_data );
+    } while( mv_data & VTU_BUSY );
+}
+
+
+
+
 //! Устанавливает умолчальный номер VLAN'а для порта
 //! \param port_index номер порта
 //! \param VID VLAN ID
 void MV88E6095_PortDefaultVID( const u8 pcbDevAddr,  const u8 port_index, const u8 force_def_vid, 
                                                                 const u16 VID )
 {
-        u16 mv_data ;
-        u32 dev_addr;
-        dev_addr = 0x10 | port_index;
+    u16   mv_data ;
+    u32   dev_addr = 0x10 | port_index;
         
-        MV88E6095_multichip_smi_read( pcbDevAddr,  dev_addr, MV88E6095_PORT_DEFVLANID, &mv_data );
-        mv_data &= ~( FORCE_DEF_VID | 0x0FFF );
-        if( force_def_vid > 0 )
+    MV88E6095_multichip_smi_read( pcbDevAddr,  dev_addr, MV88E6095_PORT_DEFVLANID, &mv_data );
+    mv_data &= ~( FORCE_DEF_VID | 0x0FFF );
+    if( force_def_vid > 0 ) {
                 mv_data |= FORCE_DEF_VID ;
-        mv_data |= DEF_VID( VID );
-        MV88E6095_multichip_smi_write( pcbDevAddr, dev_addr, MV88E6095_PORT_DEFVLANID, mv_data );       
+    }
+    mv_data |= DEF_VID( VID );
+    MV88E6095_multichip_smi_write( pcbDevAddr, dev_addr, MV88E6095_PORT_DEFVLANID, mv_data );       
 }
+
+
+void MV88E6095_PortResetDefaultVID( const u8 pcbDevAddr,  const u8 port_index )
+{
+    u16 mv_data;
+    u32 dev_addr;
+        
+    dev_addr = 0x10 | port_index;        
+    mv_data = FORCE_DEF_VID | 0x01 ;
+    MV88E6095_multichip_smi_write( pcbDevAddr, dev_addr, MV88E6095_PORT_DEFVLANID, mv_data );       
+}
+
+
 
 
 void MV88E6095_Change_Port8021Q_state( const u8 pcbDevAddr,  const u8 port_index, const Port8021QState state )
@@ -290,6 +357,18 @@ void MV88E6095_Change_Port8021Q_state( const u8 pcbDevAddr,  const u8 port_index
         mv_data |= VLAN_MODE( (u8)state );
         MV88E6095_multichip_smi_write( pcbDevAddr, dev_addr, MV88E6095_PORT_CTRL2_REG, mv_data );
 }
+
+
+void MV88E6095_Reset_Port8021Q_state( const u8 pcbDevAddr,  const u8 port_index )
+{
+      u16 mv_data = 0x0060 ;
+      u32 dev_addr = 0x10 | port_index;
+      
+      MV88E6095_multichip_smi_write( pcbDevAddr, dev_addr, MV88E6095_PORT_CTRL2_REG, mv_data );  
+}
+
+
+
 
 //! Читает запись в VTU с соотв. VLAN ID
 //! \param vid          VLAN ID
