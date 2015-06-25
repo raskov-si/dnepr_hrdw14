@@ -1,2 +1,2 @@
-const char sVerion[] = "*vlan:25918e25f6";
-const char sCompileDate[] = "2015-06-24 12:24:47.424000";
+const char sVerion[] = "*testing:9fcfcd2e34";
+const char sCompileDate[] = "2015-06-25 11:35:24.429000";
