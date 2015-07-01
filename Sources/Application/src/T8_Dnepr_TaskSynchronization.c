@@ -37,7 +37,8 @@ void T8_Dnepr_TS_Init()
 	__ffs_mutex = OSMutexCreate( ffs_mutex_PRIO, &return_code );
 	assert( return_code == OS_ERR_NONE );
         
-	smi_mutex = OSMutexCreate( SMI_MUTEX_PRIO, &return_code );
+//	smi_mutex = OSMutexCreate( SMI_MUTEX_PRIO, &return_code );
+        smi_mutex = OSSemCreate (1);
 	assert( return_code == OS_ERR_NONE );
         
 }
@@ -97,14 +98,16 @@ void t8_dnepr_ts_smi_lock(void)
     INT8U return_code = OS_ERR_NONE;
     
     assert( smi_mutex );
-    OSMutexPend( smi_mutex, 0, &return_code );
+//    OSMutexPend( smi_mutex, 0, &return_code );
+    OSSemPend( smi_mutex, 0, &return_code );
     assert( return_code == OS_ERR_NONE );
 }
 
 void t8_dnepr_ts_smi_unlock(void)
 {
     assert( smi_mutex );
-    OSMutexPost( smi_mutex );
+//    OSMutexPost( smi_mutex );
+    OSSemPost( smi_mutex );
 }
 
 /*------------------------------------------------------------------------------------------------------------------*/

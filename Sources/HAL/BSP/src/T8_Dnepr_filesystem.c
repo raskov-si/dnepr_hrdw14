@@ -160,7 +160,9 @@ void Dnepr_filesystem_Init(void)
 	// while(TRUE);
 
 	// yaffs_format( DNEPR_FLASH_ROOT, 0, 0, 1 );
-	if( yaffs_mount( DNEPR_FLASH_ROOT ) < 0 ){
+        
+	if( yaffs_mount( DNEPR_FLASH_ROOT ) < 0 )
+        {
 		yaffs_format( DNEPR_FLASH_ROOT, 0, 0, 1 );
 	}
 	// i = 0 ;

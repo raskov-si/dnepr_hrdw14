@@ -1,4 +1,4 @@
-************** GENERATED 25.06.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
+************** GENERATED 01.07.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
 *********************************
 *********************************
 #PARAM_NAME
@@ -119,7 +119,7 @@ CHARLINE
 #MFLAG
 PR_ONLY
 #VALUE
-3.3.23
+3.3.24
 #DATA_LENGTH
 32
 #LANGPACK
@@ -5622,6 +5622,8 @@ CHARLINE
 NONMETER
 #VALUE
 [100]
+#LANGPACK
+[100]
 #END
 *********************************
 *********************************
@@ -5765,6 +5767,8 @@ CHARLINE
 NONMETER
 #VALUE
 [101]
+#LANGPACK
+[101]
 #END
 *********************************
 *********************************
@@ -5842,7 +5846,7 @@ LocalSubnet
 #COMMENT
 Local Crate Subnet
 #SEC_LEVEL
-SL(n,rw,rw,rw)
+SL(n,n,rw,rw)
 #OWNER
 1024
 #TYPE
@@ -6127,6 +6131,8 @@ CHARLINE
 NONMETER
 #VALUE
 [102]
+#LANGPACK
+[102]
 #END
 *********************************
 *********************************
@@ -6135,7 +6141,7 @@ DisableTraps
 #COMMENT
 Enable/Disable send traps to SNMP server(s)
 #SEC_LEVEL
-SL(n,n,n,rw)
+SL(n,n,n,r)
 #OWNER
 1024
 #TYPE
@@ -6146,6 +6152,8 @@ UINTEGER
 PR_ONLY | EEPROM_PARAM
 #VALUE
 0
+#LANGPACK
+DisableTraps;;Ѕитовые маски trap-сообщений
 #END
 *********************************
 *********************************
@@ -6163,13 +6171,15 @@ CHARLINE
 NONMETER
 #VALUE
 [200]
+#LANGPACK
+[200]
 #END
 *********************************
 *********************************
 #PARAM_NAME
 Slot1
 #COMMENT
-Device Address
+Slot 1 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6182,14 +6192,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot1;;ƒополнительна€ запись в EEPROM слотового устройства 1
 #END
-Slot1;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot2
 #COMMENT
-Device Address
+Slot 2 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6202,14 +6213,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot2;;ƒополнительна€ запись в EEPROM слотового устройства 2
 #END
-Slot2;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot3
 #COMMENT
-Device Address
+Slot 3 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6222,14 +6234,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot3;;ƒополнительна€ запись в EEPROM слотового устройства 3
 #END
-Slot3;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot4
 #COMMENT
-Device Address
+Slot 4 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6242,14 +6255,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot4;;ƒополнительна€ запись в EEPROM слотового устройства 4
 #END
-Slot4;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot5
 #COMMENT
-Device Address
+Slot 5 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6262,14 +6276,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot5;;ƒополнительна€ запись в EEPROM слотового устройства 5
 #END
-Slot5;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot6
 #COMMENT
-Device Address
+Slot 6 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6282,14 +6297,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot6;;ƒополнительна€ запись в EEPROM слотового устройства 6
 #END
-Slot6;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot7
 #COMMENT
-Device Address
+Slot 7 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6302,14 +6318,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot7;;ƒополнительна€ запись в EEPROM слотового устройства 7
 #END
-Slot7;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot8
 #COMMENT
-Device Address
+Slot 8 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6322,14 +6339,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot8;;ƒополнительна€ запись в EEPROM слотового устройства 8
 #END
-Slot8;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot9
 #COMMENT
-Device Address
+Slot 9 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6342,14 +6360,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot9;;ƒополнительна€ запись в EEPROM слотового устройства 9
 #END
-Slot9;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot10
 #COMMENT
-Device Address
+Slot 10 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6362,14 +6381,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot10;;ƒополнительна€ запись в EEPROM слотового устройства 10
 #END
-Slot10;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot11
 #COMMENT
-Device Address
+Slot 11 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6382,14 +6402,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot11;;ƒополнительна€ запись в EEPROM слотового устройства 11
 #END
-Slot11;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot12
 #COMMENT
-Device Address
+Slot 12 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6402,14 +6423,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot12;;ƒополнительна€ запись в EEPROM слотового устройства 12
 #END
-Slot12;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot13
 #COMMENT
-Device Address
+Slot 13 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6422,14 +6444,15 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot13;;ƒополнительна€ запись в EEPROM слотового устройства 13
 #END
-Slot13;; 
 *********************************
 *********************************
 #PARAM_NAME
 Slot14
 #COMMENT
-Device Address
+Slot 14 Optional EEPROM Record
 #SEC_LEVEL
 SL(n,n,n,rw)
 #OWNER
@@ -6442,8 +6465,9 @@ CHARLINE
 GRP_ACCESS
 #VALUE
 0
+#LANGPACK
+Slot14;;ƒополнительна€ запись в EEPROM слотового устройства 14
 #END
-Slot14;; 
 *********************************
 *********************************
 #PARAM_NAME
