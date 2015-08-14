@@ -45,11 +45,22 @@
 u32		app_init(void);
 void	app_service(void);
 
+struct __OSC_ALARM_SIGNALS 
+{
+    _BOOL  sfp1_pres;
+    _BOOL  sfp2_pres;
+    _BOOL  ge1_link;
+    _BOOL  ge2_link;    
+};
+
+
 // настройки вкл/выкл SFP из Profile/Generated/value.c
 extern u32 val_CMSFP1TxEnable; // L - нижний
 extern u32 val_CMSFP2TxEnable ; // U - верхний
 extern u32 val_CMSFP1AutoNeg; // L - нижний
 extern u32 val_CMSFP2AutoNeg ; // U - верхний
+
+
 
 
 // предельные значения оборотов вентиляторов по умолчанию
@@ -94,6 +105,23 @@ static struct
   _BOOL    changed_flag;        /*!< флаг о том что параметры изменились    */
 } autoneg_state_now[2] = {0};
 
+const struct __OSC_ALARM_LOGIC
+{
+  struct __OSC_ALARM_SIGNALS  signals;
+  uint32_t                    state;
+  uint32_t                    color;    
+} osc_alarm_logic[] = 
+{
+  {{0, 0, 0, 0}, 0, SYS_NORMAL_COLOR    },
+  {{1, 0, 0, 0}, 2, SYS_CRITICAL_COLOR  },
+  {{0, 1, 0, 0}, 2, SYS_CRITICAL_COLOR  },
+  {{1, 1, 0, 0}, 2, SYS_CRITICAL_COLOR  },
+  {{1, 0, 1, 0}, 0, SYS_NORMAL_COLOR    },
+  {{0, 1, 0, 1}, 0, SYS_NORMAL_COLOR    },
+  {{1, 1, 1, 0}, 1, SYS_MINOR_COLOR     },
+  {{1, 1, 0, 1}, 1, SYS_MINOR_COLOR     },
+  {{1, 1, 1, 1}, 0, SYS_NORMAL_COLOR    },  
+};
 
 //! устанавливается в соотв. со считанным регистром 92 по адресу A0h из sfp
 static SFP_DDM_COMPLIANCE __sfp1_ddm_compliance = DDM_COMPLIANCE_NO_ANSWER ;
@@ -1103,36 +1131,46 @@ u32 cmsfppin_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar) {
 }
 
 
+
 u32 cmoscalarm_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar) 
 {
+    struct __OSC_ALARM_SIGNALS  crntsignal;
+    int                         i;
+    
+    crntsignal.sfp1_pres = _pDev_presents->bSfpPresent[I2C_DNEPR_SFP_L_INDEX];
+    crntsignal.sfp2_pres = _pDev_presents->bSfpPresent[I2C_DNEPR_SFP_U_INDEX];     
+    crntsignal.ge1_link  = _stwichport_state[3];
+    crntsignal.ge2_link  = _stwichport_state[4];
+    
+    for(i = 0; i < sizeof osc_alarm_logic / sizeof osc_alarm_logic[0]; i++ ) {
+      if (    crntsignal.sfp1_pres == osc_alarm_logic[i].signals.sfp1_pres
+          &&  crntsignal.sfp2_pres == osc_alarm_logic[i].signals.sfp2_pres
+          &&  crntsignal.ge1_link  == osc_alarm_logic[i].signals.ge1_link
+          &&  crntsignal.ge2_link  == osc_alarm_logic[i].signals.ge2_link
+          )
+      {
+        pPar->value.U32 = osc_alarm_logic[i].state;
+        pPar->par_color = osc_alarm_logic[i].color;
+        pPar->ready = 1;
+        break;
+      }
+    }
+    
+    if ( i == sizeof osc_alarm_logic / sizeof osc_alarm_logic[0] ) {
+        pPar->ready = 0;      
+    }
   
-//  CMOSCAlarm;Norm@0|Warning@1|Failure@2
-//    if ( (sfp1_pin_color == SYS_NORMAL_COLOR) && (sfp2_pin_color == SYS_NORMAL_COLOR) )
+//    if ( (_stwichport_state[3] == TRUE) && (_stwichport_state[4] == TRUE) )
 //    {
 //          pPar->value.U32 = 0;
 //          pPar->par_color = SYS_NORMAL_COLOR ;        
-//    } else if ( (sfp1_pin_color == SYS_NORMAL_COLOR) || (sfp2_pin_color == SYS_NORMAL_COLOR) ) {
+//    } else if ( (_stwichport_state[3] == TRUE) || (_stwichport_state[4] == TRUE) ) {
 //          pPar->value.U32 = 1;
 //          pPar->par_color = SYS_MINOR_COLOR ;        
 //    } else { 
 //          pPar->value.U32 = 2;
 //          pPar->par_color = SYS_CRITICAL_COLOR;      
 //    }
-  
-    if ( (_stwichport_state[3] == TRUE) && (_stwichport_state[4] == TRUE) )
-    {
-          pPar->value.U32 = 0;
-          pPar->par_color = SYS_NORMAL_COLOR ;        
-    } else if ( (_stwichport_state[3] == TRUE) || (_stwichport_state[4] == TRUE) ) {
-          pPar->value.U32 = 1;
-          pPar->par_color = SYS_MINOR_COLOR ;        
-    } else { 
-          pPar->value.U32 = 2;
-          pPar->par_color = SYS_CRITICAL_COLOR;      
-    }
-  
-      
-      pPar->ready = 1;
       
       return OK ;
 }

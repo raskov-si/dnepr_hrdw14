@@ -284,7 +284,7 @@ _BOOL I2C_Dnepr_SFP_Renew( T8_SFP_OPTICAL_CHANNEL* sfp_params,
                 for( i = 0; renew_static_info && ret == ERROR && i < 3; i++ ) {
                     ret = T8_SFP_Init( Dnepr_I2C_Get_I2C_SFP_L_Driver(), sfp_params, sfp_num );
                 }
-                if (ret == ERROR )  {
+                if (ret == ERROR && i == 3)  {
                   return FALSE;
                 }
                 ret = ERROR;
@@ -296,7 +296,7 @@ _BOOL I2C_Dnepr_SFP_Renew( T8_SFP_OPTICAL_CHANNEL* sfp_params,
                 for( i = 0; renew_static_info && ret == ERROR && i < 3; i++ ) {
 		    ret = T8_SFP_Init( Dnepr_I2C_Get_I2C_SFP_U_Driver(), sfp_params, sfp_num );
                 }
-                if (ret == ERROR )  {
+                if (ret == ERROR && i == 3)  {
                   return FALSE;
                 }
                 ret = ERROR;

@@ -196,7 +196,8 @@ void taskDeviceController(void *pdata)
 	__qPMBAlarms = OSQCreate( __pmbalarms_arr, __pmbalarms_arr_len ) ;
 
 	Dnepr_Refresh_Presents() ; // перечитываем презенты и 
-	// дискретные выводы ПЛИС
+	
+        // дискретные выводы ПЛИС
 	for( i = 0; i < 3; i++ ){
 		if( Dnepr_Reload_PSU_Status_Pins() ){
 			break ;
