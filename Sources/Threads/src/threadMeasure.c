@@ -751,7 +751,7 @@ static void _Do_Measurements()
 			__fan_last_presence = 0 ;
 		}
 	}
-//	Dnepr_Backplane_Reload_PSU_DynInfo() ; // динамические параметры из БП
+	Dnepr_Backplane_Reload_PSU_DynInfo() ; // динамические параметры из БП
 
 	// зажигаем critical alarm
 	if(mAlarm2State)
@@ -1283,6 +1283,15 @@ u32 cmgelink_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 																return ERROR ;																\
 															}
 
+u32 pscommonpower_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+  pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(0)->fVout * Dnepr_Backplane_GetPSU_Measures(0)->fIout + Dnepr_Backplane_GetPSU_Measures(1)->fVout * Dnepr_Backplane_GetPSU_Measures(1)->fIout;
+  pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+  pPar->ready = 1 ;
+  return OK ;  
+}
+
+
 MEDFILT_CREATE( ps1pres_medfilt );
 MEDFILT_CREATE( ps2pres_medfilt );
 u32 pspres_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
@@ -1369,6 +1378,327 @@ u32 psoutpwrstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 	}
 }
 
+
+
+
+u32 psfanspeedoverridestatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	if( p_ix->parent->owner == 0 ){
+		if( Dnepr_Backplane_PS1_Present() ){
+			pPar->value.U32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fan_ovverridespeed;
+			pPar->par_color = pPar->value.U32 == 1 ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
+			pPar->ready = 1 ;
+			return OK ;
+		} else {
+			pPar->ready = 0 ;
+			pPar->par_color = STR_NO_TRAP_COLOR ;
+			return ERROR ;
+		}
+	} else if( p_ix->parent->owner == 1 ){
+		if( Dnepr_Backplane_PS2_Present() ){
+			pPar->value.U32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fan_ovverridespeed;
+			pPar->par_color = pPar->value.U32 == 1 ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
+			pPar->ready = 1 ;
+			return OK ;
+		} else {
+			pPar->ready = 0 ;
+			pPar->par_color = STR_NO_TRAP_COLOR ;
+			return ERROR ;
+		}
+	} else {
+		return ERROR ;
+	}  
+}
+
+
+u32 pstempfaultstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	if( p_ix->parent->owner == 0 ){
+		if( Dnepr_Backplane_PS1_Present() ){
+			pPar->value.U32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fTemperatureFault;
+			pPar->par_color = pPar->value.U32 == 1 ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
+			pPar->ready = 1 ;
+			return OK ;
+		} else {
+			pPar->ready = 0 ;
+			pPar->par_color = STR_NO_TRAP_COLOR ;
+			return ERROR ;
+		}
+	} else if( p_ix->parent->owner == 1 ){
+		if( Dnepr_Backplane_PS2_Present() ){
+			pPar->value.U32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fTemperatureFault;
+			pPar->par_color = pPar->value.U32 == 1 ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
+			pPar->ready = 1 ;
+			return OK ;
+		} else {
+			pPar->ready = 0 ;
+			pPar->par_color = STR_NO_TRAP_COLOR ;
+			return ERROR ;
+		}
+	} else {
+		return ERROR ;
+	}  
+}
+
+u32 psfanwarningstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	if( p_ix->parent->owner == 0 ){
+		if( Dnepr_Backplane_PS1_Present() ){
+			pPar->value.U32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fan_warning;
+			pPar->par_color = pPar->value.U32 == 1 ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
+			pPar->ready = 1 ;
+			return OK ;
+		} else {
+			pPar->ready = 0 ;
+			pPar->par_color = STR_NO_TRAP_COLOR ;
+			return ERROR ;
+		}
+	} else if( p_ix->parent->owner == 1 ){
+		if( Dnepr_Backplane_PS2_Present() ){
+			pPar->value.U32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fan_warning;
+			pPar->par_color = pPar->value.U32 == 1 ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
+			pPar->ready = 1 ;
+			return OK ;
+		} else {
+			pPar->ready = 0 ;
+			pPar->par_color = STR_NO_TRAP_COLOR ;
+			return ERROR ;
+		}
+	} else {
+		return ERROR ;
+	}  
+}
+
+
+u32 psfanfaultstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	if( p_ix->parent->owner == 0 ){
+		if( Dnepr_Backplane_PS1_Present() ){
+			pPar->value.U32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fan_alarm;
+			pPar->par_color = pPar->value.U32 == 1 ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
+			pPar->ready = 1 ;
+			return OK ;
+		} else {
+			pPar->ready = 0 ;
+			pPar->par_color = STR_NO_TRAP_COLOR ;
+			return ERROR ;
+		}
+	} else if( p_ix->parent->owner == 1 ){
+		if( Dnepr_Backplane_PS2_Present() ){
+			pPar->value.U32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fan_alarm;
+			pPar->par_color = pPar->value.U32 == 1 ? SYS_NORMAL_COLOR : SYS_MINOR_COLOR ;
+			pPar->ready = 1 ;
+			return OK ;
+		} else {
+			pPar->ready = 0 ;
+			pPar->par_color = STR_NO_TRAP_COLOR ;
+			return ERROR ;
+		}
+	} else {
+		return ERROR ;
+	}  
+}
+
+
+//MEDFILT_CREATE( ps1fanspped_medfilt );
+//MEDFILT_CREATE( ps2fanspped_medfilt );
+//
+//MEDFILT_CREATE( ps1temp_medfilt );
+//MEDFILT_CREATE( ps2temp_medfilt );
+
+u32 ps1fanspeed_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+//	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+	pPar->value.U32 =  Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->nFanSpeed;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+  
+}
+
+u32 ps1temperatureflow_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+//	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+        pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fTemperatureFlow1;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+  
+}
+
+u32 ps1temperatureflow2_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+//	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+        pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fTemperatureFlow2;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+  
+}
+
+u32 ps1temperaturehotspot1_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+//	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+        pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fTemperatureHotSpot1;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+  
+}
+
+u32 ps1temperaturehotspot2_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+//	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+        pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fTemperatureHotSpot2;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+  
+}
+
+u32 ps1temperaturehotspot3_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+//	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+        pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fTemperatureHotSpot3;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+  
+}
+
+
+
+u32 ps1vin_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fVin;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+}
+
+u32 ps1iin_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fIin;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+}
+
+u32 ps1voltageout_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fVout;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+}
+
+u32 ps1iout_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fIout;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+}
+
+
+
+u32 ps2fanspeed_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+//	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+	pPar->value.U32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->nFanSpeed;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+  
+}
+
+u32 ps2temperatureflow_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+//	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+        pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fTemperatureFlow1;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+  
+}
+
+u32 ps2temperatureflow2_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+//	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+        pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fTemperatureFlow2;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+  
+}
+
+u32 ps2temperaturehotspot1_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+//	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+        pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fTemperatureHotSpot1;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+  
+}
+
+u32 ps2temperaturehotspot2_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+//	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+        pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fTemperatureHotSpot2;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+  
+}
+
+u32 ps2temperaturehotspot3_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+//	pPar->value.F32 = t8_medfilt_f32( &ps1outcurr_medfilt, _ps1_curr );
+        pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fTemperatureHotSpot3;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+  
+}
+
+
+
+u32 ps2vin_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fVin;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+}
+
+
+u32 ps2iin_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fIin;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+}
+
+u32 ps2voltageout_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fVout;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+}
+
+u32 ps2iout_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
+{
+	pPar->value.F32 = Dnepr_Backplane_GetPSU_Measures(p_ix->parent->owner)->fIout;
+	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
+	pPar->ready = 1 ;
+	return OK ;
+}
+
+
+
 extern f32 val_PS1CurrentK ;
 extern f32 val_PS1CurrentB ;
 extern f32 val_PS2CurrentK ;
@@ -1386,6 +1716,8 @@ u32 ps1outcurrent_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 	pPar->ready = 1 ;
 	return OK ;
 }
+
+
 
 u32 ps2outcurrent_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 {
