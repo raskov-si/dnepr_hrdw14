@@ -279,8 +279,6 @@
           <state>CONFIG_YAFFS_SHORT_NAMES_IN_RAM</state>
           <state>CONFIG_YAFFS_YAFFS2</state>
           <state>CONFIG_YAFFS_PROVIDE_DEFS</state>
-          <state>DEBUG_TERMINAL</state>
-          <state>DEBUG_I2C</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -1757,6 +1755,9 @@
         <name>$PROJ_DIR$\Sources\Project_Headers\ctypes.h</name>
       </file>
       <file>
+        <name>$PROJ_DIR$\Sources\Application\inc\power_managment.h</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\Sources\Project_Headers\support_common.h</name>
       </file>
       <file>
@@ -1781,6 +1782,9 @@
     <group>
       <name>src</name>
       <file>
+        <name>$PROJ_DIR$\Sources\Application\src\power_managment.c</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\Sources\Application\src\T8_Dnepr_Profile_params.c</name>
       </file>
       <file>
@@ -1797,6 +1801,9 @@
       <name>Threads</name>
       <group>
         <name>inc</name>
+        <file>
+          <name>$PROJ_DIR$\Sources\Threads\inc\inttsk_mgs.h</name>
+        </file>
         <file>
           <name>$PROJ_DIR$\Sources\Threads\inc\threadCU.h</name>
         </file>
@@ -1815,6 +1822,9 @@
       </group>
       <group>
         <name>src</name>
+        <file>
+          <name>$PROJ_DIR$\Sources\Threads\src\inttsk_mgs.c</name>
+        </file>
         <file>
           <name>$PROJ_DIR$\Sources\Threads\src\threadCU.c</name>
         </file>
@@ -2239,6 +2249,33 @@
     </file>
   </group>
   <group>
+    <name>mdlwr</name>
+    <group>
+      <name>fsm</name>
+      <group>
+        <name>pt</name>
+        <file>
+          <name>$PROJ_DIR$\Sources\mdlwr\fsm\pt\lc-addrlabels.h</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\Sources\mdlwr\fsm\pt\lc-switch.h</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\Sources\mdlwr\fsm\pt\lc.h</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\Sources\mdlwr\fsm\pt\pt-sem.h</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\Sources\mdlwr\fsm\pt\pt.h</name>
+        </file>
+      </group>
+      <file>
+        <name>$PROJ_DIR$\Sources\mdlwr\fsm\fsm.h</name>
+      </file>
+    </group>
+  </group>
+  <group>
     <name>Profile</name>
     <group>
       <name>Generated</name>
@@ -2256,6 +2293,9 @@
       </file>
       <file>
         <name>$PROJ_DIR$\Sources\Profile\inc\pr_ch.h</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\Sources\Profile\inc\prof_val.h</name>
       </file>
       <file>
         <name>$PROJ_DIR$\Sources\Profile\inc\profile_processing.h</name>

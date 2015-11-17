@@ -64,10 +64,14 @@ void Dnepr_SlotEEPROMWrite( const u32 slot_num, SlotHSEEPROMParams_t *pSlotParam
 	assert( pSlotParam );
 	if( __write_slot_eeprom( slot_num, pSlotParam )){
 		if( Dnepr_SlotEEPROM_Read( slot_num )){
-			Dnepr_DControl_ReinitHotswaps() ;
+//			Dnepr_DControl_ReinitHotswaps() ;
+                    topwmng_msg_crate_change();
 		}
 	}
 }
+
+
+
 
 _BOOL Dnepr_SlotEEPROM_Read( const u32 slot_num )
 {

@@ -120,6 +120,8 @@ u32 vpowerlimitsource_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len);
 u32 vpowerlimitsource_update(PARAM_INDEX* p_ix, void* buff);
 u32 vpowerlimit_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len);
 u32 vpowerlimit_update(PARAM_INDEX* p_ix, void* buff);
+u32 vpowerminreserve_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len);
+u32 vpowerminreserve_update(PARAM_INDEX* p_ix, void* buff);
 u32 cmsfp1pincmax_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len);
 u32 cmsfp1pincmax_update(PARAM_INDEX* p_ix, void* buff);
 u32 cmsfp1pinwmax_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len);

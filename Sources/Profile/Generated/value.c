@@ -1,7 +1,7 @@
 s8  val_Header2[23] = "3.0;dnepr2;dnepra;2;5";
 s8  val_CMHwNumber[33] = "1.4";
 s8  val_SwNumber[33] = "0";
-s8  val_CMSwNumber[33] = "3.3.25";
+s8  val_CMSwNumber[33] = "3.3.26";
 s8  val_CMSrNumber[33] = " ";
 s8  val_CMPtNumber[33] = " ";
 s8  val_Destination[65] = " ";
@@ -201,6 +201,7 @@ f32 val_PS2CurrentK = 1;
 f32 val_PS2CurrentB = 0;
 u32 val_VPowerLimitSource = 0;
 u32 val_VPowerLimit = 0;
+u32 val_VPowerMinReserve = 0;
 s32 val_MemLoadCMax = 90;
 s32 val_MemLoadWMax = 75;
 s32 val_DiskSpaceCMax = 90;

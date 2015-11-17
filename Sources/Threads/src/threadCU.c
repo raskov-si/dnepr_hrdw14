@@ -147,6 +147,9 @@ static unsigned int backplane_uart_isr_snd_hook( unsigned int *snd_buff, const u
     return i ;
 }
 
+
+
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //! \brief Задача обмена с ПК по UART
 void  taskCU (void *pdata)
@@ -166,8 +169,8 @@ void  taskCU (void *pdata)
 
     UART_Profile_Init( &backplane_uart_isr_hook, &backplane_uart_isr_snd_hook ) ;
 
-    // Команда прочитать блоки питания.
-    Dnepr_DControl_ReinitPowerLimitSource() ;
+//    // Команда прочитать блоки питания.
+//    Dnepr_DControl_ReinitPowerSource() ;
 
     ////////////////////////////////////////////////////////////////////////////
     // настройка самого uart'а, функция выводов настроенов в t8_dnepr_pins_init()

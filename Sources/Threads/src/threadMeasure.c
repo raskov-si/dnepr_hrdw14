@@ -17,6 +17,7 @@
 #include "HAL/BSP/inc/T8_Dnepr_BP_CurrentMeasure.h"
 #include "HAL/BSP/inc/T8_Dnepr_GPIO.h"
 #include "Application/inc/T8_Dnepr_TaskSynchronization.h"
+#include "Application/inc/power_managment.h"
 #include "HAL/IC/inc/MAX_MAX31785.h"
 #include "HAL/IC/inc/TI_TMP112.h"
 #include "HAL/IC/inc/TI_UCD9080.h"
@@ -204,7 +205,7 @@ void taskMeasure(void *pdata)
     _Init() ;
 	    
     while (TRUE) {
-	    _Do_Measurements();
+	_Do_Measurements();
     	_Fill_Values();
 		
     	// если зажали кнопку и держат первые 5 секунд
@@ -300,7 +301,7 @@ void taskMeasure(void *pdata)
 			
 			if( PSU_WriteEEPROM( __ps_num, __vendor, __ptnumber, "NAME", "MODEL_SERIAL", __srnumber,
 																		"FILEID", __power) ){
-				Dnepr_DControl_ResetMaxPower() ;
+				topwmng_msg_crate_change() ;
 			}
 		}
 		// команда перезагрузки секвенсора
@@ -877,32 +878,15 @@ u32 slotsstate_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar) {
 	if(_pDev_presents){
 		// проходим по всем и складываем в одну переменную
 		slot_present_2_hex = (u32)1 << 31 ;
-		for(i = 0; i < I2C_DNEPR_NUMBER_OF_SLOTS; i++ ){
+		for(i = 0; i < I2C_DNEPR_FAN_SLOT_NUM; i++ ){
 			// Если в EEPROM устройства есть дополнительная запись,
 			// в которой указано, что устройство пассивное, -- пропускаем это устройство.
 			if( Dnepr_SlotOptionalEEPROM_Available(i) == TRUE ){
 				continue ;
 			}
-
-			// проверяем состояние hotswap'а слота
-			stat = Dnepr_DControl_PowerStatus( i );
-			// если слот заполнен
-			if(	(_pDev_presents->bSlotPresent[i] == TRUE) &&
-				// и его хотсвап присутствует или непрочитан
-				((stat == HSSLOT_ON) ||
-				(stat == HSSLOT_UNAVAILABLE)) ){
-				// отмечаем слот как заполненный
-				slot_present_2_hex |= 1 << i ;
-			}
+                        slot_present_2_hex |= pwmng_is_slot_ready(i) << i;
 		}
 
-//		if( Dnepr_Backplane_GetPSU_Status()->tPs1.bSeated == 0 ) {                 
-//			slot_present_2_hex |= (u32)1 << 30 ;
-//                }
-//		if( Dnepr_Backplane_GetPSU_Status()->tPs2.bSeated == 0 ) {
-//			slot_present_2_hex |= (u32)1 << 31 ;
-//                }
-                
 		pPar->value.U32 = slot_present_2_hex ;
 		pPar->ready = 1 ;
 	} else 
@@ -927,17 +911,18 @@ u32 passiveslotstate_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 			if( Dnepr_SlotOptionalEEPROM_Available(i) == FALSE ){
 				continue ;
 			}
+                        slot_present_2_hex |= pwmng_is_slot_passive(i) << i;
 
-			// проверяем состояние hotswap'а слота
-			stat = Dnepr_DControl_PowerStatus( i );
-			// если слот заполнен
-			if(	(_pDev_presents->bSlotPresent[i] == TRUE) &&
-				// и его хотсвап присутствует или непрочитан
-				((stat == HSSLOT_ON) ||
-				(stat == HSSLOT_UNAVAILABLE)) ){
-				// отмечаем слот как заполненный
-				slot_present_2_hex |= 1 << i ;
-			}
+//			// проверяем состояние hotswap'а слота
+//			stat = Dnepr_DControl_PowerStatus( i );
+//			// если слот заполнен
+//			if(	(_pDev_presents->bSlotPresent[i] == TRUE) &&
+//				// и его хотсвап присутствует или непрочитан
+//				((stat == HSSLOT_ON) ||
+//				(stat == HSSLOT_UNAVAILABLE)) ){
+//				// отмечаем слот как заполненный
+//				slot_present_2_hex |= 1 << i ;
+//			}
 		}
 		pPar->value.U32 = slot_present_2_hex ;
 		pPar->ready = 1 ;
@@ -1556,6 +1541,7 @@ u32 vpmbusalarm_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 	return OK ;
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // параметры включения слотовых устройств
 
@@ -1563,23 +1549,25 @@ u32 vpmbusalarm_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 u32 slotpowerstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 {
 	u32 slot_num = p_ix->parent->owner ;
-	SlotPowerState_t stat ;
+        
 	if( slot_num > 13){
 		return ERROR ;
 	}
+        
+        pPar->value.U32 = pwmng_get_power_status(slot_num);
 
-	stat = Dnepr_DControl_PowerStatus( slot_num );
-	if( stat == HSSLOT_UNAVAILABLE ){
-		pPar->value.U32 = 0 ; // Unavailable
-	}else if( stat == HSSLOT_ON ){
-		pPar->value.U32 = 1 ; // On
-	}else if( stat == HSSLOT_REGULAR_OFF ){
-		pPar->value.U32 = 3 ; // SwitchedOff
-	}else if( stat == HSSLOT_OVERLIMIT_OFF ){
-		pPar->value.U32 = 2 ; // PowerLimitOff
-	}else if( stat == HSSLOT_WAITING ){
-		pPar->value.U32 = 0 ; // Unavailable
-	}
+//	stat = Dnepr_DControl_PowerStatus( slot_num );
+//	if( stat == HSSLOT_UNAVAILABLE ){
+//		pPar->value.U32 = 0 ; // Unavailable
+//	}else if( stat == HSSLOT_ON ){
+//		pPar->value.U32 = 1 ; // On
+//	}else if( stat == HSSLOT_OFF ){
+//		pPar->value.U32 = 3 ; // SwitchedOff
+//	}else if( stat == HSSLOT_OVERLIMIT_OFF ){
+//		pPar->value.U32 = 2 ; // PowerLimitOff
+//	}else if( stat == HSSLOT_WAITING ){
+//		pPar->value.U32 = 0 ; // Unavailable
+//	}
 
 	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
 	pPar->ready = 1 ;
@@ -1629,20 +1617,21 @@ u32 slotmaxpower_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 // состояние хотсвапа в блоке вентиляции
 u32 fupowerstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 {
-	SlotPowerState_t stat ;
+//	SlotPowerState_t stat ;
 	
-	stat = Dnepr_DControl_PowerStatus( I2C_DNEPR_FAN_SLOT_NUM );
-	if( stat == HSSLOT_UNAVAILABLE ){
-		pPar->value.U32 = 0 ; // Unavailable
-	}else if( stat == HSSLOT_ON ){
-		pPar->value.U32 = 1 ; // On
-	}else if( stat == HSSLOT_REGULAR_OFF ){
-		pPar->value.U32 = 3 ; // SwitchedOff
-	}else if( stat == HSSLOT_OVERLIMIT_OFF ){
-		pPar->value.U32 = 2 ; // PowerLimitOff
-	}else if( stat == HSSLOT_WAITING ){
-		pPar->value.U32 = 0 ; // Unavailable
-	}
+        pPar->value.U32 = (Dnepr_DControl_SlotPresent()->bSlotPresent[I2C_DNEPR_FAN_SLOT_NUM]) ? 0 : 1;
+//	stat = Dnepr_DControl_PowerStatus( I2C_DNEPR_FAN_SLOT_NUM );
+//	if( stat == HSSLOT_UNAVAILABLE ){
+//		pPar->value.U32 = 0 ; // Unavailable
+//	}else if( stat == HSSLOT_ON ){
+//		pPar->value.U32 = 1 ; // On
+//	}else if( stat == HSSLOT_OFF ){
+//		pPar->value.U32 = 3 ; // SwitchedOff
+//	}else if( stat == HSSLOT_OVERLIMIT_OFF ){
+//		pPar->value.U32 = 2 ; // PowerLimitOff
+//	}else if( stat == HSSLOT_WAITING ){
+//		pPar->value.U32 = 0 ; // Unavailable
+//	}
 
 	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
 	pPar->ready = 1 ;
@@ -1673,8 +1662,7 @@ u32 fupower_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 // сколько осталось мощности, 0 -- бесконечно
 u32 vpowerreserve_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 {
-	f32 fReserve = Dnepr_DControl_PowerReserv() ;
-	pPar->value.F32 = fReserve ;
+	pPar->value.F32 = pwmng_get_power_limit();
 	pPar->par_color = SYS_EMPTY_COLOR_ERROR ;
 	pPar->ready = 1 ;
 

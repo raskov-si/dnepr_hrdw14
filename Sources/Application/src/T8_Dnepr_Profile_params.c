@@ -1305,7 +1305,8 @@ u32 vpowerlimitsource_update(PARAM_INDEX* p_ix, void* buff)
 	if( Dnepr_INTValueUpdate( p_ix, buff ) == ERROR )
 		return ERROR ;
 
-	Dnepr_DControl_SetPowerLimitSource( val_VPowerLimitSource == 0, (f32)val_VPowerLimit );
+//	Dnepr_DControl_SetPowerLimitSource( val_VPowerLimitSource == 0, (f32)val_VPowerLimit );
+        topwmng_msg_profile_change();
 	return OK ;
 }
 
@@ -1321,9 +1322,29 @@ u32 vpowerlimit_update(PARAM_INDEX* p_ix, void* buff)
 	if( Dnepr_INTValueUpdate( p_ix, buff ) == ERROR )
 		return ERROR ;
 
-	Dnepr_DControl_SetPowerLimitSource( val_VPowerLimitSource == 0, (f32)(val_VPowerLimit < 1 ? FLT_MAX : val_VPowerLimit) );
+//	Dnepr_DControl_SetPowerLimitSource( val_VPowerLimitSource == 0, (f32)(val_VPowerLimit < 1 ? FLT_MAX : val_VPowerLimit) );
+        topwmng_msg_profile_change();        
 	return OK ;
 }
+
+
+u32 vpowerminreserve_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+	if( PROFILE_INTValueAccess( p_ix, buff, buff_len ) == ERROR )
+		return ERROR ;	
+	return OK ;  
+}
+
+u32 vpowerminreserve_update(PARAM_INDEX* p_ix, void* buff)
+{
+	if( Dnepr_INTValueUpdate( p_ix, buff ) == ERROR )
+		return ERROR ;
+
+//	Dnepr_DControl_SetPowerLimitSource( val_VPowerLimitSource == 0, (f32)(val_VPowerLimit < 1 ? FLT_MAX : val_VPowerLimit) );
+        topwmng_msg_profile_change();
+	return OK ;  
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1468,7 +1489,9 @@ u32 slotenable_update(PARAM_INDEX* p_ix, void* buff)
 	if( Dnepr_INTValueUpdate( p_ix, buff ) == ERROR )
 		return ERROR ;
 	// команда пересмотреть включенность устройств
-	Dnepr_DControl_RereadPowerOnOff( slot_num ) ;
+//	Dnepr_DControl_RereadPowerOnOff( slot_num ) ;
+        topwmng_msg_profile_change();
+
 	return OK ;
 }
 

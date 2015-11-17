@@ -11,9 +11,11 @@
 #include "HAL/BSP/inc/T8_Dnepr_EdgePort.h"
 #include "HAL/IC/inc/AT_AT24C512.h"
 #include "T8_Atomiccode.h"
+#include "Threads/inc/inttsk_mgs.h"
 #include "Threads/inc/threadDeviceController.h"
 #include "Threads/inc/threadMeasure.h"
 #include "Application/inc/T8_Dnepr_TaskSynchronization.h"
+#include "Application/inc/power_managment.h"
 #include "common_lib/crc.h"
 #include <string.h>
 #include <stdio.h>
@@ -48,22 +50,25 @@ static long long __last_pmbus_alarm = 0 ;
 
 // состояние слотового устройства в соответствии с алгоритмом включения
 static SlotPowerState_t __aPwrStates[ I2C_DNEPR_NUMBER_OF_SLOTS ];
+static _BOOL _hs_available[I2C_DNEPR_NUMBER_OF_SLOTS];
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //! тип сообщений посылаемых в taskDeviceController
 typedef enum mess_type_ {
-	PMBUS_ALARM,				//!< alarm на pmbus
-	
-
-	PRESENT_INTERRUPT,			//!< прерывание от плис
-	SFP_INTERRUPT, 				//!< прерывание от SFP
-
-	PSU_VALUES,					//!< измерили мощности блоков питания
-	INIT_HOTSWAPS,				//!< включить все устройства, которые можно
-	REINIT_ONOFF,				//!< включить слотовые устройства, которым можно включиться
-	POWER_ALLOW,				//!< надо включить или выключить устройство
-	FAN_SETTINGS_CHANGED		//!< Изменили параметры автоматического управления вентиляторами.
+        NOMSGS,
+//	PMBUS_ALARM,				//!< alarm на pmbus
+//	
+//
+//	PRESENT_INTERRUPT,			//!< прерывание от плис
+//	SFP_INTERRUPT, 				//!< прерывание от SFP
+//
+//	PSU_VALUES,					//!< измерили мощности блоков питания
+//	INIT_HOTSWAPS,				//!< включить все устройства, которые можно
+//	REINIT_ONOFF,				//!< включить слотовые устройства, которым можно включиться
+////	POWER_ALLOW,				//!< надо включить или выключить устройство
+//	FAN_SETTINGS_CHANGED		//!< Изменили параметры автоматического управления вентиляторами.
 } mess_type_t ;
+
 
 //! тип сообщений для очереди потока
 typedef struct task_message_ {
@@ -79,7 +84,7 @@ static I2C_DNEPR_PresentDevicesTypedef __processed_slots_present ;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static OS_EVENT  *__qRcvQueue = 0;
+//static OS_EVENT  *__qRcvQueue = 0;
 
 static f32 __fPowerLimit1, __fPowerLimit2 ;	// мощность блоков питания
 static f32 __fPowerLimit ; // сколько всего мощности можно потребить
@@ -92,7 +97,7 @@ static void __pmbus_alarm_handler() ;
 static void __slot_power_dev_plug( const u8 slot_num, const _BOOL pluginout );
 void __slot_power_onoff_init();
 //static void __slot_power_onoff_init();
-static void __slot_power_onoff();
+//static void __slot_power_onoff();
 
 static f32 __curPowerLimit();
 
@@ -152,6 +157,22 @@ static OS_EVENT  *__qPMBAlarms = 0;
 
 static void __set_fans() ;
 
+static void _send_shelf_state         ( uint8_t *data );
+static void _set_state_and_send_state ( uint8_t *data );
+static void _send_shelf_power         ( uint8_t *data );
+static void _slot_power_on            ( uint8_t dev_index );
+static void _slot_power_off           ( uint8_t dev_index );
+
+// регистр Alert общий для всех каналов всех устройств
+static LT_LTC4222_FaultAlertRegisterTypedef	hs_alert_reg = {
+											TRUE,	// FET short condition
+											FALSE,	// EN# changes state
+											TRUE,	// output power is bad
+											TRUE,	// overcurrent condition
+											TRUE,	// undervoltage condition
+											TRUE	// overvoltage condition
+											};
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void DeviceController_Init(void)
@@ -176,21 +197,209 @@ void DeviceController_Init(void)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+//void taskDeviceController(void *pdata)
+//{
+//	INT8U return_code = OS_ERR_NONE;
+//	u32 i ;
+//	I2C_DNEPR_PresentDevicesTypedef		prev_presents ;
+//	T8_Dnepr_PsStatusTypedef cur_psu_status ;
+//	T8_Dnepr_PsStatusTypedef prev_psu_status ;
+//	void *messages_array[task_messages_len] ; // для очереди сообщений
+//	task_message_t *qCurMessage ;
+//	const PSU_UnitInfoTypedef* pPSUInfo1 = NULL ;
+//	const PSU_UnitInfoTypedef* pPSUInfo2 = NULL ;
+//	
+//	pdata = pdata;
+//	// очередь сообщений для потока
+//	__qRcvQueue = OSQCreate( messages_array, task_messages_len ) ;
+//	
+//	// очередь описаний алармов
+//	__qPMBAlarms = OSQCreate( __pmbalarms_arr, __pmbalarms_arr_len ) ;
+//
+//	Dnepr_Refresh_Presents() ; // перечитываем презенты и 
+//	
+//        // дискретные выводы ПЛИС
+//	for( i = 0; i < 3; i++ ){
+//		if( Dnepr_Reload_PSU_Status_Pins() ){
+//			break ;
+//		}
+//	}
+//	memcpy( &cur_psu_status, Dnepr_Backplane_GetPSU_Status(), sizeof(T8_Dnepr_PsStatusTypedef) );
+//	memcpy( &prev_psu_status, &cur_psu_status, sizeof(T8_Dnepr_PsStatusTypedef) );
+//	Dnepr_DControl_ResetMaxPower(); // сразу при включении обновляем статусы питания
+//	
+//	__last_pmbus_alarm = llUptime ;        
+//
+//	while(TRUE){
+//          qCurMessage = (task_message_t*)OSQPend( __qRcvQueue, PMBUS_ALARM_TIMEOUT, &return_code );
+//          assert( (return_code == OS_ERR_NONE) || (return_code == OS_ERR_TIMEOUT) );
+//          // если прошел таймаут и необходимо перечитать PSU -- посылаем сами себе команду
+//          if( return_code == OS_ERR_TIMEOUT ){
+//        	// раз в 5 секунд реагируем на alarm
+//          	if( Dnepr_EdgePort_is_IRQ4_active() &&
+//        		((llUptime - __last_pmbus_alarm) > PMBUS_ALARM_TIMEOUT) ){
+//        		__last_pmbus_alarm = llUptime ;
+//        		__pmbus_alarm_handler() ;
+//        	}
+//        	continue ;
+//        } /* while(TRUE) */
+//
+//        switch( qCurMessage->message_type ){
+//        	case PSU_VALUES:
+//        		// перечитываем их статические параметры
+//				Dnepr_Backplane_Reload_PSU_Info() ;
+//				pPSUInfo1 = Dnepr_Backplane_GetPSU_Info( 0 );
+//				pPSUInfo2 = Dnepr_Backplane_GetPSU_Info( 1 );
+//				__fPowerLimit1 = pPSUInfo1 ? pPSUInfo1->fPower : 0.0 ;
+//				__fPowerLimit2 = pPSUInfo2 ? pPSUInfo2->fPower : 0.0 ;
+//
+//                              // если не удаётся прочитать мощность -- перечитываем через паузу                                
+//                                /* если максимальная мощьность не считывается то лимиты делаем максимальными !! */
+//				if( (__fPowerLimit1 < 10.) || (__fPowerLimit1 > 3000.) ||
+//					(!Dnepr_Backplane_GetPSU_Status()->tPs1.bPowerGood) ){
+//					__fPowerLimit1 = FLT_MAX ;
+//				}
+//                		if( (__fPowerLimit2 < 10.) || (__fPowerLimit2 > 3000.) ||
+//        			(!Dnepr_Backplane_GetPSU_Status()->tPs2.bPowerGood) ){
+//					__fPowerLimit2= FLT_MAX ;
+//				}
+//
+//				// обновляем светодиоды POWER
+//				// если нет одного из БП -- горим желтым
+//				if( !Dnepr_Backplane_PS1_Present() || !Dnepr_Backplane_PS2_Present() ){
+//					Dnepr_Measure_SetPowerLed( (T8_Dnepr_LedTypedef){YELLOW, FALSE} );
+//				// если у хотя бы одного БП не PowerGood -- мигаем желтым
+//				} else if( 	(!Dnepr_Backplane_GetPSU_Status()->tPs1.bPowerGood	) ||
+//							(!Dnepr_Backplane_GetPSU_Status()->tPs2.bPowerGood	) ){
+//					Dnepr_Measure_SetPowerLed( (T8_Dnepr_LedTypedef){YELLOW, TRUE} );
+//				// всё хорошо
+//				} else {
+//					Dnepr_Measure_SetPowerLed( (T8_Dnepr_LedTypedef){GREEN, FALSE} );
+//				}
+//        		
+//        		// обновляем оставшийся резерв мощности
+//        		if( __bPSULimitSource == TRUE ){
+//        			__fPowerLimit = MIN( __fPowerLimit1, __fPowerLimit2 );
+//				// источник ограничений -- профиль
+//        		} else {
+//        			if( val_VPowerLimit > 1 ){
+//						__fPowerLimit = val_VPowerLimit ;
+//					} else {
+//						__fPowerLimit = FLT_MAX ;
+//					}
+//				}
+//
+//				// Обновляем информацию о вставленных SFP
+//				Dnepr_Refresh_SFP_Presents() ;
+//				// производим включение задержанных при загрузке (DeviceController_Init())
+//	        	__slot_power_onoff();
+//	        	// Настраиваем вентиляторы.
+//	        	__set_fans() ;
+//        	break ;
+//                
+//        	// вызывается при необходимости провести включение
+//        	case INIT_HOTSWAPS:
+//	        	__slot_power_onoff();
+//	        	__set_fans() ;
+//        	break ;
+//                
+//        	// вызывается при необходимости включить устройства, которые не были включены
+//        	// из-за недостатка мощности
+//        	case REINIT_ONOFF:
+//        		__slot_power_onoff_init() ;
+//        		__set_fans() ;
+//        	break ;
+//                
+//        	// прерывание от PMBus alarm
+//        	// если в последние PMBUS_ALARM_TIMEOUT, его не было -- реагируем.
+//        	case PMBUS_ALARM :
+//        		if( llUptime > __last_pmbus_alarm ){
+//        			if( (llUptime - __last_pmbus_alarm) > PMBUS_ALARM_TIMEOUT ){
+//        				__last_pmbus_alarm = llUptime ;
+//			        	__pmbus_alarm_handler() ;
+//        			}
+//        		// если было переполнение llUptime
+//        		// реагируем на PMBus_alarm
+//        		} else {
+//        			__last_pmbus_alarm = llUptime ;
+//        			__pmbus_alarm_handler() ;
+//        		}
+//        	break ;
+//                
+//        	case PRESENT_INTERRUPT :
+//				// берём предыдущие present'ы
+//				memcpy( &prev_presents, I2C_DNEPR_GetPresentDevices(), sizeof(I2C_DNEPR_PresentDevicesTypedef) );
+//				OSTimeDly( __present_react_timeout );
+//				// перечитываем презенты из ПЛИС
+//				Dnepr_Refresh_Presents() ;
+//
+//	        	// ищем различия
+//				for(i=0; i<I2C_DNEPR_NUMBER_OF_SLOTS; i++){
+//					if( I2C_DNEPR_GetPresentDevices()->bSlotPresent[i] != 
+//										prev_presents.bSlotPresent[i]){
+//		        		// проводим процедуру включения или фиксируем вынимание
+//		        		__slot_power_dev_plug( i, I2C_DNEPR_GetPresentDevices()->bSlotPresent[i] );
+//		        		// Переключаем вентиляторы.
+//			        	__set_fans() ;
+//					}
+//				}
+//				for( i = 0; i < 3; i++ ){
+//					if( Dnepr_Reload_PSU_Status_Pins() ){
+//						break ;
+//					}
+//				}
+//				// не удалось прочитать значения статусных выводов БП
+//				if( i >= 3 ){
+//					break ;
+//				}
+//				memcpy( &cur_psu_status, Dnepr_Backplane_GetPSU_Status(), sizeof(T8_Dnepr_PsStatusTypedef) );
+//				if( (cur_psu_status.tPs1.bSeated != prev_psu_status.tPs1.bSeated) ||
+//					(cur_psu_status.tPs2.bSeated != prev_psu_status.tPs2.bSeated) ||
+//					(cur_psu_status.tPs1.bPowerGood != prev_psu_status.tPs1.bPowerGood) ||
+//					(cur_psu_status.tPs2.bPowerGood != prev_psu_status.tPs2.bPowerGood) ){
+//					// значит вставили/вынули БП
+//					Dnepr_DControl_ResetMaxPower();
+//				}
+//				memcpy( &prev_psu_status, &cur_psu_status, sizeof(T8_Dnepr_PsStatusTypedef) );
+//        	break ;
+//                
+//        	case SFP_INTERRUPT :
+//		    	Dnepr_Refresh_SFP_Presents() ;
+//        	break ;
+//                
+//        	// в профиле поменялось разрешение запуска слота
+////        	case POWER_ALLOW :
+////        		if( I2C_DNEPR_GetPresentDevices()->bSlotPresent[qCurMessage->slot_num_2_write] ){
+////	        		__slot_power_dev_plug( qCurMessage->slot_num_2_write, TRUE );
+////	        	}
+////        	break ;
+//                
+//                
+//                
+//        	// В профиле поменяли настройки регулированием вентиляторов.
+//        	case FAN_SETTINGS_CHANGED :
+//        		__set_fans() ;
+//        	break ;
+//        }
+//	}
+//}
+
+
+
+
+
+
 void taskDeviceController(void *pdata)
 {
-	INT8U return_code = OS_ERR_NONE;
-	u32 i ;
-	I2C_DNEPR_PresentDevicesTypedef		prev_presents ;
-	T8_Dnepr_PsStatusTypedef cur_psu_status ;
-	T8_Dnepr_PsStatusTypedef prev_psu_status ;
-	void *messages_array[task_messages_len] ; // для очереди сообщений
-	task_message_t *qCurMessage ;
-	const PSU_UnitInfoTypedef* pPSUInfo1 = NULL ;
-	const PSU_UnitInfoTypedef* pPSUInfo2 = NULL ;
+       	msg_inttask_t	                      *dc_incom_message = NULL;
+	u32                                   i ;
+	I2C_DNEPR_PresentDevicesTypedef	      prev_presents ;
+	T8_Dnepr_PsStatusTypedef              cur_psu_status ;
+	T8_Dnepr_PsStatusTypedef              prev_psu_status ;
+	const PSU_UnitInfoTypedef*            pPSUInfo1 = NULL ;
+	const PSU_UnitInfoTypedef*            pPSUInfo2 = NULL ;
 	
 	pdata = pdata;
-	// очередь сообщений для потока
-	__qRcvQueue = OSQCreate( messages_array, task_messages_len ) ;
 	
 	// очередь описаний алармов
 	__qPMBAlarms = OSQCreate( __pmbalarms_arr, __pmbalarms_arr_len ) ;
@@ -205,15 +414,18 @@ void taskDeviceController(void *pdata)
 	}
 	memcpy( &cur_psu_status, Dnepr_Backplane_GetPSU_Status(), sizeof(T8_Dnepr_PsStatusTypedef) );
 	memcpy( &prev_psu_status, &cur_psu_status, sizeof(T8_Dnepr_PsStatusTypedef) );
-	Dnepr_DControl_ResetMaxPower(); // сразу при включении обновляем статусы питания
-	
+        
+	Dnepr_DControl_ReinitPowerSource(); // сразу при включении обновляем статусы питания
+        Dnepr_DControl_SetFans();           // Обновляем информацию о вставленных SFP
+        Dnepr_DControl_SFP_Interrupt();     // Настраиваем вентиляторы.
+        
 	__last_pmbus_alarm = llUptime ;        
 
 	while(TRUE){
-          qCurMessage = (task_message_t*)OSQPend( __qRcvQueue, PMBUS_ALARM_TIMEOUT, &return_code );
-          assert( (return_code == OS_ERR_NONE) || (return_code == OS_ERR_TIMEOUT) );
+          dc_incom_message = recv_inttask_message(DEVICE_CONTROLLER, ANY_MODULE, NULL);
+                    
           // если прошел таймаут и необходимо перечитать PSU -- посылаем сами себе команду
-          if( return_code == OS_ERR_TIMEOUT ){
+          if( dc_incom_message == NULL ){
         	// раз в 5 секунд реагируем на alarm
           	if( Dnepr_EdgePort_is_IRQ4_active() &&
         		((llUptime - __last_pmbus_alarm) > PMBUS_ALARM_TIMEOUT) ){
@@ -222,26 +434,31 @@ void taskDeviceController(void *pdata)
         	}
         	continue ;
         } /* while(TRUE) */
+        
+        
+        switch( dc_incom_message->msg ){
+          
+                case GET_SHELF_STATE:                  
+                  _send_shelf_state(dc_incom_message->data);
+                break;
+                
+                case SET_SHELF_STATE:
+                  _set_state_and_send_state(dc_incom_message->data);
+                break;
 
-        switch( qCurMessage->message_type ){
+                case GET_SHELF_POWER:
+                  _send_shelf_power(dc_incom_message->data);                  
+                break;
+          
+                case FAILURE_SIGNALING:
+                  
+                break;
+                
         	case PSU_VALUES:
         		// перечитываем их статические параметры
 				Dnepr_Backplane_Reload_PSU_Info() ;
 				pPSUInfo1 = Dnepr_Backplane_GetPSU_Info( 0 );
 				pPSUInfo2 = Dnepr_Backplane_GetPSU_Info( 1 );
-				__fPowerLimit1 = pPSUInfo1 ? pPSUInfo1->fPower : 0.0 ;
-				__fPowerLimit2 = pPSUInfo2 ? pPSUInfo2->fPower : 0.0 ;
-
-                              // если не удаётся прочитать мощность -- перечитываем через паузу                                
-                                /* если максимальная мощьность не считывается то лимиты делаем максимальными !! */
-				if( (__fPowerLimit1 < 10.) || (__fPowerLimit1 > 3000.) ||
-					(!Dnepr_Backplane_GetPSU_Status()->tPs1.bPowerGood) ){
-					__fPowerLimit1 = FLT_MAX ;
-				}
-                		if( (__fPowerLimit2 < 10.) || (__fPowerLimit2 > 3000.) ||
-        			(!Dnepr_Backplane_GetPSU_Status()->tPs2.bPowerGood) ){
-					__fPowerLimit2= FLT_MAX ;
-				}
 
 				// обновляем светодиоды POWER
 				// если нет одного из БП -- горим желтым
@@ -255,39 +472,9 @@ void taskDeviceController(void *pdata)
 				} else {
 					Dnepr_Measure_SetPowerLed( (T8_Dnepr_LedTypedef){GREEN, FALSE} );
 				}
-        		
-        		// обновляем оставшийся резерв мощности
-        		if( __bPSULimitSource == TRUE ){
-        			__fPowerLimit = MIN( __fPowerLimit1, __fPowerLimit2 );
-				// источник ограничений -- профиль
-        		} else {
-        			if( val_VPowerLimit > 1 ){
-						__fPowerLimit = val_VPowerLimit ;
-					} else {
-						__fPowerLimit = FLT_MAX ;
-					}
-				}
-
-				// Обновляем информацию о вставленных SFP
-				Dnepr_Refresh_SFP_Presents() ;
-				// производим включение задержанных при загрузке (DeviceController_Init())
-	        	__slot_power_onoff();
-	        	// Настраиваем вентиляторы.
-	        	__set_fans() ;
+                                topwmng_msg_crate_change();                                
         	break ;
                 
-        	// вызывается при необходимости провести включение
-        	case INIT_HOTSWAPS:
-	        	__slot_power_onoff();
-	        	__set_fans() ;
-        	break ;
-                
-        	// вызывается при необходимости включить устройства, которые не были включены
-        	// из-за недостатка мощности
-        	case REINIT_ONOFF:
-        		__slot_power_onoff_init() ;
-        		__set_fans() ;
-        	break ;
                 
         	// прерывание от PMBus alarm
         	// если в последние PMBUS_ALARM_TIMEOUT, его не было -- реагируем.
@@ -337,106 +524,997 @@ void taskDeviceController(void *pdata)
 					(cur_psu_status.tPs1.bPowerGood != prev_psu_status.tPs1.bPowerGood) ||
 					(cur_psu_status.tPs2.bPowerGood != prev_psu_status.tPs2.bPowerGood) ){
 					// значит вставили/вынули БП
-					Dnepr_DControl_ResetMaxPower();
-				}
+//					Dnepr_DControl_ResetMaxPower();
+                                          Dnepr_DControl_ReinitPowerSource();
+                                        } else {
+                                          topwmng_msg_crate_change();
+                                        }
 				memcpy( &prev_psu_status, &cur_psu_status, sizeof(T8_Dnepr_PsStatusTypedef) );
         	break ;
                 
         	case SFP_INTERRUPT :
-		    	Dnepr_Refresh_SFP_Presents() ;
+		    Dnepr_Refresh_SFP_Presents() ;
         	break ;
-                
-        	// в профиле поменялось разрешение запуска слота
-        	case POWER_ALLOW :
-        		if( I2C_DNEPR_GetPresentDevices()->bSlotPresent[qCurMessage->slot_num_2_write] ){
-	        		__slot_power_dev_plug( qCurMessage->slot_num_2_write, TRUE );
-	        	}
-        	break ;
+                                
                 
         	// В профиле поменяли настройки регулированием вентиляторов.
         	case FAN_SETTINGS_CHANGED :
-        		__set_fans() ;
+        	  __set_fans() ;
         	break ;
         }
 	}
 }
 
+
+static void _send_shelf_state(uint8_t *data)
+{   
+    msg_pwr_data_t	  *recv_data;
+    msg_inttask_t         topwr_msg;    
+    msg_dc_state_data_t	  send_data;
+    
+    recv_data = (msg_pwr_data_t*)data;
+    switch ( recv_data->dev_name ) {            
+    case SLOT_1:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[0]; 
+          send_data.power_state     = ( __aPwrStates[0] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[0] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(0) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+    case SLOT_2:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[1]; 
+          send_data.power_state     = ( __aPwrStates[1] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[1] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(1) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;
+    case SLOT_3:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[2]; 
+          send_data.power_state     = ( __aPwrStates[2] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[2] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(2) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;
+    case SLOT_4:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[3]; 
+          send_data.power_state     = ( __aPwrStates[3] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[3] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(3) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;
+    case SLOT_5:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[4]; 
+          send_data.power_state     = ( __aPwrStates[4] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[4] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(4) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;
+    case SLOT_6:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[5]; 
+          send_data.power_state     = ( __aPwrStates[5] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[5] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(5) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;
+    case SLOT_7:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[6]; 
+          send_data.power_state     = ( __aPwrStates[6] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[6] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(6) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;
+    case SLOT_8:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[7]; 
+          send_data.power_state     = ( __aPwrStates[7] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[7] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(7) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;      
+    case SLOT_9:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[8]; 
+          send_data.power_state     = ( __aPwrStates[8] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[8] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(8) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;
+    case SLOT_10:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[9]; 
+          send_data.power_state     = ( __aPwrStates[9] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[9] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(9) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;
+    case SLOT_11:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[10]; 
+          send_data.power_state     = ( __aPwrStates[10] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[10] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(10) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;
+    case SLOT_12:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[11]; 
+          send_data.power_state     = ( __aPwrStates[11] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[11] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(11) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;
+    case SLOT_13:  {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[12]; 
+          send_data.power_state     = ( __aPwrStates[12] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = ( _hs_available[12] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(12) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+    case POWER1:    {
+          send_data.present         = (Dnepr_Backplane_GetPSU_Status()->tPs1.bSeated) ? 0 : 1;
+          send_data.power_state     = (Dnepr_Backplane_GetPSU_Status()->tPs1.bInOk) ?  SLOT_OFF : SLOT_ON;
+          send_data.hotswap_status  = CHIP_OK;
+          send_data.eeprom_status   = (strlen(Dnepr_Backplane_GetPSU_Info(0)->sManufacturer) != 0) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+    case POWER2:    {
+          send_data.present         = (Dnepr_Backplane_GetPSU_Status()->tPs2.bSeated) ? 0 : 1;
+          send_data.power_state     = (Dnepr_Backplane_GetPSU_Status()->tPs2.bInOk) ? SLOT_OFF : SLOT_ON;
+          send_data.hotswap_status  = CHIP_OK;
+          send_data.eeprom_status   = (strlen(Dnepr_Backplane_GetPSU_Info(1)->sManufacturer) != 0) ? CHIP_OK : CHIP_FAIL;          
+    } break;    
+    case FAN: {
+          send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[I2C_DNEPR_FAN_SLOT_NUM];
+          send_data.power_state     = (send_data.present) ? SLOT_ON : SLOT_OFF;
+          send_data.hotswap_status  = (Dnepr_Fans_Calibrated()) ? CHIP_OK : CHIP_FAIL;
+          send_data.eeprom_status   = (Dnepr_Fans_Calibrated()) ? CHIP_OK : CHIP_FAIL;          
+    }break;
+  } /*  switch ( recv_data->dev_name ) */
+            
+    topwr_msg.msg = GET_SHELF_STATE;
+    topwr_msg.data = &send_data;     
+    send_inttask_message(POWER_MANAGMENT, DEVICE_CONTROLLER, &topwr_msg);
+}
+
+
+
+static void _set_state_and_send_state (uint8_t *data)
+{
+    msg_pwr_data_t	  *recv_data;
+    msg_inttask_t         topwr_msg;    
+    msg_dc_state_data_t	  send_data;
+
+    recv_data = (msg_pwr_data_t*)data;
+    switch ( recv_data->dev_name ) { 
+      
+    case SLOT_1:  {
+      if (Dnepr_DControl_SlotPresent()->bSlotPresent[0]) {
+        if ( recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(0);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(0);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[0]; 
+      send_data.power_state     = ( __aPwrStates[0] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[0] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(0) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+    
+    case SLOT_2:  {
+      if (Dnepr_DControl_SlotPresent()->bSlotPresent[1]) {
+        if ( recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(1);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(1);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[1]; 
+      send_data.power_state     = ( __aPwrStates[1] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[1] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(1) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+    
+    case SLOT_3:  {
+      if (Dnepr_DControl_SlotPresent()->bSlotPresent[2]) {
+        if (recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(2);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(2);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[2]; 
+      send_data.power_state     = ( __aPwrStates[2] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[2] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(2) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+
+    case SLOT_4:  {
+      if (Dnepr_DControl_SlotPresent()->bSlotPresent[3]) {
+        if ( recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(3);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(3);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[3]; 
+      send_data.power_state     = ( __aPwrStates[3] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[3] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(3) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+    
+    case SLOT_5:  {
+      if (Dnepr_DControl_SlotPresent()->bSlotPresent[4]) {
+        if ( recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(4);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(4);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[4]; 
+      send_data.power_state     = ( __aPwrStates[4] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[4] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(4) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+    
+    case SLOT_6:  {
+      if (Dnepr_DControl_SlotPresent()->bSlotPresent[5]) {
+        if ( recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(5);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(5);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[5]; 
+      send_data.power_state     = ( __aPwrStates[5] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[5] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(5) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+    
+    case SLOT_7:  {
+      if (Dnepr_DControl_SlotPresent()->bSlotPresent[6]) {
+        if ( recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(6);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(6);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[6]; 
+      send_data.power_state     = ( __aPwrStates[6] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[6] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(6) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+
+    case SLOT_8:  {
+      if (Dnepr_DControl_SlotPresent()->bSlotPresent[7]) {
+        if ( recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(7);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(7);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[7]; 
+      send_data.power_state     = ( __aPwrStates[7] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[7] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(7) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+    
+    case SLOT_9:  {
+      if (Dnepr_DControl_SlotPresent()->bSlotPresent[8]) {
+        if ( recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(8);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(8);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[8]; 
+      send_data.power_state     = ( __aPwrStates[8] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[8] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(8) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+    
+    case SLOT_10:  {
+      if (Dnepr_DControl_SlotPresent()->bSlotPresent[9]) {
+        if ( recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(9);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(9);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[9]; 
+      send_data.power_state     = ( __aPwrStates[9] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[9] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(9) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+    
+    case SLOT_11:  {
+      if (Dnepr_DControl_SlotPresent()->bSlotPresent[10]) {
+        if ( recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(10);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(10);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[10]; 
+      send_data.power_state     = ( __aPwrStates[10] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[10] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(10) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+
+    case SLOT_12:  {
+      if ( Dnepr_DControl_SlotPresent()->bSlotPresent[11] ) {
+        if ( recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(11);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(11);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[11]; 
+      send_data.power_state     = ( __aPwrStates[11] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[11] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(11) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;    
+
+    case SLOT_13:  {
+      if ( Dnepr_DControl_SlotPresent()->bSlotPresent[12] ) {
+        if ( recv_data->dev_state == SLOT_WAITING || recv_data->dev_state == SLOT_OFF ) {
+            _slot_power_off(12);
+        } else if ( recv_data->dev_state == SLOT_ON ) {
+            _slot_power_on(12);        
+        }
+      }
+      send_data.present         = Dnepr_DControl_SlotPresent()->bSlotPresent[12]; 
+      send_data.power_state     = ( __aPwrStates[12] == HSSLOT_ON ) ? SLOT_ON : SLOT_OFF;
+      send_data.hotswap_status  = ( _hs_available[12] == TRUE ) ? CHIP_OK : CHIP_FAIL;
+      send_data.eeprom_status   = ( Dnepr_SlotEEPROM_Available(12) == TRUE ) ? CHIP_OK : CHIP_FAIL;
+    } break;
+    
+    } /* switch ( recv_data->dev_name ) */    
+  
+    topwr_msg.msg = SET_SHELF_STATE;
+    topwr_msg.data = &send_data;     
+    send_inttask_message(POWER_MANAGMENT, DEVICE_CONTROLLER, &topwr_msg);
+}
+
+
+
+static void _send_shelf_power         (uint8_t *data)
+{
+    msg_pwr_data_t	  *recv_data;
+    msg_inttask_t         topwr_msg;    
+    msg_dc_power_data_t	  send_data;
+
+    recv_data = (msg_pwr_data_t*)data;
+    send_data.max_power = 0.0;
+    switch ( recv_data->dev_name ) { 
+    case SLOT_1:    { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[0]  )  { send_data.max_power = __fSlotPower[0];  }  } break;    
+    case SLOT_2:    { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[1]  )  { send_data.max_power = __fSlotPower[1];  }  } break;      
+    case SLOT_3:    { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[2]  )  { send_data.max_power = __fSlotPower[2];  }  } break;  
+    case SLOT_4:    { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[3]  )  { send_data.max_power = __fSlotPower[3];  }  } break;  
+    case SLOT_5:    { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[4]  )  { send_data.max_power = __fSlotPower[4];  }  } break;  
+    case SLOT_6:    { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[5]  )  { send_data.max_power = __fSlotPower[5];  }  } break;  
+    case SLOT_7:    { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[6]  )  { send_data.max_power = __fSlotPower[6];  }  } break;  
+    case SLOT_8:    { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[7]  )  { send_data.max_power = __fSlotPower[7];  }  } break;  
+    case SLOT_9:    { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[8]  )  { send_data.max_power = __fSlotPower[8];  }  } break;  
+    case SLOT_10:   { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[9]  )  { send_data.max_power = __fSlotPower[9];  }  } break;  
+    case SLOT_11:   { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[10] )  { send_data.max_power = __fSlotPower[10]; }  } break;  
+    case SLOT_12:   { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[11] )  { send_data.max_power = __fSlotPower[11]; }  } break;  
+    case SLOT_13:   { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[12] )  { send_data.max_power = __fSlotPower[12]; }  } break;  
+    case POWER1:    { if ( Dnepr_Backplane_GetPSU_Status()->tPs1.bSeated == 0 )  { send_data.max_power = Dnepr_Backplane_GetPSU_Info(0)->fPower; }  } break;
+    case POWER2:    { if ( Dnepr_Backplane_GetPSU_Status()->tPs2.bSeated == 0 )  { send_data.max_power = Dnepr_Backplane_GetPSU_Info(1)->fPower; }  } break; 
+    case POWER3:    { send_data.max_power = 0.0; }               break;
+    case POWER4:    { send_data.max_power = 0.0; }               break;
+    case FAN:       { if ( Dnepr_DControl_SlotPresent()->bSlotPresent[13] )  { send_data.max_power = __fSlotPower[13]; }  } break; 
+    }
+    
+    topwr_msg.msg = GET_SHELF_POWER;
+    topwr_msg.data = &send_data;     
+    send_inttask_message(POWER_MANAGMENT, DEVICE_CONTROLLER, &topwr_msg);    
+}
+
+
+
+//// реакция на изменение present'ов у плис:
+//// сначала считываем EEPROM, потом разрешаем / не разрешаем запуск
+//static void __slot_power_dev_plug( const u8 slot_num, const _BOOL pluginout )
+//{
+//	size_t j ;
+//	LT_LTC4222_AdcVoltagesStructure     tAdcVoltagesStructure;
+//	LT_LTC4222_ControlRegisterTypedef 	hs_control_reg_ch1, hs_control_reg_ch2 ;
+//	LT_LTC4222_StatusRegisterTypedef 	tStateRegisterStructure_ch1 ;
+//	LT_LTC4222_AdcControlRegisterTypedef tAdcControlRegisterStructure ;
+//
+//	// устройство только что вставили
+//	if( pluginout ){
+//		// читаем и настраиваем HotSwap
+//		// проверяем наличие hotswap'а и проверяем напряжения (модуль PMBus не возвращает ошибку)
+//		for( j = 0; j < 10; j++ ){
+//			_hs_available[slot_num] = LT_LTC4222_GetAdcVoltages( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], &tAdcVoltagesStructure );
+//			_hs_available[slot_num] = _hs_available[slot_num] && (tAdcVoltagesStructure.fSource2 > 2.7) && 
+//							                      (tAdcVoltagesStructure.fSource2 < 4.0) ;
+//			if( _hs_available[slot_num] ){
+//				break  ;
+//			} else {
+//				OSTimeDly( 20 );
+//			}
+//		}
+//		Dnepr_SlotEEPROM_Read( slot_num );
+//		
+//		// настраиваем hotswap
+//		if( _hs_available[slot_num] ){
+//			// читаем текущие значения настроек
+//			LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
+//			LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
+//
+//			LT_LTC4222_GetStates( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ],  LT_LTC4222_CHANNEL1, &tStateRegisterStructure_ch1, NULL );
+//			
+//                        
+//                        
+//                        
+//                        
+//			// если устройству запрещен запуск -- не включаем его
+//			if( __slot_OnOff( slot_num ) == PERMITTED_START ){
+//				__fSlotPower[ slot_num ] = 0 ;
+//				hs_control_reg_ch1.bFetOnControl = 0 ;
+//				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_OUTPUT ;
+//				hs_control_reg_ch2.bGpioOutputState = 0 ;
+//				__aPwrStates[ slot_num ] = HSSLOT_REGULAR_OFF ;
+//			// определяем включено ли устройство
+//			// если устройство работает -- не важно почему
+//			} else if( tStateRegisterStructure_ch1.bFetOn ){
+//				__aPwrStates[ slot_num ] = HSSLOT_ON ;
+//				__fSlotPower[ slot_num ] = 0.0 ;
+//			// если EEPROM доступна и мощности достаточно ИЛИ старт без разбора -- включаем
+//			} else if(	Dnepr_SlotEEPROM_Available( slot_num ) && 
+//					((f32)Dnepr_SlotEEPROM_SlotPower( slot_num ) < __curPowerLimit()) ||
+//					(__slot_OnOff( slot_num ) == IGNORANT_START) ){
+//						__fSlotPower[ slot_num ] = (f32)Dnepr_SlotEEPROM_SlotPower( slot_num );
+//				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_PGOOD ;
+//				hs_control_reg_ch2.bGpioOutputState = 1 ;
+//				hs_control_reg_ch1.bFetOnControl = 1 ;
+//				__aPwrStates[ slot_num ] = HSSLOT_ON ;
+//			} else {
+//				hs_control_reg_ch1.bFetOnControl = 1 ;
+//				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_OUTPUT ;
+//				hs_control_reg_ch2.bGpioOutputState = 0 ;
+//				__fSlotPower[ slot_num ] = 0 ;
+//				__aPwrStates[ slot_num ] = HSSLOT_OVERLIMIT_OFF ;
+//			}
+//
+//			if( Dnepr_SlotEEPROM_Available( slot_num )){
+//				if( __aPwrStates[ slot_num ] == HSSLOT_ON ){
+//					__fSlotPower[ slot_num ] = (f32)Dnepr_SlotEEPROM_SlotPower( slot_num ) ;
+//				}
+//				// 1й канал 12 В
+//				hs_control_reg_ch1.bOcAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->oc_ar1 ;
+//				hs_control_reg_ch1.bUvAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->uv_ar1 ;
+//				hs_control_reg_ch1.bOvAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->ov_ar1 ;
+//				// 2й канал 3.3 В
+//				hs_control_reg_ch2.bOcAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->oc_ar2 ;
+//				hs_control_reg_ch2.bUvAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->uv_ar2 ;
+//				hs_control_reg_ch2.bOvAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->ov_ar2 ;
+//			}
+//
+//			// устанавливаем запрет на ALERT при завершении преобразования АЦП
+//			LT_LTC4222_GetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], &tAdcControlRegisterStructure );
+//			tAdcControlRegisterStructure.bAdcAlert = FALSE ;
+//			LT_LTC4222_SetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], &tAdcControlRegisterStructure );
+//
+//			// включаем каналы и алерты
+//			LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, &hs_alert_reg );
+//			LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, &hs_alert_reg );
+//			OSTimeDly( 250 );
+//                        
+//			// сбрасываем фолты
+//			LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL1 );
+//			LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL2 );
+//
+//			// фиксируем время включния для выжидания таймаута
+//			__slot_plugin_time[ slot_num ] = llUptime ;
+//                        
+//		} else {
+//			// если hotswap недоступен, но есть данные из EEPROM -- расчитываем,
+//			// что устройство потребляет эту мощность
+//			if( Dnepr_SlotEEPROM_Available( slot_num )){
+//				__fSlotPower[ slot_num ] = (f32)Dnepr_SlotEEPROM_SlotPower( slot_num );
+//			}
+//			__aPwrStates[ slot_num ] = HSSLOT_UNAVAILABLE ;
+//		}
+//		__processed_slots_present.bSlotPresent[ slot_num ] = 1 ;
+//                
+//	// устройство вынули
+//	} else {
+//		__processed_slots_present.bSlotPresent[ slot_num ] = 0 ;
+//		__aPwrStates[ slot_num ] = HSSLOT_UNAVAILABLE ;
+//		__fSlotPower[ slot_num ] = 0 ;
+//	}
+//}
+
+//static void __slot_power_on  ( const u8 slot_num, const _BOOL pluginout )
+//static void __slot_power_off ( const u8 slot_num, const _BOOL pluginout )
+//
+//			// если устройству запрещен запуск -- не включаем его
+//			if( __slot_OnOff( slot_num ) == PERMITTED_START ){
+//				__fSlotPower[ slot_num ] = 0 ;
+//				hs_control_reg_ch1.bFetOnControl = 0 ;
+//				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_OUTPUT ;
+//				hs_control_reg_ch2.bGpioOutputState = 0 ;
+//				__aPwrStates[ slot_num ] = HSSLOT_REGULAR_OFF ;
+//			// определяем включено ли устройство
+//			// если устройство работает -- не важно почему
+//			} else if( tStateRegisterStructure_ch1.bFetOn ){
+//				__aPwrStates[ slot_num ] = HSSLOT_ON ;
+//				__fSlotPower[ slot_num ] = 0.0 ;
+//			// если EEPROM доступна и мощности достаточно ИЛИ старт без разбора -- включаем
+//			} else if(	Dnepr_SlotEEPROM_Available( slot_num ) && 
+//					((f32)Dnepr_SlotEEPROM_SlotPower( slot_num ) < __curPowerLimit()) ||
+//					(__slot_OnOff( slot_num ) == IGNORANT_START) ){
+//						__fSlotPower[ slot_num ] = (f32)Dnepr_SlotEEPROM_SlotPower( slot_num );
+//				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_PGOOD ;
+//				hs_control_reg_ch2.bGpioOutputState = 1 ;
+//				hs_control_reg_ch1.bFetOnControl = 1 ;
+//				__aPwrStates[ slot_num ] = HSSLOT_ON ;
+//			} else {
+//				hs_control_reg_ch1.bFetOnControl = 1 ;
+//				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_OUTPUT ;
+//				hs_control_reg_ch2.bGpioOutputState = 0 ;
+//				__fSlotPower[ slot_num ] = 0 ;
+//				__aPwrStates[ slot_num ] = HSSLOT_OVERLIMIT_OFF ;
+//			}
+//			if( Dnepr_SlotEEPROM_Available( slot_num )){
+//				if( __aPwrStates[ slot_num ] == HSSLOT_ON ){
+//					__fSlotPower[ slot_num ] = (f32)Dnepr_SlotEEPROM_SlotPower( slot_num ) ;
+//				}
+//				// 1й канал 12 В
+//				hs_control_reg_ch1.bOcAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->oc_ar1 ;
+//				hs_control_reg_ch1.bUvAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->uv_ar1 ;
+//				hs_control_reg_ch1.bOvAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->ov_ar1 ;
+//				// 2й канал 3.3 В
+//				hs_control_reg_ch2.bOcAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->oc_ar2 ;
+//				hs_control_reg_ch2.bUvAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->uv_ar2 ;
+//				hs_control_reg_ch2.bOvAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->ov_ar2 ;
+//			}
+//			// включаем каналы и алерты
+//			LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, &hs_alert_reg );
+//			LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, &hs_alert_reg );
+//			OSTimeDly( 250 );
+
+
+
+// реакция на изменение present'ов у плис:
+// сначала считываем EEPROM, потом разрешаем / не разрешаем запуск
+static void __slot_power_dev_plug( const u8 slot_num, const _BOOL pluginout )
+{
+	size_t                                j;
+	LT_LTC4222_AdcVoltagesStructure       tAdcVoltagesStructure;
+	LT_LTC4222_ControlRegisterTypedef     hs_control_reg_ch1, hs_control_reg_ch2 ;
+	LT_LTC4222_StatusRegisterTypedef      tStateRegisterStructure_ch1 ;
+	LT_LTC4222_AdcControlRegisterTypedef  tAdcControlRegisterStructure ;
+
+	// устройство только что вставили
+	if( pluginout ){
+		// читаем и настраиваем HotSwap
+		// проверяем наличие hotswap'а и проверяем напряжения (модуль PMBus не возвращает ошибку)
+//		for( j = 0; j < 10; j++ ){
+			_hs_available[slot_num] = LT_LTC4222_GetAdcVoltages( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], &tAdcVoltagesStructure );
+			_hs_available[slot_num] = _hs_available[slot_num] && (tAdcVoltagesStructure.fSource2 > 2.7) && 
+							                      (tAdcVoltagesStructure.fSource2 < 4.0) ;
+//			if( _hs_available[slot_num] ){
+//			    break  ;
+//			} else {
+//			    OSTimeDly( 20 );
+//			}
+//		}
+		Dnepr_SlotEEPROM_Read( slot_num );
+                if( Dnepr_SlotEEPROM_Available( slot_num )) {                              
+                     __fSlotPower[ slot_num ] = (f32)Dnepr_SlotEEPROM_SlotPower( slot_num ) ;
+                } else {
+                    __fSlotPower[ slot_num ] = 0.0;
+                }
+		
+		// настраиваем hotswap
+		if( _hs_available[slot_num] ){
+			// читаем текущие значения настроек
+			LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
+			LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
+			LT_LTC4222_GetStates( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL1, &tStateRegisterStructure_ch1, NULL );
+			
+                        if ( tStateRegisterStructure_ch1.bFetOn ) {
+                            __aPwrStates[ slot_num ] = HSSLOT_ON ;
+                        } else {
+                            __aPwrStates[ slot_num ] = HSSLOT_WAITING ;
+                        }
+                        
+                       
+			// устанавливаем запрет на ALERT при завершении преобразования АЦП
+			LT_LTC4222_GetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], &tAdcControlRegisterStructure );
+			tAdcControlRegisterStructure.bAdcAlert = FALSE ;
+			LT_LTC4222_SetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], &tAdcControlRegisterStructure );
+                        
+			// сбрасываем фолты
+			LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL1 );
+			LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL2 );
+
+			// фиксируем время включния для выжидания таймаута
+			__slot_plugin_time[ slot_num ] = llUptime ;
+                        
+		} else {
+			// если hotswap недоступен, но есть данные из EEPROM -- расчитываем,
+			// что устройство потребляет эту мощность
+			if( Dnepr_SlotEEPROM_Available(slot_num) ){
+			    __fSlotPower[ slot_num ] = (f32)Dnepr_SlotEEPROM_SlotPower( slot_num );
+			}
+			__aPwrStates[ slot_num ] = HSSLOT_UNAVAILABLE ;
+		}
+		__processed_slots_present.bSlotPresent[ slot_num ] = 1 ;
+                
+	// устройство вынули
+	} else {
+		__processed_slots_present.bSlotPresent[ slot_num ] = 0 ;
+		__aPwrStates[ slot_num ] = HSSLOT_UNAVAILABLE ;
+		__fSlotPower[ slot_num ] = 0 ;
+	}
+}
+
+
+// При включении Днепра проходит EEPROM и HotSwap'ы всех слотовых устройств,
+// считывает их состояния, переинициализирует HotSwapы, запускает пересмотр
+// включения устройств
+void __slot_power_onoff_init()
+//static void __slot_power_onoff_init()
+{
+	size_t i, j ;
+	LT_LTC4222_AdcVoltagesStructure     tAdcVoltagesStructure;
+	LT_LTC4222_ControlRegisterTypedef 	hs_control_reg_ch1, hs_control_reg_ch2 ;
+	LT_LTC4222_StatusRegisterTypedef 	tStateRegisterStructure_ch1 ;
+	LT_LTC4222_AdcControlRegisterTypedef tAdcControlRegisterStructure ;
+//	_BOOL hs_available ;
+
+	Dnepr_Refresh_Presents() ;
+
+	// читаем по очереди все EEPROM и состояния HotSwap'ов (+ 1 слот для платы
+	// вентиляции)
+	for( i = 0; i < I2C_DNEPR_NUMBER_OF_SLOTS; i++ ){
+		if( !I2C_DNEPR_GetPresentDevices()->bSlotPresent[i] ){
+			__aPwrStates[ i ] = HSSLOT_UNAVAILABLE ;
+			continue ;
+		}
+		__processed_slots_present.bSlotPresent[ i ] = 1 ;
+		Dnepr_SlotEEPROM_Read( i );
+                if( Dnepr_SlotEEPROM_Available( i )) {                              
+                     __fSlotPower[ i ] = (f32)Dnepr_SlotEEPROM_SlotPower( i ) ;
+                } else {
+                    __fSlotPower[ i ] = 0.0;
+                }
+                
+		// читаем и настраиваем HotSwap
+		// проверяем наличие hotswap'а проверяя напряжения
+//		for( j = 0; j < 5; j++ ){
+			LT_LTC4222_GetAdcVoltages( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], &tAdcVoltagesStructure );
+			_hs_available[i] = 	(tAdcVoltagesStructure.fSource2 > 2.0) && 
+							(tAdcVoltagesStructure.fSource2 < 4.0) ;
+//			if( _hs_available[i] ){
+//				break ;
+//			} else {
+//				OSTimeDly( 1 );
+//			}
+//		}
+                
+
+
+		// настраиваем hotswap
+		if( _hs_available[i] ){
+			// читаем текущие значения настроек
+			LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
+			LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
+
+			// определяем включено ли устройство
+			LT_LTC4222_GetStates( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i],  LT_LTC4222_CHANNEL1, &tStateRegisterStructure_ch1, NULL );
+			// если устройство работает -- не важно почему
+			if( (tStateRegisterStructure_ch1.bFetOn) || 
+				(i == I2C_DNEPR_FAN_SLOT_NUM - 1)){ // или это вентиляторы -- тоже не трогаем
+				__aPwrStates[ i ] = HSSLOT_ON ;
+			// устройство не включено -- о включении решаем после того, как прочитаем параметры из флеши
+			// и eeprom
+			} else {
+				__aPwrStates[ i ] = HSSLOT_WAITING ;
+			}
+			// если доступна EEPROM -- настраиваем hotswap и учитываем потребляемую мощность
+			if( Dnepr_SlotEEPROM_Available( i )){
+				// 1й канал 12 В
+				hs_control_reg_ch1.bOcAutoRetry = Dnepr_SlotEEPROM_val( i )->oc_ar1 ;
+				hs_control_reg_ch1.bUvAutoRetry = Dnepr_SlotEEPROM_val( i )->uv_ar1 ;
+				hs_control_reg_ch1.bOvAutoRetry = Dnepr_SlotEEPROM_val( i )->ov_ar1 ;
+				// 2й канал 3.3 В
+				hs_control_reg_ch2.bOcAutoRetry = Dnepr_SlotEEPROM_val( i )->oc_ar2 ;
+				hs_control_reg_ch2.bUvAutoRetry = Dnepr_SlotEEPROM_val( i )->uv_ar2 ;
+				hs_control_reg_ch2.bOvAutoRetry = Dnepr_SlotEEPROM_val( i )->ov_ar2 ;
+			}
+			// задерживаем включение устройства
+			if( __aPwrStates[ i ] == HSSLOT_WAITING ){
+				hs_control_reg_ch1.bFetOnControl = 1 ;
+				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_OUTPUT ;
+				hs_control_reg_ch2.bGpioOutputState = 0 ;
+			}
+			//устанавливаем запрет на ALERT при завершении преобразования АЦП
+			LT_LTC4222_GetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], &tAdcControlRegisterStructure );
+			tAdcControlRegisterStructure.bAdcAlert = FALSE ;
+			LT_LTC4222_SetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], &tAdcControlRegisterStructure );
+
+			LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, &hs_alert_reg );
+			LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, &hs_alert_reg );
+			// сбрасываем фолты
+			LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2 );
+			LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1 );
+		} else {
+			// если hotswap недоступен, но есть данные из EEPROM -- расчитываем,
+			// что устройство потребляет эту мощность
+			if( Dnepr_SlotEEPROM_Available( i )){
+				__fSlotPower[ i ] = (f32)Dnepr_SlotEEPROM_SlotPower( i );
+			}
+			__aPwrStates[ i ] = HSSLOT_UNAVAILABLE ;
+		}
+	}
+}
+
+
+static void _slot_power_on( uint8_t dev_index )
+{
+  LT_LTC4222_ControlRegisterTypedef 	hs_control_reg_ch1, hs_control_reg_ch2 ;
+  LT_LTC4222_AdcControlRegisterTypedef  tAdcControlRegisterStructure ;
+  LT_LTC4222_StatusRegisterTypedef      __hs_slot_statuses1, __hs_slot_statuses2 ;
+  LT_LTC4222_FaultAlertRegisterTypedef  __hs_faults1, __hs_faults2 ;
+
+  
+  LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
+  LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
+  hs_control_reg_ch2.tGpioConfig = LT_LTC4222_PGOOD ;
+  hs_control_reg_ch2.bGpioOutputState = 1 ;
+  hs_control_reg_ch1.bFetOnControl = 1 ;
+  LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
+  LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
+  
+  
+// устанавливаем запрет на ALERT при завершении преобразования АЦП
+  LT_LTC4222_GetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], &tAdcControlRegisterStructure );
+  tAdcControlRegisterStructure.bAdcAlert = FALSE ;
+  LT_LTC4222_SetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], &tAdcControlRegisterStructure );
+
+  OSTimeDly( 200 );
+  
+// сбрасываем фолты
+  LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], LT_LTC4222_CHANNEL2 );
+  LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], LT_LTC4222_CHANNEL1 );
+// считываем статусы этого hotswap'а
+  LT_LTC4222_GetStates( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], LT_LTC4222_CHANNEL1, &__hs_slot_statuses1, &__hs_faults1 );
+  LT_LTC4222_GetStates( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], LT_LTC4222_CHANNEL2, &__hs_slot_statuses2, &__hs_faults2 );
+
+  // фиксируем время включния для выжидания таймаута
+  __aPwrStates[ dev_index ] = HSSLOT_ON ;
+  __slot_plugin_time[ dev_index ] = llUptime ;
+}
+
+
+
+
+static void _slot_power_off(  uint8_t  dev_index )
+{
+  LT_LTC4222_ControlRegisterTypedef 	hs_control_reg_ch1, hs_control_reg_ch2 ;
+  
+  __aPwrStates[ dev_index ] = HSSLOT_OFF ;
+
+  LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
+  LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
+
+  hs_control_reg_ch1.bFetOnControl = 0 ;
+  hs_control_reg_ch2.tGpioConfig = LT_LTC4222_OUTPUT ;
+  hs_control_reg_ch2.bGpioOutputState = 0 ;
+
+  LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
+  LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( dev_index ), __hs_slot_addresses[dev_index], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
+}
+
+
+
+// проходит все устройства, которые не включены и включает, если есть резерв
+// мощности и устройству не запрещен запуск
+//static void __slot_power_onoff()
+//{
+//	LT_LTC4222_StatusRegisterTypedef __hs_slot_statuses1, __hs_slot_statuses2 ;
+//	LT_LTC4222_FaultAlertRegisterTypedef __hs_faults1, __hs_faults2 ;
+//	u32 i ;
+//	LT_LTC4222_ControlRegisterTypedef 	hs_control_reg_ch1, hs_control_reg_ch2 ;
+//	LT_LTC4222_AdcControlRegisterTypedef tAdcControlRegisterStructure ;
+//
+//
+//	for( i = 0; i < I2C_DNEPR_NUMBER_OF_SLOTS; i++ ){
+//		// если устройство не вставлено -- ничего не делаем
+//		if( !I2C_DNEPR_GetPresentDevices()->bSlotPresent[i] ){
+//
+//
+//		// если устройству запрещён запуск -- выключаем при любых обстоятельствах
+//		} else if( __slot_OnOff( i ) == PERMITTED_START ){
+//				__aPwrStates[ i ] = HSSLOT_REGULAR_OFF ;
+//				__fSlotPower[ i ] = 0 ;
+//
+//				LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
+//				LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
+//
+//				hs_control_reg_ch1.bFetOnControl = 0 ;
+//				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_OUTPUT ;
+//				hs_control_reg_ch2.bGpioOutputState = 0 ;
+//
+//				LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
+//				LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
+//
+//		// если у устройства не доступна EEPROM и старт умный -- не включаем
+//		} else if( (__slot_OnOff( i ) == SMARTLY_START)  && 
+//				!Dnepr_SlotEEPROM_Available(i) ){
+//					__aPwrStates[ i ] = HSSLOT_OVERLIMIT_OFF ;
+//					__fSlotPower[ i ] = 0 ;
+//		}else if( (__aPwrStates[ i ] == HSSLOT_WAITING) ||
+//			(__aPwrStates[ i ] == HSSLOT_OVERLIMIT_OFF) ){
+//			// уст-во вписывается в предел мощности
+//			if( ((f32)Dnepr_SlotEEPROM_SlotPower( i ) < __curPowerLimit()) ||
+//				// ИЛИ включен уверенный пуск
+//				( __slot_OnOff( i ) == IGNORANT_START ) ){
+//				LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
+//				LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
+//				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_PGOOD ;
+//				hs_control_reg_ch2.bGpioOutputState = 1 ;
+//				hs_control_reg_ch1.bFetOnControl = 1 ;
+//				LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
+//				LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
+//				__aPwrStates[ i ] = HSSLOT_ON ;
+//				__fSlotPower[ i ] = (f32)Dnepr_SlotEEPROM_SlotPower( i ) ;
+//
+//
+//				// устанавливаем запрет на ALERT при завершении преобразования АЦП
+//				LT_LTC4222_GetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], &tAdcControlRegisterStructure );
+//				tAdcControlRegisterStructure.bAdcAlert = FALSE ;
+//				LT_LTC4222_SetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], &tAdcControlRegisterStructure );
+//
+//				OSTimeDly( 200 );
+//				// сбрасываем фолты
+//				LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2 );
+//				LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1 );
+//				// считываем статусы этого hotswap'а
+//				LT_LTC4222_GetStates( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &__hs_slot_statuses1, &__hs_faults1 );
+//				LT_LTC4222_GetStates( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &__hs_slot_statuses2, &__hs_faults2 );
+//
+//				// фиксируем время включния для выжидания таймаута
+//				__slot_plugin_time[ i ] = llUptime ;
+//				__processed_slots_present.bSlotPresent[ i ] = 1 ;
+//			} else {
+//				__aPwrStates[ i ] = HSSLOT_OVERLIMIT_OFF ;
+//				__processed_slots_present.bSlotPresent[ i ] = 0 ;
+//			}
+//		}
+//	}
+//}
+
+
+
+
+
+
+
+
+
+
+
+
+
+void task_shelf_manager(void *pdata)
+{
+    enum _POWER_STATES *ptr_state;
+
+    ptr_state = &curnt_state;
+    
+    pdata = pdata;
+    while (TRUE) 
+    {
+      WORK_OUT_STATIC_FSM_TABLE(enum _POWER_STATES, &curnt_state, pwmng_get_current_signal, powermang_trans_table)
+//        { 
+//        						int                         cur_signal;
+//                                                        transition_worker           worker; 
+//                                                        
+//							cur_signal = pwmng_get_current_signal();
+//                                                        worker = powermang_trans_table[(int)*ptr_state][cur_signal].worker; 
+//                                                        if (worker != NULL) { 
+//                                                            worker((int)*ptr_state, cur_signal); 
+//                                                        } 
+//                                                        *ptr_state = (enum _POWER_STATES)powermang_trans_table[(int)*ptr_state][cur_signal].new_state; 
+//                                                      }        
+        
+    }  
+}
+
+
+
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // интерфейсные процедуры, вызываются из других потоков и прерываний
 
-static task_message_t __power_mess = { PSU_VALUES, 0 };
-void Dnepr_DControl_ResetMaxPower()
+//void Dnepr_DControl_ResetMaxPower()
+//{
+//  	msg_inttask_t             msg;
+//        
+//        msg.msg = PSU_VALUES;
+//	msg.data = NULL;
+//	send_inttask_message(DEVICE_CONTROLLER, ANY_MODULE,  &msg);
+//}
+
+
+void topwmng_msg_profile_change ( void )
 {
-	if( __qRcvQueue  ){
-		OSQPost( __qRcvQueue, (void*)&__power_mess ) ;
-	}
+  msg_inttask_t             msg;
+        
+  msg.msg = PROF_POWER_RECALC;
+  msg.data = NULL;
+  send_inttask_message(POWER_MANAGMENT, ANY_MODULE,  &msg);  
 }
 
-// сигнал о том, что в профиле поменялось разрешение запуска слота
-static task_message_t __onoffallow_mess = { POWER_ALLOW, 0 };
-void Dnepr_DControl_RereadPowerOnOff( const u32 slot_num )
+void topwmng_msg_crate_change ( void )
 {
-	__onoffallow_mess.slot_num_2_write = slot_num ;
-	if( __qRcvQueue  ){
-		OSQPost( __qRcvQueue, (void*)&__onoffallow_mess ) ;
-	}	
+  msg_inttask_t             msg;
+        
+  msg.msg = SHELF_POWER_RECALC;
+  msg.data = NULL;
+  send_inttask_message(POWER_MANAGMENT, ANY_MODULE,  &msg);  
 }
+
+
+
+// сигнал о том, что в профиле поменялось разрешение запуска слота
+//void Dnepr_DControl_RereadPowerOnOff( const u32 slot_num )
+//{
+//  	msg_inttask_t             msg;
+//        
+//        msg.msg = POWER_RECALC;
+//	msg.data = NULL;
+//	send_inttask_message(DEVICE_CONTROLLER, ANY_MODULE,  &msg);
+//}
 
 // сигнал о необходимости проверить возможность включения устройств,
 // например, если увеличился запас по питанию
-static task_message_t __reiniths_mess = { INIT_HOTSWAPS, 0 };
-void Dnepr_DControl_ReinitHotswaps()
-{
-	if( __qRcvQueue  ){
-		OSQPost( __qRcvQueue, (void*)&__reiniths_mess ) ;
-	}	
-}
+//void Dnepr_DControl_ReinitHotswaps()
+//{
+//  	msg_inttask_t             msg;
+//        
+//        msg.msg = INIT_HOTSWAPS;
+//	msg.data = NULL;
+//	send_inttask_message(DEVICE_CONTROLLER, ANY_MODULE,  &msg);
+//}
 
 // сигнал о необходимости пересчитать вентиляторы
-static task_message_t __fan_mess = { FAN_SETTINGS_CHANGED, 0 };
 void Dnepr_DControl_SetFans()
 {
-	if( __qRcvQueue  ){
-		OSQPost( __qRcvQueue, (void*)&__fan_mess ) ;
-	}	
+  	msg_inttask_t             msg;
+        
+        msg.msg = FAN_SETTINGS_CHANGED;
+	msg.data = NULL;
+	send_inttask_message(DEVICE_CONTROLLER, ANY_MODULE,  &msg);
 }
 
-f32 Dnepr_DControl_PowerReserv()
-{
-	f32 lim = __curPowerLimit() ;
-	if( lim > (FLT_MAX - 1000) ){
-		return 0 ;
-	} else {
-		return lim ;
-	}
-}
+//f32 Dnepr_DControl_PowerReserv()
+//{
+//	f32 lim = __curPowerLimit() ;
+//	if( lim > (FLT_MAX - 1000) ){
+//		return 0 ;
+//	} else {
+//		return lim ;
+//	}
+//}
 
-SlotPowerState_t Dnepr_DControl_PowerStatus( const u32 slot_num )
-{
-	if( slot_num >= I2C_DNEPR_NUMBER_OF_SLOTS ){
-		return HSSLOT_UNAVAILABLE ;
-	}
-	return __aPwrStates[ slot_num ] ;
-}
+//SlotPowerState_t Dnepr_DControl_PowerStatus( const u32 slot_num )
+//{
+//	if( slot_num >= I2C_DNEPR_NUMBER_OF_SLOTS ){
+//		return HSSLOT_UNAVAILABLE ;
+//	}
+//	return __aPwrStates[ slot_num ] ;
+//}
 
-void Dnepr_DControl_SetPowerLimitSource( const _BOOL psu_source, const f32 limit )
-{
-	__bPSULimitSource = psu_source ;
-	if( !__bPSULimitSource ){
-		// источник ограничений -- профиль
-		if( limit > 1 ){
-			__fPowerLimit = limit ;
-		} else {
-			__fPowerLimit = FLT_MAX ;
-		}
-
-		// включаем устройства
-		Dnepr_DControl_ReinitHotswaps() ;
-	// забираем мощность из бп
-	} else {
-		Dnepr_DControl_ResetMaxPower() ;
-	}
-}
+//void Dnepr_DControl_SetPowerLimitSource( const _BOOL psu_source, const f32 limit )
+//{
+//	__bPSULimitSource = psu_source ;
+//	if( !__bPSULimitSource ){
+//		// источник ограничений -- профиль
+//		if( limit > 1 ){
+//			__fPowerLimit = limit ;
+//		} else {
+//			__fPowerLimit = FLT_MAX ;
+//		}
+//
+//		// включаем устройства
+//		Dnepr_DControl_ReinitHotswaps() ;
+//	// забираем мощность из бп
+//	} else {
+//		Dnepr_DControl_ResetMaxPower() ;
+//	}
+//}
 
 I2C_DNEPR_PresentDevicesTypedef* Dnepr_DControl_SlotPresent()
 {
@@ -448,11 +1526,16 @@ I2C_DNEPR_PresentDevicesTypedef* Dnepr_DControl_SlotRawPresent()
 	return I2C_DNEPR_GetPresentDevices() ;
 }
 
-void Dnepr_DControl_ReinitPowerLimitSource()
+
+void Dnepr_DControl_ReinitPowerSource(void)
 {
-	__bPSULimitSource = (val_VPowerLimitSource == 0) ; // TRUE -- PSU, иначе значение из профиля
-	Dnepr_DControl_SetPowerLimitSource( __bPSULimitSource, val_VPowerLimit );
+  	msg_inttask_t             msg;
+        
+        msg.msg = PSU_VALUES;
+	msg.data = NULL;
+	send_inttask_message(DEVICE_CONTROLLER, ANY_MODULE,  &msg);
 }
+
 
 size_t Dnepr_DControl_NextPMBusAlarm( s8* sResult, const size_t wResultLen )
 {
@@ -538,20 +1621,23 @@ size_t Dnepr_DControl_NextPMBusAlarm( s8* sResult, const size_t wResultLen )
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // вызываются из прерываний
 
-static const task_message_t __pmbusalarmmess = { PMBUS_ALARM, 0 };
+//static const task_message_t __pmbusalarmmess = { PMBUS_ALARM, 0 };
 void Dnepr_DControl_PMBusAlarm()
 {
-	if( __qRcvQueue  ){
-		OSQPost( __qRcvQueue, (void*)&__pmbusalarmmess ) ;
-	}
+  	msg_inttask_t             msg;
+        
+        msg.msg = PMBUS_ALARM;
+	msg.data = NULL;
+	send_inttask_message(DEVICE_CONTROLLER, ANY_MODULE,  &msg);
 }
 
-static const task_message_t __fpgamess = { PRESENT_INTERRUPT, 0 };
 static long long __pres_uptime = 0 ;
 void Dnepr_DControl_Present_Interrupt()
 {
-	u32 diff ;
-	if( __qRcvQueue && (llUptime ) ){
+	u32                       diff ;
+  	msg_inttask_t             msg;
+        
+	if( llUptime ){
 		if( llUptime >= __pres_uptime ){
 			diff = llUptime - __pres_uptime ;
 		} else {
@@ -559,17 +1645,20 @@ void Dnepr_DControl_Present_Interrupt()
 		}
 		if( diff >= __present_react_timeout ){
 			__pres_uptime = __present_react_timeout ;
-			OSQPost( __qRcvQueue, (void*)&__fpgamess ) ;
+                        msg.msg = PRESENT_INTERRUPT;
+                  	msg.data = NULL;
+                  	send_inttask_message(DEVICE_CONTROLLER, ANY_MODULE,  &msg);
 		}
 	}
 }
 
-static const task_message_t __sfpmess = { SFP_INTERRUPT, 0 };
 void Dnepr_DControl_SFP_Interrupt()
 {
-	if( __qRcvQueue  ){
-		OSQPost( __qRcvQueue, (void*)&__sfpmess ) ;
-	}
+  	msg_inttask_t             msg;
+        
+        msg.msg = SFP_INTERRUPT;
+	msg.data = NULL;
+	send_inttask_message(DEVICE_CONTROLLER, ANY_MODULE,  &msg);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -707,295 +1796,12 @@ static void __pmbus_alarm_handler()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// регистр Alert общий для всех каналов всех устройств
-static LT_LTC4222_FaultAlertRegisterTypedef	hs_alert_reg = {
-											TRUE,	// FET short condition
-											FALSE,	// EN# changes state
-											TRUE,	// output power is bad
-											TRUE,	// overcurrent condition
-											TRUE,	// undervoltage condition
-											TRUE	// overvoltage condition
-											};
-
-// При включении Днепра проходит EEPROM и HotSwap'ы всех слотовых устройств,
-// считывает их состояния, переинициализирует HotSwapы, запускает пересмотр
-// включения устройств
-void __slot_power_onoff_init()
-//static void __slot_power_onoff_init()
-{
-	size_t i, j ;
-	LT_LTC4222_AdcVoltagesStructure     tAdcVoltagesStructure;
-	LT_LTC4222_ControlRegisterTypedef 	hs_control_reg_ch1, hs_control_reg_ch2 ;
-	LT_LTC4222_StatusRegisterTypedef 	tStateRegisterStructure_ch1 ;
-	LT_LTC4222_AdcControlRegisterTypedef tAdcControlRegisterStructure ;
-	_BOOL hs_available ;
-
-	Dnepr_Refresh_Presents() ;
-
-	// читаем по очереди все EEPROM и состояния HotSwap'ов (+ 1 слот для платы
-	// вентиляции)
-	for( i = 0; i < I2C_DNEPR_NUMBER_OF_SLOTS; i++ ){
-		if( !I2C_DNEPR_GetPresentDevices()->bSlotPresent[i] ){
-			__aPwrStates[ i ] = HSSLOT_UNAVAILABLE ;
-			continue ;
-		}
-		__processed_slots_present.bSlotPresent[ i ] = 1 ;
-		Dnepr_SlotEEPROM_Read( i );
-		// читаем и настраиваем HotSwap
-		// проверяем наличие hotswap'а проверяя напряжения
-		for( j = 0; j < 5; j++ ){
-			LT_LTC4222_GetAdcVoltages( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], &tAdcVoltagesStructure );
-			hs_available = 	(tAdcVoltagesStructure.fSource2 > 2.0) && 
-							(tAdcVoltagesStructure.fSource2 < 4.0) ;
-			if( hs_available ){
-				break ;
-			} else {
-				OSTimeDly( 1 );
-			}
-		}
-
-		// настраиваем hotswap
-		if( hs_available ){
-			// читаем текущие значения настроек
-			LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
-			LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
-
-			// определяем включено ли устройство
-			LT_LTC4222_GetStates( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i],  LT_LTC4222_CHANNEL1, &tStateRegisterStructure_ch1, NULL );
-			// если устройство работает -- не важно почему
-			if( (tStateRegisterStructure_ch1.bFetOn) || 
-				(i == I2C_DNEPR_FAN_SLOT_NUM - 1)){ // или это вентиляторы -- тоже не трогаем
-				__aPwrStates[ i ] = HSSLOT_ON ;
-				__fSlotPower[ i ] = (f32)Dnepr_SlotEEPROM_SlotPower(i) ;
-			// устройство не включено -- о включении решаем после того, как прочитаем параметры из флеши
-			// и eeprom
-			} else {
-				__aPwrStates[ i ] = HSSLOT_WAITING ;
-			}
-			// если доступна EEPROM -- настраиваем hotswap и учитываем потребляемую мощность
-			if( Dnepr_SlotEEPROM_Available( i )){
-				// 1й канал 12 В
-				hs_control_reg_ch1.bOcAutoRetry = Dnepr_SlotEEPROM_val( i )->oc_ar1 ;
-				hs_control_reg_ch1.bUvAutoRetry = Dnepr_SlotEEPROM_val( i )->uv_ar1 ;
-				hs_control_reg_ch1.bOvAutoRetry = Dnepr_SlotEEPROM_val( i )->ov_ar1 ;
-				// 2й канал 3.3 В
-				hs_control_reg_ch2.bOcAutoRetry = Dnepr_SlotEEPROM_val( i )->oc_ar2 ;
-				hs_control_reg_ch2.bUvAutoRetry = Dnepr_SlotEEPROM_val( i )->uv_ar2 ;
-				hs_control_reg_ch2.bOvAutoRetry = Dnepr_SlotEEPROM_val( i )->ov_ar2 ;
-			}
-			// задерживаем включение устройства
-			if( __aPwrStates[ i ] == HSSLOT_WAITING ){
-				hs_control_reg_ch1.bFetOnControl = 1 ;
-				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_OUTPUT ;
-				hs_control_reg_ch2.bGpioOutputState = 0 ;
-			}
-			//устанавливаем запрет на ALERT при завершении преобразования АЦП
-			LT_LTC4222_GetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], &tAdcControlRegisterStructure );
-			tAdcControlRegisterStructure.bAdcAlert = FALSE ;
-			LT_LTC4222_SetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], &tAdcControlRegisterStructure );
-
-			LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, &hs_alert_reg );
-			LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, &hs_alert_reg );
-			// сбрасываем фолты
-			LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2 );
-			LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1 );
-		} else {
-			// если hotswap недоступен, но есть данные из EEPROM -- расчитываем,
-			// что устройство потребляет эту мощность
-			if( Dnepr_SlotEEPROM_Available( i )){
-				__fSlotPower[ i ] = (f32)Dnepr_SlotEEPROM_SlotPower( i );
-			}
-			__aPwrStates[ i ] = HSSLOT_UNAVAILABLE ;
-		}
-	}
-}
-
-// проходит все устройства, которые не включены и включает, если есть резерв
-// мощности и устройству не запрещен запуск
-static void __slot_power_onoff()
-{
-	LT_LTC4222_StatusRegisterTypedef __hs_slot_statuses1, __hs_slot_statuses2 ;
-	LT_LTC4222_FaultAlertRegisterTypedef __hs_faults1, __hs_faults2 ;
-	u32 i ;
-	LT_LTC4222_ControlRegisterTypedef 	hs_control_reg_ch1, hs_control_reg_ch2 ;
-	LT_LTC4222_AdcControlRegisterTypedef tAdcControlRegisterStructure ;
 
 
-	for( i = 0; i < I2C_DNEPR_NUMBER_OF_SLOTS; i++ ){
-		// если устройство не вставлено -- ничего не делаем
-		if( !I2C_DNEPR_GetPresentDevices()->bSlotPresent[i] ){
 
 
-		// если устройству запрещён запуск -- выключаем при любых обстоятельствах
-		} else if( __slot_OnOff( i ) == PERMITTED_START ){
-				__aPwrStates[ i ] = HSSLOT_REGULAR_OFF ;
-				__fSlotPower[ i ] = 0 ;
-
-				LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
-				LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
-
-				hs_control_reg_ch1.bFetOnControl = 0 ;
-				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_OUTPUT ;
-				hs_control_reg_ch2.bGpioOutputState = 0 ;
-
-				LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
-				LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
-
-		// если у устройства не доступна EEPROM и старт умный -- не включаем
-		} else if( (__slot_OnOff( i ) == SMARTLY_START)  && 
-				!Dnepr_SlotEEPROM_Available(i) ){
-					__aPwrStates[ i ] = HSSLOT_OVERLIMIT_OFF ;
-					__fSlotPower[ i ] = 0 ;
-		}else if( (__aPwrStates[ i ] == HSSLOT_WAITING) ||
-			(__aPwrStates[ i ] == HSSLOT_OVERLIMIT_OFF) ){
-			// уст-во вписывается в предел мощности
-			if( ((f32)Dnepr_SlotEEPROM_SlotPower( i ) < __curPowerLimit()) ||
-				// ИЛИ включен уверенный пуск
-				( __slot_OnOff( i ) == IGNORANT_START ) ){
-				LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
-				LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
-				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_PGOOD ;
-				hs_control_reg_ch2.bGpioOutputState = 1 ;
-				hs_control_reg_ch1.bFetOnControl = 1 ;
-				LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
-				LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
-				__aPwrStates[ i ] = HSSLOT_ON ;
-				__fSlotPower[ i ] = (f32)Dnepr_SlotEEPROM_SlotPower( i ) ;
 
 
-				// устанавливаем запрет на ALERT при завершении преобразования АЦП
-				LT_LTC4222_GetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], &tAdcControlRegisterStructure );
-				tAdcControlRegisterStructure.bAdcAlert = FALSE ;
-				LT_LTC4222_SetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], &tAdcControlRegisterStructure );
-
-				OSTimeDly( 200 );
-				// сбрасываем фолты
-				LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2 );
-				LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1 );
-				// считываем статусы этого hotswap'а
-				LT_LTC4222_GetStates( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL1, &__hs_slot_statuses1, &__hs_faults1 );
-				LT_LTC4222_GetStates( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], LT_LTC4222_CHANNEL2, &__hs_slot_statuses2, &__hs_faults2 );
-
-				// фиксируем время включния для выжидания таймаута
-				__slot_plugin_time[ i ] = llUptime ;
-				__processed_slots_present.bSlotPresent[ i ] = 1 ;
-			} else {
-				__aPwrStates[ i ] = HSSLOT_OVERLIMIT_OFF ;
-				__processed_slots_present.bSlotPresent[ i ] = 0 ;
-			}
-		}
-	}
-}
-
-// реакция на изменение present'ов у плис:
-// сначала считываем EEPROM, потом разрешаем / не разрешаем запуск
-static void __slot_power_dev_plug( const u8 slot_num, const _BOOL pluginout )
-{
-	size_t j ;
-	_BOOL hs_available ;
-	LT_LTC4222_AdcVoltagesStructure     tAdcVoltagesStructure;
-	LT_LTC4222_ControlRegisterTypedef 	hs_control_reg_ch1, hs_control_reg_ch2 ;
-	LT_LTC4222_StatusRegisterTypedef 	tStateRegisterStructure_ch1 ;
-	LT_LTC4222_AdcControlRegisterTypedef tAdcControlRegisterStructure ;
-
-	// устройство только что вставили
-	if( pluginout ){
-		// читаем и настраиваем HotSwap
-		// проверяем наличие hotswap'а и проверяем напряжения (модуль PMBus не возвращает ошибку)
-		for( j = 0; j < 10; j++ ){
-			hs_available = LT_LTC4222_GetAdcVoltages( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], &tAdcVoltagesStructure );
-			hs_available = hs_available && (tAdcVoltagesStructure.fSource2 > 2.7) && 
-							(tAdcVoltagesStructure.fSource2 < 4.0) ;
-			if( hs_available ){
-				break  ;
-			} else {
-				OSTimeDly( 20 );
-			}
-		}
-		Dnepr_SlotEEPROM_Read( slot_num );
-		
-		// настраиваем hotswap
-		if( hs_available ){
-			// читаем текущие значения настроек
-			LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, NULL );
-			LT_LTC4222_GetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, NULL );
-
-			LT_LTC4222_GetStates( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ],  LT_LTC4222_CHANNEL1, &tStateRegisterStructure_ch1, NULL );
-			
-			// если устройству запрещен запуск -- не включаем его
-			if( __slot_OnOff( slot_num ) == PERMITTED_START ){
-				__fSlotPower[ slot_num ] = 0 ;
-				hs_control_reg_ch1.bFetOnControl = 0 ;
-				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_OUTPUT ;
-				hs_control_reg_ch2.bGpioOutputState = 0 ;
-				__aPwrStates[ slot_num ] = HSSLOT_REGULAR_OFF ;
-			// определяем включено ли устройство
-			// если устройство работает -- не важно почему
-			} else if( tStateRegisterStructure_ch1.bFetOn ){
-				__aPwrStates[ slot_num ] = HSSLOT_ON ;
-				__fSlotPower[ slot_num ] = 0.0 ;
-			// если EEPROM доступна и мощности достаточно ИЛИ старт без разбора -- включаем
-			} else if(	Dnepr_SlotEEPROM_Available( slot_num ) && 
-					((f32)Dnepr_SlotEEPROM_SlotPower( slot_num ) < __curPowerLimit()) ||
-					(__slot_OnOff( slot_num ) == IGNORANT_START) ){
-						__fSlotPower[ slot_num ] = (f32)Dnepr_SlotEEPROM_SlotPower( slot_num );
-				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_PGOOD ;
-				hs_control_reg_ch2.bGpioOutputState = 1 ;
-				hs_control_reg_ch1.bFetOnControl = 1 ;
-				__aPwrStates[ slot_num ] = HSSLOT_ON ;
-			} else {
-				hs_control_reg_ch1.bFetOnControl = 1 ;
-				hs_control_reg_ch2.tGpioConfig = LT_LTC4222_OUTPUT ;
-				hs_control_reg_ch2.bGpioOutputState = 0 ;
-				__fSlotPower[ slot_num ] = 0 ;
-				__aPwrStates[ slot_num ] = HSSLOT_OVERLIMIT_OFF ;
-			}
-
-			if( Dnepr_SlotEEPROM_Available( slot_num )){
-				if( __aPwrStates[ slot_num ] == HSSLOT_ON ){
-					__fSlotPower[ slot_num ] = (f32)Dnepr_SlotEEPROM_SlotPower( slot_num ) ;
-				}
-				// 1й канал 12 В
-				hs_control_reg_ch1.bOcAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->oc_ar1 ;
-				hs_control_reg_ch1.bUvAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->uv_ar1 ;
-				hs_control_reg_ch1.bOvAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->ov_ar1 ;
-				// 2й канал 3.3 В
-				hs_control_reg_ch2.bOcAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->oc_ar2 ;
-				hs_control_reg_ch2.bUvAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->uv_ar2 ;
-				hs_control_reg_ch2.bOvAutoRetry = Dnepr_SlotEEPROM_val( slot_num )->ov_ar2 ;
-			}
-
-			// устанавливаем запрет на ALERT при завершении преобразования АЦП
-			LT_LTC4222_GetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], &tAdcControlRegisterStructure );
-			tAdcControlRegisterStructure.bAdcAlert = FALSE ;
-			LT_LTC4222_SetAdcControl( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], &tAdcControlRegisterStructure );
-
-			// включаем каналы и алерты
-			LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL1, &hs_control_reg_ch1, &hs_alert_reg );
-			LT_LTC4222_SetConfig( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL2, &hs_control_reg_ch2, &hs_alert_reg );
-			OSTimeDly( 250 );
-			// сбрасываем фолты
-			LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL1 );
-			LT_LTC4222_ResetFaults( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], LT_LTC4222_CHANNEL2 );
-
-			// фиксируем время включния для выжидания таймаута
-			__slot_plugin_time[ slot_num ] = llUptime ;
-		} else {
-			// если hotswap недоступен, но есть данные из EEPROM -- расчитываем,
-			// что устройство потребляет эту мощность
-			if( Dnepr_SlotEEPROM_Available( slot_num )){
-				__fSlotPower[ slot_num ] = (f32)Dnepr_SlotEEPROM_SlotPower( slot_num );
-			}
-			__aPwrStates[ slot_num ] = HSSLOT_UNAVAILABLE ;
-		}
-		__processed_slots_present.bSlotPresent[ slot_num ] = 1 ;
-	// устройство вынули
-	} else {
-		__processed_slots_present.bSlotPresent[ slot_num ] = 0 ;
-		__aPwrStates[ slot_num ] = HSSLOT_UNAVAILABLE ;
-		__fSlotPower[ slot_num ] = 0 ;
-	}
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
