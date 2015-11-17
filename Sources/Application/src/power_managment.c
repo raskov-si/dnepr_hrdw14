@@ -742,6 +742,7 @@ static void _pwmng_power_slots_read	(int state, int signal)
 	msg_inttask_t			*dc_message;
 	msg_pwr_data_t			send_data;
 	msg_dc_power_data_t		*recv2_data;
+	msg_dc_state_data_t		*recv_data;
 
 	for ( i = 0; i < SLOT_MAX_NUM; i++ ) {
 		if ( !(crate_status.slot_status[i].now_present) ) {
@@ -765,6 +766,30 @@ static void _pwmng_power_slots_read	(int state, int signal)
                 } else {
                     _set_inauto_signal(dc_message->msg);
                     return;                   
+                }
+                
+                if ( crate_status.slot_status[i].health_status == ERROR ) {
+			send_data.dev_name = pwmng_get_slot_name(i);
+			pwr_msg.msg = GET_SHELF_STATE;
+			pwr_msg.data = &send_data;
+
+			/* определяем включено ли устройство */
+			send_inttask_message(DEVICE_CONTROLLER, POWER_MANAGMENT, &pwr_msg);
+			dc_message = recv_inttask_message(POWER_MANAGMENT, DEVICE_CONTROLLER, NULL);
+			if ( dc_message == NULL ) {
+				crate_status.slot_status[i].cons_power = 0.0;
+				continue;
+			}
+                        if ( dc_message->msg == GET_SHELF_STATE ) {
+  			  recv_data = dc_message->data;
+			  crate_status.slot_status[i].now_present = recv_data->present;
+			  crate_status.slot_status[i].now_on = (recv_data->power_state == SLOT_ON) ? SLOT_ON : SLOT_OFF;
+      			  crate_status.slot_status[i].health_status = ((recv_data->hotswap_status == CHIP_OK) && (recv_data->eeprom_status == CHIP_OK)) ? OK : ERROR;
+                          crate_status.slot_status[i].passive_flag = FALSE;
+                        } else {
+                          _set_inauto_signal(dc_message->msg);
+                          return;                          
+                        }
                 }
 	}
 }

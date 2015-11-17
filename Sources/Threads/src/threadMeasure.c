@@ -633,7 +633,7 @@ static u32 _Fill_Values()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // если вставили sfp -- надо послать сообщение в taskCU, чтобы обновились пороги
 static taskCU_message_t	renew_sfp_cu_mess ;
-
+static uint32_t dynam_index = 0;
 static void _Do_Measurements()
 {
 	// послать команду на перечитывание порогов SFP? —тавитс€ в TRUE, если только что вставили
@@ -752,7 +752,13 @@ static void _Do_Measurements()
 			__fan_last_presence = 0 ;
 		}
 	}
-	Dnepr_Backplane_Reload_PSU_DynInfo() ; // динамические параметры из Ѕѕ
+        if ( dynam_index == 10 ) {
+          dynam_index = 0;
+  	  Dnepr_Backplane_Reload_PSU_DynInfo() ; // динамические параметры из Ѕѕ
+        } else {
+          dynam_index++;
+        }
+        
 
 	// зажигаем critical alarm
 	if(mAlarm2State)
@@ -911,7 +917,7 @@ u32 passiveslotstate_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 			if( Dnepr_SlotOptionalEEPROM_Available(i) == FALSE ){
 				continue ;
 			}
-                        slot_present_2_hex |= pwmng_is_slot_passive(i) << i;
+                        slot_present_2_hex |= pwmng_is_slot_ready(i) << i;
 
 //			// провер€ем состо€ние hotswap'а слота
 //			stat = Dnepr_DControl_PowerStatus( i );

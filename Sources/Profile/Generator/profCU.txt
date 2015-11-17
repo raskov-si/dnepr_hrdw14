@@ -1,5 +1,4 @@
-************** GENERATED 14.08.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
-************** GENERATED 22.10.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
+************** GENERATED 17.11.2015 BY UAV PROFILE GENERATOR V.2.0 TOOL ************************
 *********************************
 *********************************
 #PARAM_NAME
@@ -120,8 +119,7 @@ CHARLINE
 #MFLAG
 PR_ONLY
 #VALUE
-3.3.25
-3.3.25.777
+3.3.26
 #DATA_LENGTH
 32
 #LANGPACK
@@ -5273,6 +5271,29 @@ VPowerLimit;Вт;Текущий предел потребляемой мощности
 *********************************
 *********************************
 #PARAM_NAME
+VPowerMinReserve
+#COMMENT
+Value of minimum power limit
+#SEC_LEVEL
+SL(r,r,rw,rw)
+#OWNER
+1024
+#TYPE
+PR_SET_PARAM
+#DATA_TYPE
+UINTEGER
+#MFLAG
+EEPROM_PARAM
+#VALUE
+0
+#UNIT
+W
+#LANGPACK
+VPowerMinReserve;Вт;Минимальный запас мощности после запуска всех устройств
+#END
+*********************************
+*********************************
+#PARAM_NAME
 LimitSect
 #SEC_LEVEL
 NOT_ACCESSIBLE
@@ -7326,7 +7347,6 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-3;Power supply;PS1Pres|PS1InPwrStatus|PS1OutPwrStatus|PS1OutCurrent|PS2Pres|PS2InPwrStatus|PS2OutPwrStatus|PS2OutCurrent
 3;Power supply;PSCommonPower|PS1Pres|PS1InPwrStatus|PS1OutPwrStatus|PS1OutCurrent|PS2Pres|PS2InPwrStatus|PS2OutPwrStatus|PS2OutCurrent|PS1FanSpeedOverrideStatus|PS2FanSpeedOverrideStatus|PS1FanWarningStatus|PS2FanWarningStatus|PS1FanFaultStatus|PS2FanFaultStatus|PS1FanSpeed|PS2FanSpeed|PS1TemperatureFlow|PS2TemperatureFlow|PS1Vin|PS2Vin|PS1Iin|PS2Iin|PS1VoltageOut|PS2VoltageOut|PS1Iout|PS2Iout|PS1TemperatureFlow2|PS2TemperatureFlow2|PS1TemperatureHotSpot1|PS2TemperatureHotSpot1|PS1TemperatureHotSpot2|PS2TemperatureHotSpot2|PS1TemperatureHotSpot3|PS2TemperatureHotSpot3
 #LANGPACK
 3;Блоки питания
@@ -8714,9 +8734,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot1PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot1PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot1PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot1PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8733,9 +8753,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot2PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot2PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot2PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot2PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8752,9 +8772,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot3PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot3PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot3PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot3PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8771,9 +8791,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot4PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot4PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot4PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot4PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8790,9 +8810,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot5PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot5PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot5PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot5PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8809,9 +8829,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot6PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot6PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot6PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot6PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8828,9 +8848,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot7PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot7PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot7PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot7PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8847,9 +8867,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot8PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot8PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot8PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot8PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8866,9 +8886,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot9PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot9PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot9PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot9PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8885,9 +8905,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot10PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot10PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot10PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot10PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8904,9 +8924,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot11PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot11PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot11PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot11PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8923,9 +8943,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot12PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot12PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot12PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot12PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8942,9 +8962,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot13PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot13PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot13PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot13PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8961,9 +8981,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-Slot14PowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+Slot14PowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-Slot14PowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+Slot14PowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
@@ -8980,9 +9000,9 @@ CHARLINE
 #MFLAG
 0
 #VALUE
-FUPowerStatus;Unavailable@0|On@1|PowerLimitOff@2|SwitchedOff@3
+FUPowerStatus;Unavailable@0|Failure@1|On@2|PowerLimitOff@3|SwitchedOff@4
 #LANGPACK
-FUPowerStatus;Недоступно@0|Работает@1|ПределМощности@2|Выключено@3
+FUPowerStatus;Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4
 #END
 *********************************
 *********************************
