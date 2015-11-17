@@ -940,6 +940,69 @@ u32 ps1srnumber_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len) {
 #undef PSU_SRLEN_NUM
 }
 
+
+u32 ps1templimit1_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+  const PSU_UnitMeasurements*  pPSUMes = Dnepr_Backplane_GetPSU_Measures(0);
+  
+  if( pPSUMes ){
+	*((u32*)buff) = (u32)pPSUMes->fTemperatureFaultLim[1];
+	return OK ;
+  } else {
+	return ERROR ;
+  }
+
+}
+
+u32 ps1templimit2_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len) 
+{
+  const PSU_UnitMeasurements*  pPSUMes = Dnepr_Backplane_GetPSU_Measures(0);
+  
+  if( pPSUMes ){
+	*((u32*)buff) = (u32)pPSUMes->fTemperatureFaultLim[0];
+	return OK ;
+  } else {
+	return ERROR ;
+  }
+}
+
+u32 ps1templimit3_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+  const PSU_UnitMeasurements*  pPSUMes = Dnepr_Backplane_GetPSU_Measures(0);
+  
+  if( pPSUMes ){
+	*((u32*)buff) = (u32)pPSUMes->fTemperatureFaultLim[2];
+	return OK ;
+  } else {
+	return ERROR ;
+  }
+}
+
+u32 ps1templimit4_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+  const PSU_UnitMeasurements*  pPSUMes = Dnepr_Backplane_GetPSU_Measures(0);
+  
+  if( pPSUMes ){
+	*((u32*)buff) = (u32)pPSUMes->fTemperatureFaultLim[3];
+	return OK ;
+  } else {
+	return ERROR ;
+  }
+}
+
+u32 ps1templimit5_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+  const PSU_UnitMeasurements*  pPSUMes = Dnepr_Backplane_GetPSU_Measures(0);
+  
+  if( pPSUMes ){
+	*((u32*)buff) = (u32)pPSUMes->fTemperatureFaultLim[4];
+	return OK ;
+  } else {
+	return ERROR ;
+  }
+}
+
+
 u32 ps2vendor_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
 {
 	const PSU_UnitInfoTypedef* pPSUInfo = Dnepr_Backplane_GetPSU_Info(1) ;
@@ -986,6 +1049,69 @@ u32 ps2srnumber_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len) {
 
 #undef PSU_SRLEN_NUM
 }
+
+u32 ps2templimit1_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+  const PSU_UnitMeasurements*  pPSUMes = Dnepr_Backplane_GetPSU_Measures(1);
+  
+  if( pPSUMes ){
+	*((u32*)buff) = (u32)pPSUMes->fTemperatureFaultLim[1];
+	return OK ;
+  } else {
+	return ERROR ;
+  }
+
+}
+
+u32 ps2templimit2_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len) 
+{
+  const PSU_UnitMeasurements*  pPSUMes = Dnepr_Backplane_GetPSU_Measures(1);
+  
+  if( pPSUMes ){
+	*((u32*)buff) = (u32)pPSUMes->fTemperatureFaultLim[0];
+	return OK ;
+  } else {
+	return ERROR ;
+  }
+}
+
+u32 ps2templimit3_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+  const PSU_UnitMeasurements*  pPSUMes = Dnepr_Backplane_GetPSU_Measures(1);
+  
+  if( pPSUMes ){
+	*((u32*)buff) = (u32)pPSUMes->fTemperatureFaultLim[2];
+	return OK ;
+  } else {
+	return ERROR ;
+  }
+}
+
+u32 ps2templimit4_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+  const PSU_UnitMeasurements*  pPSUMes = Dnepr_Backplane_GetPSU_Measures(1);
+  
+  if( pPSUMes ){
+	*((u32*)buff) = (u32)pPSUMes->fTemperatureFaultLim[3];
+	return OK ;
+  } else {
+	return ERROR ;
+  }
+}
+
+u32 ps2templimit5_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
+{
+  const PSU_UnitMeasurements*  pPSUMes = Dnepr_Backplane_GetPSU_Measures(1);
+  
+  if( pPSUMes ){
+	*((u32*)buff) = (u32)pPSUMes->fTemperatureFaultLim[4];
+	return OK ;
+  } else {
+	return ERROR ;
+  }
+}
+
+
 
 u32 pswreeprom_access(PARAM_INDEX* p_ix, void* buff, u32 buff_len)
 {

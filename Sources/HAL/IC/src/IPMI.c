@@ -164,12 +164,12 @@ _BOOL IPMI_Find_n_Read_PSU_MultiArea
         
         /* если у блока нет нужной записи в multirecord то считывать параметры PSU с мастер-контроллера Ѕѕ */
         if ( ret == FALSE ) {          
-//            u16   param;            
-//            u8 i;            
-//            u8  i_hit[10];
-//            u8  hit_index = 0;
-//            memset(i_hit, 0, 10);
-//            
+            u16   param;            
+            u8 i;            
+            u8  i_hit[10];
+            u8  hit_index = 0;
+            memset(i_hit, 0, 10);
+            
 //            OSTimeDly( 50000 );
 //            for ( i = 1; i < 128; i++ )
 //            {
@@ -182,8 +182,8 @@ _BOOL IPMI_Find_n_Read_PSU_MultiArea
 //                    i_hit[hit_index++] = i;                    
 //                }
 //            }
-//            
-//            
+            
+            
 //            /* PMBUS */            
 //	    OSTimeDly( 50 );
 //            ret = __PMB_ReadWord(pmb_bus, m2Addr, PMB_MFR_POUT_MAX, &param );            
@@ -202,12 +202,13 @@ _BOOL IPMI_Find_n_Read_PSU_MultiArea
 //            if ( ret == TRUE )  {
 //              psu_area->high_end_input_voltage_range_1 = (s16)__PSU_PMBus_ConvertLinearVal(param) * 100;
 //            }            
-//            
+            
         } /* if ( ret == FALSE ) */
         
         if ( (psu_area->overall_capacity == 0) || (psu_area->overall_capacity > 2000) )
         { ret = FALSE; }
         
+                
         return ret;
 }
 

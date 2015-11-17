@@ -20,7 +20,7 @@
 static T8_Dnepr_PsStatusTypedef __ps_status ;
 
 static PSU_UnitInfoTypedef 	__psu_info[ I2C_DNEPR_NUMBER_OF_PSU ];
-static PSU_UnitMeasurements __psu_measues[ I2C_DNEPR_NUMBER_OF_PSU ];
+static PSU_UnitMeasurements     __psu_measues[ I2C_DNEPR_NUMBER_OF_PSU ];
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void Dnepr_Backplane_Init()
@@ -87,7 +87,7 @@ _BOOL Dnepr_Backplane_Reload_PSU_Info()
 	// PSU1 вставлен
 	if( __ps_status.tPs1.bSeated == 0 ){
 		// перечитываем коэф.-ты
-		btest = PSU_Setup( 1, &__psu_info[0] );
+		btest = PSU_Setup( 1, &__psu_info[0], &__psu_measues[0] );
 		ret = ret && btest ;
 		__ps1_seated = TRUE ;
 	// PSU1 вынули
@@ -98,7 +98,7 @@ _BOOL Dnepr_Backplane_Reload_PSU_Info()
 	}
 	// PSU2 вставлен
 	if( __ps_status.tPs2.bSeated == 0 ){
-		btest = PSU_Setup( 2, &__psu_info[1] );
+		btest = PSU_Setup( 2, &__psu_info[1], &__psu_measues[1] );
 		ret = ret && btest ;
 		__ps2_seated = TRUE ;
 	// PSU2 вынули

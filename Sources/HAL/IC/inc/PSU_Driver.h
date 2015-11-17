@@ -144,12 +144,22 @@ typedef struct __PSU_UnitInfoTypedef{
 //! \brief текущие измерения из БП безотносительно типа связи с ним (PSMI или PMBUS)
 typedef struct __PSU_UnitMeasurements 
 {
-	f32 fTemperature; /*!< Temperature sensors (&deg;C) */
+	f32 fTemperatureFlow1; /*!< Temperature sensors (&deg;C) */
+	f32 fTemperatureFlow2; /*!< Temperature sensors (&deg;C) */
+	f32 fTemperatureHotSpot1; /*!< Temperature sensors (&deg;C) */
+	f32 fTemperatureHotSpot2; /*!< Temperature sensors (&deg;C) */
+	f32 fTemperatureHotSpot3; /*!< Temperature sensors (&deg;C) */
+        f32 fTemperatureFaultLim[5];
 	f32 fVout;        /*!< Output voltage sensors (V) */
 	f32 fVin;                                /*!< Input voltage sensor (V) */
 	f32 fIout ;        /*!< Output current sensors (A) */
 	f32 fIin;                                /*!< Input current sensor (A) */	
 	u16 nFanSpeed; /*!< Fan speed sensors (RPM) */
+        u8  fTemperatureFault;
+        u8  fan_ovverridespeed;
+        u8  fan_warning;
+        u8  fan_alarm;
+        u8  tachpulses;
 } PSU_UnitMeasurements;
 
 /*!
@@ -172,7 +182,12 @@ void PSU_InitPeripherialInterface(PMB_PeriphInterfaceTypedef* tPmbusPeriphInterf
 //FRU Routines
 _BOOL __PSU_InitUnitInfo (PSU_UnitInfoTypedef* PSU_UnitInfoStructure);
 _BOOL __PSU_PrintUnitInfo(PSU_UnitInfoTypedef* PSU_UnitInfoStructure);
-_BOOL PSU_Setup(u8 nAddressIndex, PSU_UnitInfoTypedef* unitInfoStruct);
+_BOOL PSU_Setup
+(
+  const u8            nUnitNumber,        /*!< [in]  номер блока питания, начиная с 1               */
+  PSU_UnitInfoTypedef *unitInfoStruct,     /*!< [out] заполняемая прочитанными параметрами структура */
+  PSU_UnitMeasurements* tUnitMeasuesStructure
+);
 _BOOL PSU_WriteEEPROM( const u8 nUnitNumber, const s8* sManufacturer, const s8* sName,
 	const s8* sModel, const s8* sSerial, const s8* sTag, const s8* sFileId, const u16 power );
 //! \brief очищает информацию о модуле, вызывать, когда модуль вынут
@@ -233,7 +248,9 @@ _BOOL 	PSU_PMBus_CoeffsLoaded( const u8 nUnitNumber );
 //! \brief сбрасываем коэфициенты, когда БП вынимают
 void 	PSU_PMBus_CoeffsClear( const u8 nUnitNumber );
 
-f32 PSU_PMBus_ReadTemp(u8 nUnitNumber );
+f32 PSU_PMBus_ReadTempAir1(u8 nUnitNumber );
+f32 PSU_PMBus_ReadTempAir2(u8 nUnitNumber );
+f32 PSU_PMBus_ReadTempHotSpot(u8 nUnitNumber );
 f32 PSU_PMBus_ReadVout(u8 nUnitNumber );
 f32 PSU_PMBus_ReadVin (u8 nUnitNumber );
 f32 PSU_PMBus_ReadIout(u8 nUnitNumber );
@@ -244,6 +261,15 @@ f32 PSU_PMBus_ReadFanSpeed(u8 nUnitNumber );
 unsigned short PSU_PMBus_GetStatus(u8 nUnitNumber);
 
 _BOOL PSU_GetUnitMeasurements(u8 nUnitNumber, PSU_UnitMeasurements* tUnitMeasuesStructure);
+
+u8 PSU_PMBus_GetFanStatus(u8 nUnitNumber);
+u8  PSU_PMBus_ReadFanConfig (u8 nUnitNumber );
+f32 PSU_PMBus_ReadTempLimit(u8 nUnitNumber );
+u8  PSU_PMBus_ReadTempFault (u8 nUnitNumber );
+_BOOL PSU_PMBus_SetPage(u8 nUnitNumber, u8 page_num );
+
+
+
 
 
 #endif

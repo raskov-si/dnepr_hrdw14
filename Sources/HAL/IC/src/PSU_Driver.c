@@ -63,6 +63,7 @@ typedef struct {
 
 /*! List of unit addresses on the bus. */
 static u8 naPsuAddress[4] = {PMB_PSU_ADDR1_00, PMB_PSU_ADDR1_01, PMB_PSU_ADDR1_10, PMB_PSU_ADDR1_11};
+static u8 current_adress_index = 0;
 
 static const t_psu_adresses  psu_adresses[3][4] = 
 {
@@ -99,7 +100,7 @@ const u8 naMurataPsuAddress[4]={PMB_PSU_ADDR2_00, PMB_PSU_ADDR2_01, PMB_PSU_ADDR
 const u8 naMurataFruAddress[4]={PMB_FRU_ADDR2_00, PMB_FRU_ADDR2_01, PMB_FRU_ADDR2_10, PMB_FRU_ADDR2_11};
 
 //! какой тип связи поддерживает какой модуль
-static UnitConnectionType_t __unit_conn_type[4] = { UNSET, UNSET, UNSET, UNSET };
+volatile static UnitConnectionType_t __unit_conn_type[4] = { UNSET, UNSET, UNSET, UNSET };
 //! Коэффициенты для чтения параметров в формате Direct
 static PSU_UnitCoefficients __pmbus_unit_coefficients[4] ;
 //! были ли прочитаны коэф.-ты в __pmbus_unit_coefficients
@@ -266,7 +267,8 @@ static _BOOL psu_find_manufacture_and_fullfill_psu_area
 _BOOL PSU_Setup
 (
   const u8            nUnitNumber,        /*!< [in]  номер блока питания, начиная с 1               */
-  PSU_UnitInfoTypedef *unitInfoStruct     /*!< [out] заполняемая прочитанными параметрами структура */
+  PSU_UnitInfoTypedef *unitInfoStruct,     /*!< [out] заполняемая прочитанными параметрами структура */
+  PSU_UnitMeasurements* tUnitMeasuesStructure
 )
 {
   s32                                       i, j;
@@ -315,6 +317,13 @@ _BOOL PSU_Setup
  
       unitInfoStruct->sManufacturer[0] = 0 ;
       strncpy( unitInfoStruct->sManufacturer, (s8*)fru.product_info.manufacturer_name, fru.product_info.manufacturer_name_length );
+/////////////      
+//      if ( strcmp(unitInfoStruct->sManufacturer , "Murata-PS") == 0 )  /* для старых */
+//      { unitInfoStruct->nPsuAddress = psu_adresses[1][nUnitNumber-1].maincontroller_adress; current_adress_index = 1; }
+      if ( strcmp(unitInfoStruct->sManufacturer , "Murata-PS") == 0 )  /* для новых */
+      { unitInfoStruct->nPsuAddress = psu_adresses[2][nUnitNumber-1].maincontroller_adress; current_adress_index = 2; }
+////////////      
+      
       unitInfoStruct->sModel[0] = 0 ;
       strncpy( unitInfoStruct->sModel, (const char*)fru.product_info.model, fru.product_info.model_length );	
       unitInfoStruct->sModelId[0] = 0 ;
@@ -376,6 +385,9 @@ _BOOL PSU_Setup
     if (ret == FALSE) {
       fru.header.product_area_offset = 0;
     }
+    
+
+    
         
    /* если есть область MultiRecord/PSU, читаем статические параметры с eeprom
       если нет, то пытаемся считать информацию с контроллера, */
@@ -395,6 +407,32 @@ _BOOL PSU_Setup
 	unitInfoStruct->bPmbusSupport = 0;
 	unitInfoStruct->bPsmiSupport = 0;      
         return ret;
+    }
+    
+    if ( __unit_conn_type[nUnitNumber-1] == PMBUS_UNIT  )    {
+          PSU_PMBus_ReadCoefficients(nUnitNumber);
+          OSTimeDly(5);
+          tUnitMeasuesStructure->tachpulses         = (PSU_PMBus_ReadFanConfig( nUnitNumber ) >> 4) & 0x3;         
+          OSTimeDly(5);          
+          tUnitMeasuesStructure->fTemperatureFaultLim[0] = PSU_PMBus_ReadTempLimit( nUnitNumber );
+          OSTimeDly(5);
+          PSU_PMBus_SetPage(nUnitNumber, 1);
+          OSTimeDly(20);          
+          tUnitMeasuesStructure->fTemperatureFaultLim[1] = PSU_PMBus_ReadTempLimit( nUnitNumber );
+          OSTimeDly(5);
+          PSU_PMBus_SetPage(nUnitNumber, 2);
+          OSTimeDly(20);          
+          tUnitMeasuesStructure->fTemperatureFaultLim[2] = PSU_PMBus_ReadTempLimit( nUnitNumber );
+          OSTimeDly(5);
+          PSU_PMBus_SetPage(nUnitNumber, 3);
+          OSTimeDly(20);          
+          tUnitMeasuesStructure->fTemperatureFaultLim[3] = PSU_PMBus_ReadTempLimit( nUnitNumber );
+          OSTimeDly(5);
+          PSU_PMBus_SetPage(nUnitNumber, 4);
+          OSTimeDly(20);          
+          tUnitMeasuesStructure->fTemperatureFaultLim[4] = PSU_PMBus_ReadTempLimit( nUnitNumber );
+          OSTimeDly(5);
+          PSU_PMBus_SetPage(nUnitNumber, 0);
     }
     
     naPsuAddress[nUnitNumber-1] = psu_adresses[j][nUnitNumber-1].maincontroller_adress;
@@ -809,11 +847,15 @@ _BOOL PSU_PSMI_GetUnitStatus(u8 nUnitNumber, PSMI_UnitStatusTypedef* tUnitStatus
 static f32 __PSU_PMBus_ConverDirectVal( const u8 nUnitNumber, const s32 val )
 {
 	f32 m, b, r;
-	assert( __pmbus_coefs_read[nUnitNumber-1] == TRUE );
+//	assert( __pmbus_coefs_read[nUnitNumber-1] == TRUE );
 
-	m = __pmbus_unit_coefficients[nUnitNumber-1].m ;
-	b = __pmbus_unit_coefficients[nUnitNumber-1].b ;
-	r = __pmbus_unit_coefficients[nUnitNumber-1].r ;
+//	m = __pmbus_unit_coefficients[nUnitNumber-1].m ;
+//	b = __pmbus_unit_coefficients[nUnitNumber-1].b ;
+//	r = __pmbus_unit_coefficients[nUnitNumber-1].r ;
+        
+	m = 1 ;
+	b = 0 ;
+	r = 2 ;
 
 	return ((f32)val * pow( 10.0, -r ) - b) / m ;
 }
@@ -842,10 +884,15 @@ _BOOL PSU_PMBus_ReadCoefficients( const u8 nUnitNumber )
 	u8 nBuff[8] ;
 
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
-	if(! __PMB_ReadMultipleBytes( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_COEFFICIENTS,
+        
+        
+//	if(! __PMB_ReadMultipleBytes( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_COEFFICIENTS,
+//		nBuff, 6, POWERUNIT_PMBUS_TIMEOUTMS, 3) )
+//		return FALSE ;
+
+	if(! __PMB_ReadMultipleBytes( PMB_PERIPH_INTERFACE_STRUCT_PTR, psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_COEFFICIENTS,
 		nBuff, 6, POWERUNIT_PMBUS_TIMEOUTMS, 3) )
 		return FALSE ;
-
 	__pmbus_unit_coefficients[nUnitNumber-1].m = (nBuff[1] << 8) | nBuff[0] ;
 	__pmbus_unit_coefficients[nUnitNumber-1].b = (nBuff[3] << 8) | nBuff[2] ;
 	__pmbus_unit_coefficients[nUnitNumber-1].r = nBuff[5] ;
@@ -874,52 +921,95 @@ void PSU_PMBus_CoeffsClear( const u8 nUnitNumber )
 	__pmbus_coefs_read[nUnitNumber-1] = FALSE ;
 }
 
-f32 PSU_PMBus_ReadTemp(u8 nUnitNumber )
+f32 PSU_PMBus_ReadTempLimit(u8 nUnitNumber )
 {
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 val;
-//        f32 temp;
-        
-        OSTimeDly( 100 );
-	
-        __PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_TEMPERATURE_2, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
-        
-//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VOUT, &val );
-//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IOUT, &val );
-//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VIN, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
-//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IIN, &val );
-//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_FAN_SPEED_1, &val );
-//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSU_PMBUS_STATUS_REG, &val );
-//        temp = __PSU_PMBus_ConvertLinearVal(val);
-        
-//        return temp;
-        
-	return __PSU_PMBus_ConverDirectVal( nUnitNumber, (s32)val );
+        f32 temp;
+        	
+        __PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR,  psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_OT_FAULT_LIMIT, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+	return __PSU_PMBus_ConvertLinearVal( val );
+}
+
+u8  PSU_PMBus_ReadTempFault (u8 nUnitNumber )
+{
+    u8 val ;
+    assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
+    __PMB_ReadByte( PMB_PERIPH_INTERFACE_STRUCT_PTR,  psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_STATUS_TEMPERATURE, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );  
+    return val;
+}
+
+
+f32 PSU_PMBus_ReadTempAir1(u8 nUnitNumber )
+{
+	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
+	u16 val;
+        f32 temp;
+        	
+        __PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR,  psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_READ_TEMPERATURE_1, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+	return __PSU_PMBus_ConvertLinearVal( val );
+      
+}
+
+
+f32 PSU_PMBus_ReadTempAir2(u8 nUnitNumber )
+{
+	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
+	u16 val;
+        f32 temp;
+        	
+        __PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR,  psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_READ_TEMPERATURE_2, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+        temp = __PSU_PMBus_ConverDirectVal( nUnitNumber, (s32)val );
+        return temp;
+      
+}
+
+f32 PSU_PMBus_ReadTempHotSpot(u8 nUnitNumber )
+{
+	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
+	u16 val;
+        f32 temp;
+        	
+        __PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR,  psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_READ_TEMPERATURE_3, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+	return __PSU_PMBus_ConvertLinearVal( val );
+}
+
+
+
+_BOOL PSU_PMBus_SetPage(u8 nUnitNumber, u8 page_num )
+{
+	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
+        return __PMB_WriteByte( PMB_PERIPH_INTERFACE_STRUCT_PTR,  psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_PAGE, page_num, POWERUNIT_PMBUS_TIMEOUTMS, 3 );  
 }
 
 f32 PSU_PMBus_ReadVout(u8 nUnitNumber )
 {	
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 val;
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VOUT, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+//	_BOOL read_bool = __PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VOUT, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+	_BOOL read_bool = __PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_READ_VOUT, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 
 	return __PSU_PMBus_ConverDirectVal( nUnitNumber, (s32)val ) ;
+//	return __PSU_PMBus_ConvertLinearVal( val );
 }
 
 f32 PSU_PMBus_ReadIout(u8 nUnitNumber )
 {
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 val;
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IOUT, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IOUT, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR,  psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_READ_IOUT, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 
 	return __PSU_PMBus_ConverDirectVal( nUnitNumber, (s32)val ) ;
+//	return __PSU_PMBus_ConvertLinearVal( val );
 }
 
 f32 PSU_PMBus_ReadVin (u8 nUnitNumber )
 {
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 val ;
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VIN, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_VIN, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR,  psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_READ_VIN, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return __PSU_PMBus_ConvertLinearVal( val );
 }
 
@@ -927,7 +1017,8 @@ f32 PSU_PMBus_ReadIin (u8 nUnitNumber )
 {
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 val ;
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IIN, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_IIN, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_READ_IIN, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
 	return __PSU_PMBus_ConvertLinearVal( val );
 }
 
@@ -935,8 +1026,18 @@ float PSU_PMBus_ReadFanSpeed(u8 nUnitNumber )
 {
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	u16 val ;
-	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_FAN_SPEED_1, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PMB_READ_FAN_SPEED_1, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_READ_FAN_SPEED_1, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+        
 	return __PSU_PMBus_ConvertLinearVal( val );
+}
+
+u8  PSU_PMBus_ReadFanConfig (u8 nUnitNumber )
+{
+    u8 val ;
+    assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
+    __PMB_ReadByte( PMB_PERIPH_INTERFACE_STRUCT_PTR,  psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_FAN_CONFIG_1_2, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );  
+    return val;
 }
 
 unsigned short PSU_PMBus_GetStatus(u8 nUnitNumber)
@@ -947,45 +1048,106 @@ unsigned short PSU_PMBus_GetStatus(u8 nUnitNumber)
 	return res ;
 }
 
+u8 PSU_PMBus_GetFanStatus(u8 nUnitNumber)
+{
+	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
+	u8 val ;
+//	__PMB_ReadWord( PMB_PERIPH_INTERFACE_STRUCT_PTR, naPsuAddress[nUnitNumber-1], PSU_PMBUS_STATUS_REG, &res, POWERUNIT_PMBUS_TIMEOUTMS, 3 );
+        __PMB_ReadByte( PMB_PERIPH_INTERFACE_STRUCT_PTR,  psu_adresses[current_adress_index][nUnitNumber-1].maincontroller_adress, PMB_STATUS_FANS_1_2, &val, POWERUNIT_PMBUS_TIMEOUTMS, 3 );  
+        
+	return val ;
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static PSMI_UnitStatusTypedef __psmi_unit_measues_buffer ; //!< складываем измерения сюда, потом берём из нужных мест числа
 
 _BOOL PSU_GetUnitMeasurements(u8 nUnitNumber, PSU_UnitMeasurements* tUnitMeasuesStructure)
 {
+        u8  tempstatus;
 	assert( PMB_PERIPH_INTERFACE_STRUCT_PTR!=NULL );
 	assert( tUnitMeasuesStructure != NULL );
         
-	if( __unit_conn_type[nUnitNumber-1] == PMBUS_UNIT ){
-		tUnitMeasuesStructure->fTemperature     = PSU_PMBus_ReadTemp( nUnitNumber );
-		tUnitMeasuesStructure->fVout 		= PSU_PMBus_ReadVout( nUnitNumber );
-		tUnitMeasuesStructure->fVin 		= PSU_PMBus_ReadVin( nUnitNumber );
-		tUnitMeasuesStructure->fIout 		= PSU_PMBus_ReadIout( nUnitNumber );
-		tUnitMeasuesStructure->fIin 		= PSU_PMBus_ReadIin( nUnitNumber );
-		tUnitMeasuesStructure->nFanSpeed 	= (u16)PSU_PMBus_ReadFanSpeed( nUnitNumber );
+	if( __unit_conn_type[nUnitNumber-1] == PMBUS_UNIT ) {
+          OSTimeDly(1);
+          PSU_PMBus_SetPage(nUnitNumber, 0);
+          OSTimeDly(1);
+	  tUnitMeasuesStructure->fVin 		    = PSU_PMBus_ReadVin( nUnitNumber );
+          OSTimeDly(1);
+	  tUnitMeasuesStructure->fIin 		    = PSU_PMBus_ReadIin( nUnitNumber ) ;
+          OSTimeDly(1);
+          tUnitMeasuesStructure->fVout 		    = PSU_PMBus_ReadVout( nUnitNumber );
+          OSTimeDly(1);
+  	  tUnitMeasuesStructure->fIout 		    = PSU_PMBus_ReadIout( nUnitNumber );          
+          
+          OSTimeDly(1);
+	  tUnitMeasuesStructure->nFanSpeed 	    = (u16)PSU_PMBus_ReadFanSpeed( nUnitNumber ) / ((tUnitMeasuesStructure->tachpulses > 0) ? tUnitMeasuesStructure->tachpulses : 1) ;          
+          OSTimeDly(1);        
+          tempstatus = PSU_PMBus_GetFanStatus(nUnitNumber);
+          tUnitMeasuesStructure->fan_ovverridespeed = (tempstatus >> 3) & 0x1;
+          tUnitMeasuesStructure->fan_warning = (tempstatus >> 5) & 0x1;
+          tUnitMeasuesStructure->fan_alarm = (tempstatus >> 7) & 0x1;
+          OSTimeDly(1);
+          tUnitMeasuesStructure->fTemperatureFault  = (PSU_PMBus_ReadTempFault( nUnitNumber )) ? 1 : 0;
+          OSTimeDly(1);          
+          tUnitMeasuesStructure->fTemperatureFlow1  = PSU_PMBus_ReadTempAir2( nUnitNumber );
+          OSTimeDly(1);
+          tUnitMeasuesStructure->fTemperatureFlow2  = PSU_PMBus_ReadTempAir1( nUnitNumber );
+          OSTimeDly(1);
+          tUnitMeasuesStructure->fTemperatureHotSpot1  = PSU_PMBus_ReadTempHotSpot( nUnitNumber );
+          OSTimeDly(1);
+          PSU_PMBus_SetPage(nUnitNumber, 1);
+          OSTimeDly(10);
+          tUnitMeasuesStructure->fTemperatureHotSpot2  = PSU_PMBus_ReadTempHotSpot( nUnitNumber );
+          OSTimeDly(1);
+          PSU_PMBus_SetPage(nUnitNumber, 2);
+          OSTimeDly(10);
+          tUnitMeasuesStructure->fTemperatureHotSpot3  = PSU_PMBus_ReadTempHotSpot( nUnitNumber );
+          
+        } else {
+	  tUnitMeasuesStructure->fTemperatureFlow1   = 0.0;
+	  tUnitMeasuesStructure->fVout 		     = 0.0;
+	  tUnitMeasuesStructure->fVin 		     = 0.0;
+	  tUnitMeasuesStructure->fIout 		     = 0.0;
+	  tUnitMeasuesStructure->fIin 		     = 0.0;
+	  tUnitMeasuesStructure->nFanSpeed 	     = 0;
 
-		return TRUE ;
-	} else if( __unit_conn_type[nUnitNumber-1] == PSMI_UNIT ){
-		PSU_PSMI_GetUnitStatus( nUnitNumber, &__psmi_unit_measues_buffer );
-
-		tUnitMeasuesStructure->fTemperature     = __psmi_unit_measues_buffer.fTemperature[1] ;
-		tUnitMeasuesStructure->fVout 		= __psmi_unit_measues_buffer.fVout[0]; // 0 -- 12 В, 1 -- 3.3 В
-		tUnitMeasuesStructure->fVin 		= __psmi_unit_measues_buffer.fVin ;
-		tUnitMeasuesStructure->fIout 		= __psmi_unit_measues_buffer.fIout[0];
-		tUnitMeasuesStructure->fIin 		= __psmi_unit_measues_buffer.fIin ;
-		tUnitMeasuesStructure->nFanSpeed 	= __psmi_unit_measues_buffer.nFanSpeed[0];
-
-		return TRUE ;
-	} else {
-		tUnitMeasuesStructure->fTemperature = 0.0;
-		tUnitMeasuesStructure->fVout 		= 0.0;
-		tUnitMeasuesStructure->fVin 		= 0.0;
-		tUnitMeasuesStructure->fIout 		= 0.0;
-		tUnitMeasuesStructure->fIin 		= 0.0;
-		tUnitMeasuesStructure->nFanSpeed 	= 0;
-
-		return FALSE ;
+	  return FALSE ;
 	}
+
+
+        return TRUE ;
+//	if( __unit_conn_type[nUnitNumber-1] == PMBUS_UNIT ){
+//		tUnitMeasuesStructure->fTemperature     = PSU_PMBus_ReadTemp( nUnitNumber );
+////		tUnitMeasuesStructure->fVout 		= PSU_PMBus_ReadVout( nUnitNumber );
+////		tUnitMeasuesStructure->fVin 		= PSU_PMBus_ReadVin( nUnitNumber );
+////		tUnitMeasuesStructure->fIout 		= PSU_PMBus_ReadIout( nUnitNumber );
+////		tUnitMeasuesStructure->fIin 		= PSU_PMBus_ReadIin( nUnitNumber );
+////		tUnitMeasuesStructure->nFanSpeed 	= (u16)PSU_PMBus_ReadFanSpeed( nUnitNumber );
+//
+//		return TRUE ;
+//	} else if( __unit_conn_type[nUnitNumber-1] == PSMI_UNIT ){
+//		PSU_PSMI_GetUnitStatus( nUnitNumber, &__psmi_unit_measues_buffer );
+//
+//		tUnitMeasuesStructure->fTemperature     = __psmi_unit_measues_buffer.fTemperature[1] ;
+////		tUnitMeasuesStructure->fVout 		= __psmi_unit_measues_buffer.fVout[0]; // 0 -- 12 В, 1 -- 3.3 В
+////		tUnitMeasuesStructure->fVin 		= __psmi_unit_measues_buffer.fVin ;
+////		tUnitMeasuesStructure->fIout 		= __psmi_unit_measues_buffer.fIout[0];
+////		tUnitMeasuesStructure->fIin 		= __psmi_unit_measues_buffer.fIin ;
+////		tUnitMeasuesStructure->nFanSpeed 	= __psmi_unit_measues_buffer.nFanSpeed[0];
+//
+//		return TRUE ;
+//	} else {
+//		tUnitMeasuesStructure->fTemperature = 0.0;
+//		tUnitMeasuesStructure->fVout 		= 0.0;
+//		tUnitMeasuesStructure->fVin 		= 0.0;
+//		tUnitMeasuesStructure->fIout 		= 0.0;
+//		tUnitMeasuesStructure->fIin 		= 0.0;
+//		tUnitMeasuesStructure->nFanSpeed 	= 0;
+//
+//		return FALSE ;
+//	}
 }
 
 /*!

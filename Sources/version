@@ -1,2 +1,4 @@
-const char sVerion[] = "*testing:edd021d0dd";
-const char sCompileDate[] = "2015-11-16 15:07:00.634000";
+const char sVerion[] = "*testing:b2b8f9bd74";
+const char sCompileDate[] = "2015-08-14 12:57:51.844000";
+const char sVerion[] = "*forhrdwrtst:edd021d0dd";
+const char sCompileDate[] = "2015-10-22 13:41:19.744000";
