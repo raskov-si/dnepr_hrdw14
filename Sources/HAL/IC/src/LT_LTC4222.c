@@ -56,42 +56,42 @@ _BOOL LT_LTC4222_GetAdcVoltages( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterfa
 	*/
 	
 	/*Halting ADC before reading registers*/
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, &nAdcControl, LT_LTC4222_PMBUS_TIMEOUTMS, 3);
-	ret &= __PMB_WriteByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, LT_LTC4222_ADC_SET_HALT(nAdcControl), LT_LTC4222_PMBUS_TIMEOUTMS, 3);
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, &nAdcControl, LT_LTC4222_PMBUS_TIMEOUTMS, 5);
+	ret &= __PMB_WriteByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, LT_LTC4222_ADC_SET_HALT(nAdcControl), LT_LTC4222_PMBUS_TIMEOUTMS, 5);
 	
 	/*SOURCE1*/
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SOURCE1_MSB, &nAdcCodeMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SOURCE1_LSB, &nAdcCodeLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SOURCE1_MSB, &nAdcCodeMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SOURCE1_LSB, &nAdcCodeLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
 	tAdcVoltagesStructure->fSource1 = (f32)PMB_ADC_RAW_SOURCE_TO_VOLTS( _WORD(nAdcCodeMsb, nAdcCodeLsb) );
 	
 	/*SOURCE2*/
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SOURCE2_MSB, &nAdcCodeMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SOURCE2_LSB, &nAdcCodeLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SOURCE2_MSB, &nAdcCodeMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SOURCE2_LSB, &nAdcCodeLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
 	tAdcVoltagesStructure->fSource2 = (f32)PMB_ADC_RAW_SOURCE_TO_VOLTS( _WORD(nAdcCodeMsb, nAdcCodeLsb) );
 	
 	/*ADIN1*/
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADIN1_MSB, &nAdcCodeMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3);
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADIN1_LSB, &nAdcCodeLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADIN1_MSB, &nAdcCodeMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5);
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADIN1_LSB, &nAdcCodeLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
 	tAdcVoltagesStructure->fAdin1 = (f32)PMB_ADC_RAW_ADIN_TO_VOLTS( _WORD(nAdcCodeMsb, nAdcCodeLsb) );
 	
 	/*ADIN2*/
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADIN2_MSB, &nAdcCodeMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADIN2_LSB, &nAdcCodeLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADIN2_MSB, &nAdcCodeMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADIN2_LSB, &nAdcCodeLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
 	tAdcVoltagesStructure->fAdin2 = (f32)PMB_ADC_RAW_ADIN_TO_VOLTS( _WORD(nAdcCodeMsb, nAdcCodeLsb) );
 		
 	/*SENSE1*/
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SENSE1_MSB, &nAdcCodeMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SENSE1_LSB, &nAdcCodeLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SENSE1_MSB, &nAdcCodeMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SENSE1_LSB, &nAdcCodeLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
 	tAdcVoltagesStructure->fSense1 = (f32)PMB_ADC_RAW_SENSE_TO_VOLTS( _WORD(nAdcCodeMsb, nAdcCodeLsb) );
 	
 	/*SENSE2*/
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SENSE2_MSB, &nAdcCodeMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SENSE2_LSB, &nAdcCodeLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SENSE2_MSB, &nAdcCodeMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_SENSE2_LSB, &nAdcCodeLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
 	tAdcVoltagesStructure->fSense2 = (f32)PMB_ADC_RAW_SENSE_TO_VOLTS( _WORD(nAdcCodeMsb, nAdcCodeLsb) );
 	
 	/*Restarting ADC*/
-	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, &nAdcControl, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
-	ret &= __PMB_WriteByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, LT_LTC4222_ADC_RESET_HALT(nAdcControl), LT_LTC4222_PMBUS_TIMEOUTMS, 3);
+	ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, &nAdcControl, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
+	ret &= __PMB_WriteByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, LT_LTC4222_ADC_RESET_HALT(nAdcControl), LT_LTC4222_PMBUS_TIMEOUTMS, 5);
 	
 	return ret;
 }
@@ -146,7 +146,7 @@ _BOOL LT_LTC4222_SetConfig( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u
 		}
 			
 		//Writing Control register to controller 
-		bWriteResult &= __PMB_WriteByte(tPmbusPeriphInterface, nAddress, nControlAddress, nControl, LT_LTC4222_PMBUS_TIMEOUTMS, 3);
+		bWriteResult &= __PMB_WriteByte(tPmbusPeriphInterface, nAddress, nControlAddress, nControl, LT_LTC4222_PMBUS_TIMEOUTMS, 5);
 	}
 	//Alert register
 	if(tAlertRegisterStructure!=NULL){
@@ -171,7 +171,7 @@ _BOOL LT_LTC4222_SetConfig( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u
 		}
 
 		//Writing Alert register to controller 
-		bWriteResult &= __PMB_WriteByte(tPmbusPeriphInterface, nAddress, nAlertAddress, nAlert, LT_LTC4222_PMBUS_TIMEOUTMS, 3);
+		bWriteResult &= __PMB_WriteByte(tPmbusPeriphInterface, nAddress, nAlertAddress, nAlert, LT_LTC4222_PMBUS_TIMEOUTMS, 5);
 	}
 	
 	return bWriteResult;
@@ -206,7 +206,7 @@ _BOOL LT_LTC4222_GetConfig( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u
 	/* Control register. */
 	if(tControlRegisterStructure!=NULL){		
 		/* Reading control register. */
-		ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, nControlAddress, &nControl, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
+		ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, nControlAddress, &nControl, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
 		tControlRegisterStructure->tGpioConfig      = (LT_LTC4222_GpioConfigTypedef) LT_LTC4222_GET_GPIO_CONFIG(nControl);
 		tControlRegisterStructure->bGpioOutputState = LT_LTC4222_GET_GPO_STATE(nControl);
 		tControlRegisterStructure->bMassWriteEnable = LT_LTC4222_GET_MASS_WRITE_STATE(nControl);
@@ -219,7 +219,7 @@ _BOOL LT_LTC4222_GetConfig( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u
 	/* Alert register. */
 	if(tAlertRegisterStructure!=NULL){		
 		/* Reading alert register. */
-		ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, nAlertAddress, &nAlert, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
+		ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, nAlertAddress, &nAlert, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
 		
 		tAlertRegisterStructure->bFetShort      = LT_LTC4222_GET_FET_SHORT_ALERT(nAlert);
 		tAlertRegisterStructure->bEnStateChange = LT_LTC4222_GET_nEN_STATE_CHANGE_ALERT(nAlert);
@@ -251,7 +251,7 @@ _BOOL LT_LTC4222_ResetFaults( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface,
 	if( mChannel==LT_LTC4222_CHANNEL2 ){
 		nAlertAddress   = LT_LTC4222_FAULT2 ;
 	}
-	__PMB_WriteByte(tPmbusPeriphInterface, nAddress, nAlertAddress, 0x00, LT_LTC4222_PMBUS_TIMEOUTMS, 3);
+	__PMB_WriteByte(tPmbusPeriphInterface, nAddress, nAlertAddress, 0x00, LT_LTC4222_PMBUS_TIMEOUTMS, 5);
 	
 	return 1 ;
 }
@@ -285,7 +285,7 @@ _BOOL LT_LTC4222_GetStates( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u
 	if(tStatusRegisterStructure!=NULL){
 		/* Reading status register. */
           	OSTimeDly(1);   
-		ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, nStatusAddress, &nStatus, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
+		ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, nStatusAddress, &nStatus, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
 		
 		tStatusRegisterStructure->bFetOn          = LT_LTC4222_GET_FET_ON(nStatus);
 		tStatusRegisterStructure->bGpioInputState = LT_LTC4222_GET_GPI_STATE(nStatus);
@@ -300,7 +300,7 @@ _BOOL LT_LTC4222_GetStates( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u
 	if(tFaultRegisterStructure!=NULL){
 		/* Reading status register. */
           	OSTimeDly(1);   
-		ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, nFaultAddress, &nFault, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
+		ret &= __PMB_ReadByte(tPmbusPeriphInterface, nAddress, nFaultAddress, &nFault, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
 		
 		tFaultRegisterStructure->bFetShort      = LT_LTC4222_GET_FET_SHORT_FAULT(nFault);
 		tFaultRegisterStructure->bEnStateChange = LT_LTC4222_GET_nEN_STATE_CHANGE_FAULT(nFault);
@@ -356,8 +356,8 @@ u16 LT_LTC4222_GetRawAdcData( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface,
 	}
 	
 	//Reading data
-	__PMB_ReadByte(tPmbusPeriphInterface, nAddress, nChannelMsb, &nAdcDataMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
-	__PMB_ReadByte(tPmbusPeriphInterface, nAddress, nChannelLsb, &nAdcDataLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
+	__PMB_ReadByte(tPmbusPeriphInterface, nAddress, nChannelMsb, &nAdcDataMsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
+	__PMB_ReadByte(tPmbusPeriphInterface, nAddress, nChannelLsb, &nAdcDataLsb, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
 	
 	//Return word
 	return _WORD(nAdcDataMsb, nAdcDataLsb);
@@ -384,7 +384,7 @@ _BOOL LT_LTC4222_SetAdcControl( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterfac
 	}
 	LT_LTC4222_ADC_SET_CHANNEL(nAdcControl, tAdcControlRegisterStructure->tAdcChannel);
 	
-	return __PMB_WriteByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, nAdcControl, LT_LTC4222_PMBUS_TIMEOUTMS, 3);
+	return __PMB_WriteByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, nAdcControl, LT_LTC4222_PMBUS_TIMEOUTMS, 5);
 }
 
 _BOOL LT_LTC4222_GetAdcControl( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterface, u8 nAddress, LT_LTC4222_AdcControlRegisterTypedef* tAdcControlRegisterStructure){
@@ -401,7 +401,7 @@ _BOOL LT_LTC4222_GetAdcControl( PMB_PeriphInterfaceTypedef* tPmbusPeriphInterfac
 	
 	if(tAdcControlRegisterStructure==NULL) return 0;
 
-	ret = __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, &nAdcControl, LT_LTC4222_PMBUS_TIMEOUTMS, 3 );
+	ret = __PMB_ReadByte(tPmbusPeriphInterface, nAddress, LT_LTC4222_ADC_CONTROL, &nAdcControl, LT_LTC4222_PMBUS_TIMEOUTMS, 5 );
 	
 	tAdcControlRegisterStructure->bAdcBusy    = LT_LTC4222_ADC_GET_BUSY(nAdcControl);
 	tAdcControlRegisterStructure->bAdcAlert   = LT_LTC4222_ADC_GET_ALERT(nAdcControl);

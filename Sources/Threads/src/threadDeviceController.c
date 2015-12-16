@@ -421,7 +421,7 @@ void taskDeviceController(void *pdata)
         
 	__last_pmbus_alarm = llUptime ;        
 
-	while(TRUE){
+	while (TRUE) {
           dc_incom_message = recv_inttask_message(DEVICE_CONTROLLER, ANY_MODULE, NULL);
                     
           // если прошел таймаут и необходимо перечитать PSU -- посылаем сами себе команду
@@ -466,7 +466,7 @@ void taskDeviceController(void *pdata)
 					Dnepr_Measure_SetPowerLed( (T8_Dnepr_LedTypedef){YELLOW, FALSE} );
 				// если у хотя бы одного БП не PowerGood -- мигаем желтым
 				} else if( 	(!Dnepr_Backplane_GetPSU_Status()->tPs1.bPowerGood	) ||
-							(!Dnepr_Backplane_GetPSU_Status()->tPs2.bPowerGood	) ){
+						(!Dnepr_Backplane_GetPSU_Status()->tPs2.bPowerGood	) ){
 					Dnepr_Measure_SetPowerLed( (T8_Dnepr_LedTypedef){YELLOW, TRUE} );
 				// всё хорошо
 				} else {
@@ -1076,16 +1076,16 @@ static void __slot_power_dev_plug( const u8 slot_num, const _BOOL pluginout )
 	if( pluginout ){
 		// читаем и настраиваем HotSwap
 		// проверяем наличие hotswap'а и проверяем напряжения (модуль PMBus не возвращает ошибку)
-//		for( j = 0; j < 10; j++ ){
+		for( j = 0; j < 3; j++ ){
 			_hs_available[slot_num] = LT_LTC4222_GetAdcVoltages( Dnepr_I2C_Get_PMBUS_EXT_Driver( slot_num ), __hs_slot_addresses[ slot_num ], &tAdcVoltagesStructure );
 			_hs_available[slot_num] = _hs_available[slot_num] && (tAdcVoltagesStructure.fSource2 > 2.7) && 
 							                      (tAdcVoltagesStructure.fSource2 < 4.0) ;
-//			if( _hs_available[slot_num] ){
-//			    break  ;
-//			} else {
-//			    OSTimeDly( 20 );
-//			}
-//		}
+			if( _hs_available[slot_num] ){
+			    break  ;
+			} else {
+			    OSTimeDly( 20 );
+			}
+		}
 		Dnepr_SlotEEPROM_Read( slot_num );
                 if( Dnepr_SlotEEPROM_Available( slot_num )) {                              
                      __fSlotPower[ slot_num ] = (f32)Dnepr_SlotEEPROM_SlotPower( slot_num ) ;
@@ -1170,16 +1170,16 @@ void __slot_power_onoff_init()
                 
 		// читаем и настраиваем HotSwap
 		// проверяем наличие hotswap'а проверяя напряжения
-//		for( j = 0; j < 5; j++ ){
+		for( j = 0; j < 5; j++ ){
 			LT_LTC4222_GetAdcVoltages( Dnepr_I2C_Get_PMBUS_EXT_Driver( i ), __hs_slot_addresses[i], &tAdcVoltagesStructure );
 			_hs_available[i] = 	(tAdcVoltagesStructure.fSource2 > 2.0) && 
 							(tAdcVoltagesStructure.fSource2 < 4.0) ;
-//			if( _hs_available[i] ){
-//				break ;
-//			} else {
-//				OSTimeDly( 1 );
-//			}
-//		}
+			if( _hs_available[i] ){
+				break ;
+			} else {
+				OSTimeDly( 1 );
+			}
+		}
                 
 
 

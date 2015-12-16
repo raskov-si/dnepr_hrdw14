@@ -745,6 +745,33 @@ static void _pwmng_power_slots_read	(int state, int signal)
 	msg_dc_state_data_t		*recv_data;
 
 	for ( i = 0; i < SLOT_MAX_NUM; i++ ) {
+                         
+//		if ( !(crate_status.slot_status[i].now_present)
+//                    || crate_status.slot_status[i].health_status == ERROR) {
+			send_data.dev_name = pwmng_get_slot_name(i);
+			pwr_msg.msg = GET_SHELF_STATE;
+			pwr_msg.data = &send_data;
+
+			/* определяем включено ли устройство */
+			send_inttask_message(DEVICE_CONTROLLER, POWER_MANAGMENT, &pwr_msg);
+			dc_message = recv_inttask_message(POWER_MANAGMENT, DEVICE_CONTROLLER, NULL);
+			if ( dc_message == NULL ) {
+			        crate_status.slot_status[i].now_present = 0;
+				crate_status.slot_status[i].cons_power = 0.0;
+				continue;
+			}
+                        if ( dc_message->msg == GET_SHELF_STATE ) {
+  			  recv_data = dc_message->data;
+			  crate_status.slot_status[i].now_present = recv_data->present;
+			  crate_status.slot_status[i].now_on = (recv_data->power_state == SLOT_ON) ? SLOT_ON : SLOT_OFF;
+      			  crate_status.slot_status[i].health_status = ((recv_data->hotswap_status == CHIP_OK) && (recv_data->eeprom_status == CHIP_OK)) ? OK : ERROR;
+                          crate_status.slot_status[i].passive_flag = FALSE;
+                        } else {
+                          _set_inauto_signal(dc_message->msg);
+                          return;                          
+                        }
+//                    }
+                        
 		if ( !(crate_status.slot_status[i].now_present) ) {
 			crate_status.slot_status[i].cons_power =  0.0;
 			continue;
@@ -768,29 +795,8 @@ static void _pwmng_power_slots_read	(int state, int signal)
                     return;                   
                 }
                 
-                if ( crate_status.slot_status[i].health_status == ERROR ) {
-			send_data.dev_name = pwmng_get_slot_name(i);
-			pwr_msg.msg = GET_SHELF_STATE;
-			pwr_msg.data = &send_data;
-
-			/* определяем включено ли устройство */
-			send_inttask_message(DEVICE_CONTROLLER, POWER_MANAGMENT, &pwr_msg);
-			dc_message = recv_inttask_message(POWER_MANAGMENT, DEVICE_CONTROLLER, NULL);
-			if ( dc_message == NULL ) {
-				crate_status.slot_status[i].cons_power = 0.0;
-				continue;
-			}
-                        if ( dc_message->msg == GET_SHELF_STATE ) {
-  			  recv_data = dc_message->data;
-			  crate_status.slot_status[i].now_present = recv_data->present;
-			  crate_status.slot_status[i].now_on = (recv_data->power_state == SLOT_ON) ? SLOT_ON : SLOT_OFF;
-      			  crate_status.slot_status[i].health_status = ((recv_data->hotswap_status == CHIP_OK) && (recv_data->eeprom_status == CHIP_OK)) ? OK : ERROR;
-                          crate_status.slot_status[i].passive_flag = FALSE;
-                        } else {
-                          _set_inauto_signal(dc_message->msg);
-                          return;                          
-                        }
-                }
+//                if ( crate_status.slot_status[i].health_status == ERROR ) {
+//                }
 	}
 }
 
@@ -950,6 +956,7 @@ static void _pwmng_power_calc_prohib	(int state, int signal)
   			                            crate_status.slot_status[i].now_on = (recv_data->power_state == SLOT_OFF) ? SLOT_OFF : SLOT_ON;
       						    if ( crate_status.slot_status[i].now_on == SLOT_ON ) {
                                                         power_slots_now += crate_status.slot_status[i].cons_power;
+                                                        crate_status.recuredPower -= crate_status.slot_status[i].cons_power;
                                                     }
                                                 } else {
                                                     _set_inauto_signal(dc_message->msg);
@@ -1130,13 +1137,14 @@ int   pwmng_get_power_status(int  slot_index)
 
 Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4  
 */
-    if ( crate_status.slot_status[slot_index].now_present || crate_status.slot_status[slot_index].passive_flag )
+    if ( crate_status.slot_status[slot_index].now_present )
     {      
+      
         if ( crate_status.slot_status[slot_index].health_status != OK ) {
           return 1;
         }
         
-        if ( crate_status.slot_status[slot_index].now_on == SLOT_ON ) {
+        if ( crate_status.slot_status[slot_index].now_on == SLOT_ON || crate_status.slot_status[slot_index].passive_flag) {
           return 2;
         } else {
           if ( get_slotconf(slot_index) == SmartlyStart ) {
