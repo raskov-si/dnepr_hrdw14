@@ -47,6 +47,8 @@ int     pwmng_is_slot_ready(int);
 int     pwmng_is_slot_passive(int);
 int     pwmng_get_power_status(int);
 float   pwmng_get_power_limit(void);
+int     pwmng_get_fan_status(void);
+
 
 
 #ifdef	__cplusplus

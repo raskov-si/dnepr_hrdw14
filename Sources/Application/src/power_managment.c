@@ -69,16 +69,17 @@ static void _pwmng_power_calc_smartly	(int state, int signal);
 /*variables=========================================================================================================*/
 const  fsm_table_t   powermang_trans_table[13][5] =  {
 /* init */
-		[POW_STATE_INIT][SIGNAL_STATIC]				= {	POW_STATE_GETSLOTSSTATE, 	        _pwmng_get_slot_states          },
+		[POW_STATE_INIT][SIGNAL_STATIC]				= {	POW_STATE_INIT, 	                NULL                            },
 		[POW_STATE_INIT][SIGNAL_CRATECHANGE]			= {	POW_STATE_GETSLOTSSTATE, 		_pwmng_get_slot_states		},
-		[POW_STATE_INIT][SIGNAL_PROFILECHANGE]			= {	POW_STATE_GETSLOTSSTATE, 		_pwmng_get_slot_states		},
-
+		[POW_STATE_INIT][SIGNAL_PROFILECHANGE]			= {	POW_STATE_INIT, 		        NULL		                },
+                
+                
 		[POW_STATE_GETSLOTSSTATE][SIGNAL_STATIC]		= {	POW_STATE_POWER_DELAY, 			_pwmng_power_delay		},
 		[POW_STATE_GETSLOTSSTATE][SIGNAL_CRATECHANGE]		= {	POW_STATE_INIT, 			_pwmng_power_delay	        },
 		[POW_STATE_GETSLOTSSTATE][SIGNAL_PROFILECHANGE]		= {	POW_STATE_POWER_DELAY, 			_pwmng_power_delay		},
                 
 
-		[POW_STATE_POWER_DELAY][SIGNAL_STATIC]			= {	POW_STATE_POWER_DELAY, 			NULL	                        },
+		[POW_STATE_POWER_DELAY][SIGNAL_STATIC]			= {	POW_STATE_SOURCE_READ, 			_pwmng_power_source_read	                        },
 		[POW_STATE_POWER_DELAY][SIGNAL_CRATECHANGE]		= {	POW_STATE_SOURCE_READ, 			_pwmng_power_source_read        },
 		[POW_STATE_POWER_DELAY][SIGNAL_PROFILECHANGE]		= {	POW_STATE_SOURCE_READ, 			_pwmng_power_source_read	},
 /* init */
@@ -138,6 +139,9 @@ enum _POWER_STATES   		curnt_state  = POW_STATE_INIT;
 static enum _POWER_SIGNALS	curnt_signal = SIGNAL_STATIC;
 static enum _POWER_SIGNALS	inauto_signal = SIGNAL_STATIC;
 
+
+
+///u32 val_VPowerMinReserve = 0;
 
 
 /*------------------------------------------------------------------------------------------------------------------*/
@@ -240,6 +244,12 @@ int pwmng_get_current_signal (void)
    case POW_STATE_INIT: {
         curnt_signal = SIGNAL_STATIC;
         inauto_signal = SIGNAL_STATIC;
+          dc_message = recv_inttask_message(POWER_MANAGMENT, ANY_MODULE, NULL);
+	  if ( dc_message == NULL ) {
+	      break;
+	  }
+          _set_current_signal ( dc_message->msg );          
+        
    } break;
    
   case POW_STATE_POWER_DELAY : {    
@@ -476,6 +486,9 @@ static void _pwmng_power_delay	(int state, int signal)
 			  crate_status.slot_status[i].now_on = (recv_data->power_state == SLOT_OFF) ? SLOT_OFF : SLOT_ON;
                         } else {
                           _set_inauto_signal(dc_message->msg);
+//                          if ( dc_message->msg == SHELF_POWER_RECALC) {
+//                            inauto_signal = SIGNAL_CRATECHANGE;
+//                          }
                           return;
                         }
 		} /* if ( crate_status.slot_status[i].now_on ) */
@@ -688,6 +701,8 @@ static void _pwmng_power_fan_read	(int state, int signal)
           recv_data = dc_message->data;
 	  crate_status.fan_status.now_on        =  (recv_data->power_state == SLOT_OFF) ? SLOT_OFF : SLOT_ON;
 	  crate_status.fan_status.now_present 	=  recv_data->present;
+	  crate_status.fan_status.health_status = ((recv_data->hotswap_status == CHIP_OK) && (recv_data->eeprom_status == CHIP_OK)) ? OK : ERROR;
+          
         } else {
           _set_current_signal(dc_message->msg);
           return;                  
@@ -1139,12 +1154,15 @@ int   pwmng_get_power_status(int  slot_index)
 */
     if ( crate_status.slot_status[slot_index].now_present )
     {      
+        if ( crate_status.slot_status[slot_index].passive_flag ) {
+          return 2;
+        }
       
         if ( crate_status.slot_status[slot_index].health_status != OK ) {
           return 1;
         }
         
-        if ( crate_status.slot_status[slot_index].now_on == SLOT_ON || crate_status.slot_status[slot_index].passive_flag) {
+        if ( crate_status.slot_status[slot_index].now_on == SLOT_ON ) {
           return 2;
         } else {
           if ( get_slotconf(slot_index) == SmartlyStart ) {
@@ -1157,6 +1175,45 @@ int   pwmng_get_power_status(int  slot_index)
       
     return 0;      
 }
+
+/*=============================================================================================================*/
+/*!  \brief
+     \return
+     \retval
+     \sa
+*/
+/*=============================================================================================================*/
+int   pwmng_get_fan_status(void)
+{
+/*    
+"Недоступно" -  при отсутствии вставленного устройства или при пассивном вставленном устройстве;
+"Сбой управления" - при аппаратном сбое управления устройством;
+"Работает" - при нормальной работе во включенном состоянии;
+
+"ПределМощности" -  при выключенном состоянии из-за отсутствия запаса мощности;
+
+"Выключено" - При выключенном состоянии и-за запрета запуска пользователем.
+
+Недоступно@0|СбойУправления@1|Работает@2|ПределМощности@3|Выключено@4  
+*/
+    if ( crate_status.fan_status.now_present )
+    {      
+      
+//        if ( crate_status.fan_status.health_status != OK ) {
+//          return 1;
+//        }
+        
+        if ( crate_status.fan_status.now_on == SLOT_ON ) {
+          return 2;
+        } else {
+            return 4;
+        }
+    }
+      
+    return 0;      
+}
+
+
 
 /*=============================================================================================================*/
 /*!  \brief

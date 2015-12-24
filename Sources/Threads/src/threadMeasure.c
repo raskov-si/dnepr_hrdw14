@@ -1957,7 +1957,7 @@ u32 fupowerstatus_getvalue(PARAM_INDEX* p_ix,P32_PTR pPar)
 {
 //	SlotPowerState_t stat ;
 	
-        pPar->value.U32 = (Dnepr_DControl_SlotPresent()->bSlotPresent[I2C_DNEPR_FAN_SLOT_NUM]) ? 0 : 1;
+        pPar->value.U32 = pwmng_get_fan_status();
 //	stat = Dnepr_DControl_PowerStatus( I2C_DNEPR_FAN_SLOT_NUM );
 //	if( stat == HSSLOT_UNAVAILABLE ){
 //		pPar->value.U32 = 0 ; // Unavailable

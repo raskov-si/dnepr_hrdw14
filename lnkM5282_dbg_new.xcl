@@ -70,7 +70,7 @@
 
 -Z(CONST)rom_langpack=00043000-0004D000
 -Z(CONST)profile,power_sequencer_settings,const_values,console_commands=0004D000-0007FFFF
- 
+
 -Z(CONST)RESETVEC=0:+8
 -Z(CONST)INTVEC=_VBR_ADDRESS:+400
 -Z(CONST)CFMCONFIG=400-417
@@ -78,7 +78,6 @@
 -Z(CODE)RCODE,CODE,NEAR_C=2C18-7FFF
 
 -Z(CODE)FCODE,FAR_ID,NEARPID_ID,NEAR_ID,EARLYDIFUNCT,DIFUNCT,FAR_C=00002C18-00043000
-
 
 //-------------------------------------------------------------------------
 //      Allocate the read/write segments

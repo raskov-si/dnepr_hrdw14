@@ -158,9 +158,9 @@ static void taskInit(void *pdata)
     OSTaskNameSet( tackDController_PRIO, "taskDeviceController", &return_code ) ;
     assert( return_code == OS_ERR_NONE ) ;
     
-//    assert(OSTaskCreateExt(task_shelf_manager, (void *)0, (void *)&task_shelfmng_stack[511], PRIO_TASK_SHELFMNG, PRIO_TASK_SHELFMNG, (void *)&task_shelfmng_stack, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
-//    OSTaskNameSet( PRIO_TASK_SHELFMNG, "task_shelf_manager", &return_code ) ;
-//    assert( return_code == OS_ERR_NONE ) ;    
+    assert(OSTaskCreateExt(task_shelf_manager, (void *)0, (void *)&task_shelfmng_stack[511], PRIO_TASK_SHELFMNG, PRIO_TASK_SHELFMNG, (void *)&task_shelfmng_stack, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
+    OSTaskNameSet( PRIO_TASK_SHELFMNG, "task_shelf_manager", &return_code ) ;
+    assert( return_code == OS_ERR_NONE ) ;    
        
 #ifdef DEBUG_TERMINAL
     assert(OSTaskCreateExt(task_terminal, (void *)0, (void *)&task_terminal_stack[511], TASKTERM_COMM_PRIO, TASKTERM_COMM_PRIO, (void *)&task_terminal_stack, 512, NULL, OS_TASK_OPT_STK_CHK ) == OS_ERR_NONE) ;
